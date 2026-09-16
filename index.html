@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دکان کھاتہ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#123128">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF7EC; --paper-2:#F2EAD3; --cover:#123128; --cover-2:#0A1F19;
+    --ink:#241F16; --ink-soft:#726B57; --gold:#B9873D; --gold-light:#F1E4C4;
+    --line:#E1D3AC; --danger:#A23F2E; --danger-light:#F5E1D8;
+    --green:#3D6B4C; --green-light:#E3ECDF; --margin-rule:#9C3B2E;
+    --radius:12px; --radius-sm:8px;
+    --shadow-card:0 1px 2px rgba(18,49,40,.06), 0 2px 10px rgba(18,49,40,.05);
+    --shadow-pop:0 14px 34px rgba(10,31,25,.22);
+  }
+  body[data-theme="dark"]{
+    --paper:#171712; --paper-2:#20201A; --cover:#0E2019; --cover-2:#060F0C;
+    --ink:#EDE7D6; --ink-soft:#A79E86; --gold:#D9A857;
+    --line:#39392E; --danger:#D97862; --danger-light:#3A241D;
+    --green:#79C08F; --green-light:#1C2E22; --margin-rule:#D97862;
+    --shadow-card:0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.25);
+    --shadow-pop:0 14px 34px rgba(0,0,0,.45);
+  }
+  body[data-theme="dark"] .cust-row, body[data-theme="dark"] .prod-row, body[data-theme="dark"] .customer-detail{background:var(--paper-2);}
+  body[data-theme="dark"] input, body[data-theme="dark"] select, body[data-theme="dark"] button{background:var(--paper-2);color:var(--ink);}
+  body[data-theme="dark"] button.primary{background:var(--gold);color:#171712;}
+  body[data-theme="dark"] .maintab.active{background:var(--paper);}
+  body[data-theme="dark"] .maintab.active,
+  body[data-theme="dark"] .metric-value,
+  body[data-theme="dark"] .section-title,
+  body[data-theme="dark"] .backbtn,
+  body[data-theme="dark"] .modal-title{color:var(--gold);}
+  body[data-theme="dark"] .metric-value.owe{color:var(--danger);}
+  body[data-theme="dark"] .metric-value.paid{color:var(--green);}
+  body[data-theme="dark"] .section-title::after{background:var(--line);}
+  body[data-theme="dark"] .wrap::before{opacity:.4;}
+  body[data-theme="dark"] button.danger{color:var(--danger);background:var(--paper-2);}
+  body[data-theme="dark"] button.paidbtn{color:var(--green);background:var(--green-light);}
+  body[data-theme="dark"] button.ghost{background:none;color:var(--ink);}
+  body[data-theme="dark"] .wa-link{color:#3A2E17;}
+  .themebtn{background:rgba(255,255,255,0.06);border:1px solid rgba(241,228,196,0.28);color:var(--gold-light);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0;font-size:15px;line-height:1;}
+  .themebtn:hover{background:rgba(255,255,255,0.14);}
+  .voice-mic-btn{position:absolute;inset-inline-end:3px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:13px;padding:0;cursor:pointer;z-index:2;}
+  .voice-mic-btn.listening{animation:micpulse 1s ease-in-out infinite;border-color:var(--danger);background:var(--danger-light);}
+  .smart-voice-btn{width:100%;border:1px dashed var(--line);background:var(--paper);border-radius:8px;padding:8px;font-size:12.5px;color:var(--ink-soft);cursor:pointer;margin-bottom:8px;}
+  .smart-voice-btn.listening{animation:micpulse 1s ease-in-out infinite;border-color:var(--danger);color:var(--danger);background:var(--danger-light);border-style:solid;}
+  @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(162,63,46,.35);}50%{box-shadow:0 0 0 6px rgba(162,63,46,0);}}
+  .voice-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(10px);background:var(--cover);color:var(--gold-light);padding:11px 18px;border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;z-index:300;box-shadow:var(--shadow-pop);max-width:86%;text-align:center;white-space:pre-line;opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;}
+  .voice-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body[data-lang="ur"]{font-family:'Noto Nastaliq Urdu','Fraunces',serif;}
+  body[data-lang="ar"]{font-family:'Noto Naskh Arabic','Fraunces',serif;}
+  body[data-lang="en"]{font-family:'Fraunces',serif;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  body[data-dir="rtl"]{direction:rtl;}
+  body[data-dir="ltr"]{direction:ltr;}
+  ::selection{background:var(--gold-light);}
+  button, input, select{font-size:14px;}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  @media (prefers-reduced-motion:no-preference){
+    .view.active{animation:fadein .28s ease both;}
+    @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+    .maintab{transition:margin .18s ease, opacity .18s ease;}
+    .modal{animation:popin .18s ease both;}
+    @keyframes popin{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:none;}}
+  }
+
+  /* ===== Cover / letterhead ===== */
+  .cover{background:radial-gradient(140% 100% at 50% 0%, var(--cover) 0%, var(--cover-2) 78%);color:var(--gold-light);padding:18px 16px 0;position:relative;}
+  .cover::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,transparent,var(--gold) 20%,var(--gold) 80%,transparent);}
+  .toprow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+  .langbar{display:flex;gap:6px;flex:1;justify-content:center;}
+  .langbtn{background:rgba(255,255,255,0.06);color:var(--gold-light);border:1px solid rgba(241,228,196,0.28);padding:5px 12px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .langbtn.active{background:var(--gold);color:var(--cover-2);border-color:var(--gold);font-weight:600;}
+  .gearbtn{background:rgba(255,255,255,0.06);border:1px solid rgba(241,228,196,0.28);color:var(--gold-light);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0;font-size:16px;line-height:1;}
+  .gearbtn:hover{background:rgba(255,255,255,0.14);}
+  .shopname-row{display:flex;align-items:center;justify-content:center;text-align:center;}
+  .shopname{font-size:23px;font-weight:600;background:transparent;border:none;color:var(--gold-light);text-align:center;width:min(300px,84%);outline:none;border-bottom:1px dashed transparent;text-shadow:0 1px 0 rgba(0,0,0,.25);letter-spacing:.2px;}
+  .shopname:focus{border-bottom:1px dashed var(--gold);}
+  .tagline{text-align:center;font-size:11.5px;color:var(--gold-light);opacity:.62;margin:3px 0 6px;font-family:'Inter',sans-serif;}
+  .rule-flourish{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px;opacity:.55;}
+  .rule-flourish span{height:1px;width:46px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  .rule-flourish i{width:4px;height:4px;border-radius:50%;background:var(--gold);display:block;transform:rotate(45deg);}
+
+  .maintabs{display:flex;gap:4px;padding:0 2px;}
+  .maintab{flex:1;text-align:center;padding:10px 2px 9px;font-size:11.3px;color:var(--gold-light);opacity:.55;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;border-radius:10px 10px 0 0;margin-top:7px;letter-spacing:.1px;}
+  .maintab.active{opacity:1;background:var(--paper);color:var(--cover);margin-top:0;box-shadow:0 -3px 10px rgba(0,0,0,.14);}
+  .tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:9px;margin-inline-start:5px;font-family:'Inter',sans-serif;vertical-align:middle;}
+
+  /* ===== Body / ledger page ===== */
+  .wrap{max-width:640px;margin:0 auto;padding:18px 16px 40px;position:relative;padding-inline-start:30px;}
+  .wrap::before{content:'';position:absolute;inset-inline-start:15px;top:0;bottom:0;width:1.5px;background:var(--margin-rule);opacity:.22;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .metric-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .metric-card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-card);position:relative;}
+  .metric-card::before{content:'';position:absolute;top:0;left:14px;right:14px;height:2px;background:var(--gold);opacity:.35;border-radius:2px;}
+  .metric-label{font-size:11.5px;color:var(--ink-soft);font-family:'Inter',sans-serif;margin-bottom:4px;}
+  .metric-value{font-size:19px;font-weight:600;color:var(--cover);}
+  .metric-value.owe{color:var(--danger);}
+  .metric-value.paid{color:var(--green);}
+
+  .section-title{font-size:15.5px;font-weight:600;margin:22px 0 10px;color:var(--cover);display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--line);}
+  .section-note{font-size:11.5px;color:var(--ink-soft);font-family:'Inter',sans-serif;margin:-6px 0 12px;}
+
+  .card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-card);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;}
+  input, select{font-family:'Inter',sans-serif;border:1px solid var(--line);background:#fff;border-radius:var(--radius-sm);padding:9px 10px;font-size:14px;width:100%;color:var(--ink);}
+  body[data-lang="ur"] input, body[data-lang="ur"] select, body[data-lang="ar"] input, body[data-lang="ar"] select{font-family:inherit;}
+  button{font-family:'Inter',sans-serif;cursor:pointer;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;padding:9px 12px;font-size:13.5px;color:var(--ink);}
+  button:active{transform:translateY(1px);}
+  button.primary{background:var(--cover);color:var(--gold-light);border-color:var(--cover);font-weight:600;}
+  button.paidbtn{background:var(--green-light);color:var(--green);border-color:var(--green);font-weight:600;}
+  button.small{padding:5px 10px;font-size:12px;}
+  button.danger{color:var(--danger);border-color:var(--danger-light);}
+  button.ghost{background:none;}
+  body[data-lang="ur"] button, body[data-lang="ar"] button{font-family:inherit;}
+
+  .searchsort{display:flex;gap:8px;margin-bottom:10px;}
+  .searchsort input{flex:1;}
+  .searchsort select{flex:none;width:auto;max-width:44%;}
+
+  .cust-row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:10px;transition:box-shadow .15s;}
+  .cust-row:hover{box-shadow:var(--shadow-card);}
+  .cust-row-name{font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px;}
+  .cust-row-sub{font-size:11.5px;color:var(--ink-soft);font-family:'Inter',sans-serif;}
+  .cust-row-bal{font-size:15px;white-space:nowrap;text-align:end;}
+  .overdue-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;flex:none;}
+  .overdue-tag{font-size:9.5px;font-family:'Inter',sans-serif;background:var(--danger-light);color:var(--danger);padding:1px 6px;border-radius:8px;font-weight:600;}
+
+  .prod-row{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s;}
+  .prod-row:hover{box-shadow:var(--shadow-card);}
+  .prod-row-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px;}
+  .prod-row-name{font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px;}
+  .prod-row-price{font-size:13px;color:var(--ink-soft);white-space:nowrap;}
+  .stockbar-track{position:relative;height:7px;background:var(--paper-2);border-radius:4px;overflow:hidden;}
+  .stockbar-fill{position:absolute;top:0;bottom:0;inset-inline-start:0;background:var(--green);border-radius:4px;}
+  .stockbar-fill.low{background:var(--danger);}
+  .prod-row-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft);font-family:'Inter',sans-serif;margin-top:4px;}
+
+  .customer-detail{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card);}
+  .detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .cname-edit{font-size:17px;font-weight:600;border:none;background:transparent;border-bottom:1px dashed transparent;width:100%;color:var(--ink);padding:2px 0;font-family:inherit;}
+  .cname-edit:focus{border-bottom:1px dashed var(--gold);outline:none;}
+  .cphone{font-size:12.5px;color:var(--ink-soft);font-family:'Inter',sans-serif;border:none;background:transparent;border-bottom:1px dashed transparent;padding:2px 0;width:100%;}
+  .cphone:focus{border-bottom:1px dashed var(--gold);outline:none;}
+  .cust-totals{display:flex;gap:14px;margin:10px 0;font-size:12.5px;color:var(--ink-soft);flex-wrap:wrap;}
+  .cust-totals b{color:var(--danger);}
+  .actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .wa-link{text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:var(--gold-light);color:#5C4416;border:1px solid var(--gold);border-radius:var(--radius-sm);padding:6px 12px;font-size:12.5px;font-family:'Inter',sans-serif;}
+  .entry-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;background:var(--paper);padding:10px;border-radius:8px;}
+  .entry-form .full{grid-column:1/-1;}
+  .hist{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;}
+  .hist-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dotted var(--line);font-size:12.5px;gap:6px;}
+  .hist-item{flex:1;color:var(--ink);}
+  .hist-badge{font-size:10.5px;padding:2px 7px;border-radius:20px;font-family:'Inter',sans-serif;white-space:nowrap;}
+  .hist-badge.purchase{background:var(--danger-light);color:var(--danger);}
+  .hist-badge.payment{background:var(--green-light);color:var(--green);}
+  .hist-date{color:var(--ink-soft);font-size:10.5px;font-family:'Inter',sans-serif;white-space:nowrap;}
+  .hist-amt{font-weight:600;white-space:nowrap;}
+  .hist-amt.purchase{color:var(--danger);}
+  .hist-amt.payment{color:var(--green);}
+  .del-icon{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:15px;padding:0 2px;line-height:1;border-radius:4px;flex:none;}
+  .del-icon:hover{color:var(--danger);}
+  .empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:22px 10px;}
+  .empty-icon{font-size:22px;display:block;margin-bottom:6px;opacity:.5;}
+  .toggle-form{background:none;border:1px solid var(--line);font-size:13px;padding:6px 10px;}
+  .hidden{display:none;}
+  .backbtn{background:none;border:none;color:var(--cover);font-size:13.5px;cursor:pointer;padding:4px 0;font-family:'Inter',sans-serif;margin-bottom:8px;font-weight:600;}
+
+  .subtabs{display:flex;gap:8px;margin-bottom:14px;}
+  .subtab{flex:1;text-align:center;padding:8px;font-size:13px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-family:'Inter',sans-serif;}
+  .subtab.active{background:var(--cover);color:var(--gold-light);border-color:var(--cover);font-weight:600;}
+  .period-row{display:flex;gap:8px;margin-bottom:14px;}
+
+  .barchart{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;}
+  .barrow{display:grid;grid-template-columns:64px 1fr 74px;align-items:center;gap:8px;font-size:12px;}
+  .barrow .m-label{color:var(--ink-soft);font-family:'Inter',sans-serif;}
+  .bartrack{position:relative;height:16px;background:var(--paper-2);border-radius:4px;overflow:hidden;}
+  .barfill{position:absolute;top:0;bottom:0;border-radius:4px;}
+  .barfill.pos{background:var(--green);}
+  .barfill.neg{background:var(--danger);}
+  .barrow .m-amt{text-align:end;}
+
+  .cur-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;}
+  .cur-row input{padding:6px 8px;font-size:13px;}
+  .cur-folder{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .cur-folder summary{cursor:pointer;list-style:revert;margin:0;padding:2px 0;}
+  .cur-folder summary::marker{color:var(--gold, #b8860b);}
+  .cur-folder[open] summary{margin-bottom:8px;}
+  .cur-folder .cur-row{margin-bottom:6px;}
+  .cur-code{width:70px;flex:none;}
+  .cur-rate{flex:1;}
+  .cur-conv{font-size:12.5px;color:var(--ink-soft);white-space:nowrap;min-width:90px;text-align:end;}
+  .inv-row{display:flex;gap:8px;align-items:center;}
+
+  /* ===== Settings modal ===== */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,31,25,.55);display:flex;align-items:center;justify-content:center;z-index:80;padding:18px;}
+  .modal-backdrop.hidden{display:none;}
+  .modal{background:var(--paper);border-radius:14px;max-width:400px;width:100%;padding:20px;box-shadow:var(--shadow-pop);max-height:86vh;overflow:auto;}
+  .modal-title{font-size:17px;font-weight:600;color:var(--cover);margin:0 0 4px;}
+  .modal-sub{font-size:12px;color:var(--ink-soft);font-family:'Inter',sans-serif;margin:0 0 14px;}
+  .modal .card{margin-bottom:10px;}
+  .filelabel{display:inline-block;width:100%;text-align:center;}
+  .status-msg{font-size:12.5px;font-family:'Inter',sans-serif;margin-top:6px;padding:7px 10px;border-radius:8px;}
+  .status-msg.ok{background:var(--green-light);color:var(--green);}
+  .status-msg.err{background:var(--danger-light);color:var(--danger);}
+
+  /* ===== Print statement ===== */
+  #printArea{display:none;}
+  body.statement-open #printArea{display:block;position:fixed;inset:0;z-index:90;background:#fff;color:#000;overflow:auto;font-family:'Inter',sans-serif;}
+  body.statement-open > *:not(#printArea){display:none !important;}
+  .print-actions{position:sticky;top:0;display:flex;gap:8px;padding:12px 16px;background:#F2EAD3;border-bottom:1px solid #ccc;z-index:2;}
+  .print-actions button{flex:1;padding:9px 8px;border-radius:8px;border:1px solid #ccc;background:#fff;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;}
+  .print-actions .pa-back{background:#fff;}
+  .print-actions .pa-send{background:#E3ECDF;color:#3D6B4C;border-color:#3D6B4C;font-weight:600;}
+  .print-actions .pa-print{background:#123128;color:#F1E4C4;border-color:#123128;font-weight:600;}
+  .p-body{padding:20px 24px;max-width:640px;margin:0 auto;}
+  #printArea .p-head{display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px;}
+  #printArea table{width:100%;border-collapse:collapse;font-size:13px;}
+  #printArea th, #printArea td{padding:6px 4px;border-bottom:1px solid #ccc;text-align:start;}
+  #printArea .p-total{margin-top:14px;font-weight:700;font-size:15px;text-align:end;}
+  @media print{
+    body.statement-open #printArea{position:static;}
+    .print-actions{display:none !important;}
+  }
+</style>
+</head>
+<body data-lang="ur" data-dir="rtl">
+<div class="cover">
+  <div class="toprow">
+    <button class="gearbtn" id="btnSettings" title="Settings" aria-label="Settings">⚙</button>
+    <div class="langbar">
+      <button class="langbtn" data-l="ur">اردو</button>
+      <button class="langbtn" data-l="en">English</button>
+      <button class="langbtn" data-l="ar">العربية</button>
+    </div>
+    <button class="themebtn" id="btnTheme" title="Theme" aria-label="Theme">🌙</button>
+  </div>
+  <div class="shopname-row"><input class="shopname" id="shopNameInput" maxlength="40"></div>
+  <div class="tagline" id="tagline"></div>
+  <div class="rule-flourish"><span></span><i></i><span></span></div>
+  <div class="maintabs">
+    <div class="maintab" data-t="reports" id="tabReportsBtn"></div>
+    <div class="maintab" data-t="customers" id="tabCustomersBtn"><span id="tabCustomersTxt"></span><span class="tab-badge hidden" id="overdueBadgeCount"></span></div>
+    <div class="maintab" data-t="products" id="tabProductsBtn"><span id="tabProductsTxt"></span><span class="tab-badge hidden" id="lowStockBadgeCount"></span></div>
+    <div class="maintab" data-t="business" id="tabBusinessBtn"></div>
+    <div class="maintab" data-t="zakat" id="tabZakatBtn"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="view" id="viewReports">
+  <div class="metric-row">
+    <div class="metric-card"><div class="metric-label" id="lblRepRevenue"></div><div class="metric-value num" id="valRepRevenue">0</div></div>
+    <div class="metric-card"><div class="metric-label" id="lblRepCustomers"></div><div class="metric-value num" id="valRepCustomers">0</div></div>
+  </div>
+  <div class="metric-row">
+    <div class="metric-card"><div class="metric-label" id="lblRepDue"></div><div class="metric-value num owe" id="valRepDue">0</div></div>
+    <div class="metric-card"><div class="metric-label" id="lblRepStockVal"></div><div class="metric-value num" id="valRepStockVal">0</div></div>
+  </div>
+  <div class="section-title" id="lblRepTrend"></div>
+  <div class="card"><div id="repTrendChart" class="barchart"></div></div>
+  <div class="section-title" id="lblRepReminders"></div>
+  <div id="repRemindersArea"></div>
+  <div class="section-title" id="lblRepTopCust"></div>
+  <div id="repTopCustArea"></div>
+  <div class="section-title" id="lblRepLowStock"></div>
+  <div id="repLowStockArea"></div>
+</div>
+
+<div class="view" id="viewCustomers">
+  <div class="metric-row">
+    <div class="metric-card"><div class="metric-label" id="lblMonthSales"></div><div class="metric-value num" id="valMonthSales">0</div></div>
+    <div class="metric-card"><div class="metric-label" id="lblTotalDue"></div><div class="metric-value num owe" id="valTotalDue">0</div></div>
+  </div>
+  <div class="section-title" id="lblAddCustomer"></div>
+  <div class="card">
+    <div class="row2"><input type="text" id="newName" maxlength="40"><input type="tel" id="newPhone" maxlength="20"></div>
+    <button class="primary" id="btnAddCustomer"></button>
+  </div>
+  <div class="section-title" id="lblCustomers"></div>
+  <div class="searchsort">
+    <input type="text" id="custSearch">
+    <select id="custSort">
+      <option value="balance"></option>
+      <option value="name"></option>
+      <option value="recent"></option>
+    </select>
+  </div>
+  <div id="customerListArea"></div>
+</div>
+
+<div class="view" id="viewProducts">
+  <div class="metric-row">
+    <div class="metric-card"><div class="metric-label" id="lblProductCount"></div><div class="metric-value num" id="valProductCount">0</div></div>
+    <div class="metric-card"><div class="metric-label" id="lblStockValue"></div><div class="metric-value num" id="valStockValue">0</div></div>
+  </div>
+  <div class="subtabs">
+    <div class="subtab" data-pv="list" id="subProdListBtn"></div>
+    <div class="subtab" data-pv="newstock" id="subNewStockBtn"></div>
+  </div>
+
+  <div id="prodListSection">
+    <div class="section-title" id="lblAddProduct"></div>
+    <div class="card">
+      <div class="row2"><input type="text" id="newProdName" maxlength="40"><input type="number" id="newProdPrice" min="0"></div>
+      <input type="number" id="newProdQty" min="0">
+      <button class="primary" id="btnAddProduct"></button>
+    </div>
+    <button class="ghost small" id="toggleBulkAdd" style="margin-top:8px;width:100%;"></button>
+    <div class="card hidden" id="bulkAddCard" style="margin-top:8px;">
+      <div class="section-note" id="bulkAddNoteTxt" style="margin:0 0 4px;white-space:pre-line;"></div>
+      <textarea id="bulkAddText" rows="4" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;"></textarea>
+      <button class="primary" id="btnBulkAddSave"></button>
+      <div id="bulkAddStatus"></div>
+    </div>
+    <div class="section-title" id="lblProducts"></div>
+    <div class="searchsort">
+      <input type="text" id="prodSearch">
+    </div>
+    <div id="productListArea"></div>
+  </div>
+
+  <div id="prodNewStockSection" class="hidden">
+    <div class="section-title" id="lblNewStockAdd"></div>
+    <div class="card">
+      <select id="newStockProdSelect"></select>
+      <div class="row2"><input type="number" id="newStockQty" min="0" placeholder=""><input type="date" id="newStockDate"></div>
+      <button class="primary" id="btnAddNewStock"></button>
+    </div>
+    <div class="section-title" id="lblNewStockLog"></div>
+    <div id="newStockLogArea"></div>
+  </div>
+</div>
+
+<div class="view" id="viewBusiness">
+  <div class="subtabs">
+    <div class="subtab" data-p="monthly" id="subMonthlyBtn"></div>
+    <div class="subtab" data-p="yearly" id="subYearlyBtn"></div>
+  </div>
+  <div class="period-row"><select id="selMonth"></select><select id="selYear"></select></div>
+  <div id="businessArea"></div>
+</div>
+
+<div class="view" id="viewZakat">
+  <div id="zakatArea"></div>
+</div>
+
+</div>
+
+<div class="modal-backdrop hidden" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title" id="settingsTitleTxt"></div>
+    <div class="modal-sub" id="settingsSubTxt"></div>
+    <button class="primary" style="width:100%;margin-bottom:8px;" id="btnExportBackup"></button>
+    <label class="filelabel">
+      <button class="ghost" style="width:100%;" id="btnImportBackupTrigger"></button>
+      <input type="file" id="fileImportBackup" accept="application/json" class="hidden">
+    </label>
+    <div id="backupStatus"></div>
+    <div style="height:14px;"></div>
+    <button class="ghost" style="width:100%;" id="btnExportCsv"></button>
+    <div style="height:14px;"></div>
+
+    <div style="border-top:1px dashed var(--line);margin:4px 0 12px;"></div>
+    <div class="modal-title" style="font-size:15px;" id="voiceSectionTitleTxt"></div>
+    <button class="ghost" style="width:100%;" id="btnToggleVoice"></button>
+
+    <div style="border-top:1px dashed var(--line);margin:4px 0 12px;"></div>
+    <div class="modal-title" style="font-size:15px;" id="pinSectionTitleTxt"></div>
+    <div id="pinSection"></div>
+
+    <div style="height:14px;"></div>
+    <button class="danger" style="width:100%;" id="btnResetAll"></button>
+    <div style="height:12px;"></div>
+    <button class="ghost" style="width:100%;" id="btnCloseSettings"></button>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="lockScreen" style="z-index:200;background:var(--cover-2);">
+  <div class="modal" style="text-align:center;">
+    <div style="font-size:34px;margin-bottom:4px;">🔒</div>
+    <div class="modal-title" id="lockTitleTxt"></div>
+    <div class="modal-sub" id="lockSubTxt"></div>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="lockPinInput" style="text-align:center;font-size:22px;letter-spacing:8px;">
+    <div id="lockError" class="status-msg err hidden" style="margin-top:8px;"></div>
+    <button class="primary" style="width:100%;margin-top:10px;" id="btnUnlock"></button>
+    <button class="ghost small" style="width:100%;margin-top:10px;" id="btnForgotPin"></button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const STORAGE_KEY = 'dokan-khata-data-v4';
+
+const TXT = {
+  ur:{
+    title:'دکان کھاتہ', shopPlaceholder:'اپنی دکان کا نام لکھیں', tagline:'ہر گاہک اور ہر حساب کا مکمل ریکارڈ',
+    tabReports:'ڈیش بورڈ', tabCustomers:'گاہک کھاتہ', tabBusiness:'کاروباری حساب', tabZakat:'زکوٰۃ و اثاثے',
+    lblRepRevenue:'اس مہینے کی آمدنی', lblRepCustomers:'کل گاہک', lblRepDue:'کل بقایا', lblRepStockVal:'مال کی مالیت',
+    lblRepTrend:'گزشتہ 6 ماہ کی سیل', lblRepTopCust:'سب سے زیادہ بقایا گاہک', lblRepLowStock:'کم مقدار والی مصنوعات',
+    repNoTopCust:'کوئی بقایا نہیں۔', repNoLowStock:'کوئی پراڈکٹ کم مقدار میں نہیں۔',
+    voiceNotSupported:'اس براؤزر میں وائس ان پٹ دستیاب نہیں۔', voiceNotUnderstood:'سمجھ نہیں آیا، دوبارہ کوشش کریں',
+    voiceSectionTitle:'آواز سے ڈیٹا درج کرنا', voiceEnableBtn:'🎤 آواز فعال کریں', voiceDisableBtn:'🔇 آواز بند کریں',
+    voiceHeard:(text)=>`سنا: "${text}"`, voiceHeardSet:(text,val)=>`سنا: "${text}"\nدرج کر دیا: ${val}`,
+    voiceHeardSetBoth:(text,name,amt)=>`سنا: "${text}"\nنام: ${name}\nرقم: ${amt}`, smartVoiceBtn:'🎤 نام اور رقم دونوں بولیں', smartVoiceHint:'ایک ہی بار میں نام اور رقم بولیں، جیسے "چینی 500"',
+    voiceErrPermission:'مائیکروفون کی اجازت نہیں ملی۔ براؤزر کی سیٹنگز میں مائیکروفون کی اجازت دیں۔', voiceErrNoSpeech:'کچھ سنائی نہیں دیا۔ دوبارہ کوشش کریں۔', voiceErrGeneric:(e)=>`وائس میں مسئلہ ہوا (${e})۔ دوبارہ کوشش کریں۔`,
+    linkProductOpt:'کوئی پراڈکٹ نہیں (صرف اندراج)', linkProductLbl:'پراڈکٹ سے جوڑیں (اسٹاک خود کم ہوگا)', qtySoldOptionalPh:'مقدار (اگر پراڈکٹ منتخب کی ہے)',
+    lblMonthSales:'اس مہینے کی سیل', lblTotalDue:'کل بقایا رقم',
+    lblAddCustomer:'نیا گاہک شامل کریں', namePh:'گاہک کا نام', phonePh:'موبائل نمبر', addBtn:'شامل کریں',
+    lblCustomers:'گاہکوں کی فہرست', emptyCust:'ابھی کوئی گاہک شامل نہیں کیا گیا۔',
+    clear:'حساب برابر', back:'واپس فہرست پر',
+    total:'کل بقایا', thisMonthDue:'اس ماہ کا اضافہ',
+    addPurchase:'نیا حساب/سامان درج کریں', recordPayment:'وصولی درج کریں',
+    itemPh:'سامان / تفصیل', amountPh:'رقم',
+    saveTxn:'محفوظ کریں', noTxn:'ابھی کوئی ریکارڈ نہیں۔',
+    sendMsg:'واٹس ایپ پیغام', delete:'حذف کریں',
+    purchaseBadge:'سامان لیا', paymentBadge:'وصول شدہ',
+    msgTemplate:(name,shop,total,newAmt)=>`السلام علیکم ${name} صاحب،\n${shop} کی طرف سے حساب کی یاد دہانی۔\nنیا اندراج: ${newAmt} روپے\nکل بقایا رقم: ${total} روپے\nبراہ کرم جلد ادائیگی کریں۔ شکریہ۔`,
+    monthly:'ماہانہ ریکارڈ', yearly:'سالانہ ریکارڈ',
+    totalSales:'کل سیل (گاہکوں سے)', totalStock:'نیا مال خریدا', totalExpense:'دیگر اخراجات/بل',
+    totalSupplier:'دکانداروں کو ادائیگی', profit:'منافع',
+    addEntry:'نیا اندراج کریں', entryTypeStock:'نیا مال', entryTypeExpense:'خرچہ/بل', entryTypeSupplier:'دکاندار کو ادائیگی',
+    descPh:'تفصیل لکھیں', save:'محفوظ کریں', noEntries:'اس عرصہ میں کوئی اندراج نہیں۔', yearSummary:'سالانہ خلاصہ',
+    monthNames:['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'],
+
+    inventoryLabel:'تجارتی مال کی موجودہ مالیت', inventorySave:'محفوظ کریں',
+    cashBalance:'دکان میں نقد رقم (بیلنس)', cashBalanceSave:'محفوظ کریں', receivables:'گاہکوں سے وصول ہونے والی رقم',
+    totalQarza:'دکاندار پر واجب الادا قرضہ (تمام سالوں کا مجموعہ)', netZakatable:'زکوٰۃ کے قابل کل رقم', zakatDue:'زکوٰۃ کی رقم (٪۲.۵)',
+    zakatNote:'زکوٰۃ کی شرح ٢.٥٪ رکھی گئی ہے۔ نصاب اور دیگر شرعی تفصیلات کی تصدیق اپنے عالم دین سے ضرور کریں۔',
+    addCashIn:'دکان میں رقم داخل کریں', addCashOut:'دکان سے رقم نکالیں',
+    cashInDesc:'رقم کہاں سے آئی', cashOutDesc:'رقم کس مقصد کے لیے نکالی',
+    addQarza:'قرضہ درج کریں', qarzaDesc:'قرضہ کس کا / کس لیے ہے',
+    historyCash:'رقم کی آمد و اخراج کی تفصیل', historyQarza:'قرضوں کی فہرست',
+    cashInBadge:'رقم آئی', cashOutBadge:'رقم نکلی',
+    currencyTitle:'مختلف کرنسیوں میں رقم', currencyNote:'اپنی کرنسی کی شرح تبادلہ درج کریں تاکہ رقم اس کرنسی میں بھی نظر آئے۔',
+    baseCurrencyLbl:'اپنی کرنسی کا نام', currencyCode:'کرنسی کا کوڈ', currencyRate:'١ یونٹ کی مالیت (اپنی کرنسی میں)',
+    addCurrency:'کرنسی شامل کریں', removeCurrency:'حذف کریں', netInThisCurrency:'زکوٰۃ کے قابل رقم', zakatInThisCurrency:'زکوٰۃ',
+    noEntriesShort:'کوئی اندراج نہیں۔',
+
+    searchPh:'گاہک تلاش کریں...', sortByBalance:'زیادہ بقایا پہلے', sortByName:'نام کے مطابق', sortByRecent:'حالیہ سرگرمی',
+    overdueBadge:'زائد المیعاد', confirmDeleteEntry:'کیا یہ اندراج حذف کر دیا جائے؟', confirmDeleteCustomer:'کیا اس گاہک کو حذف کر دیا جائے؟ تمام ریکارڈ ختم ہو جائے گا۔',
+    printStatement:'پرنٹ اسٹیٹمنٹ', statementTitle:'کھاتے کا بیان', statementDate:'تاریخ', statementTotal:'کل بقایا رقم',
+    printBack:'واپس', printNow:'پرنٹ کریں', sendToCustomer:'گاہک کو بھیجیں',
+    statementMsgTemplate:(name,shop,total)=>`السلام علیکم ${name} صاحب،\n${shop} کی طرف سے آپ کے کھاتے کا بیان۔\nکل بقایا رقم: ${total} روپے\nبراہ کرم جلد ادائیگی کریں۔ شکریہ۔`,
+    settingsTitle:'ترتیبات', settingsSub:'ڈیٹا کا بیک اپ لیں یا بحال کریں۔',
+    backupExport:'بیک اپ ڈاؤن لوڈ کریں', backupImport:'بیک اپ بحال کریں', resetAll:'ڈیٹا ری سیٹ کریں (قرضے محفوظ رہیں گے)',
+    csvExport:'گاہکوں کی فہرست ڈاؤن لوڈ کریں (CSV/Excel)',
+    confirmReset:'یہ عمل واپس نہیں ہو سکتا۔ گاہکوں کے کھاتے اور قرضے (آپ کے ذمّے اور آپ کو ملنے والے) محفوظ رہیں گے — باقی تمام ڈیٹا (پراڈکٹس، کاروباری ریکارڈ، نقد رقم) حذف ہو جائے گا۔ جاری رکھیں؟',
+    restoreSuccess:'بیک اپ کامیابی سے بحال ہو گیا۔', restoreError:'فائل درست نہیں۔ براہ کرم درست بیک اپ فائل منتخب کریں۔',
+    closeBtn:'بند کریں', noSearchResults:'کوئی گاہک نہیں ملا۔',
+
+    tabProducts:'مصنوعات', lblAddProduct:'نیا پراڈکٹ شامل کریں', productNamePh:'پراڈکٹ کا نام', pricePh:'قیمت (فی یونٹ)', qtyPh:'مقدار (اسٹاک)',
+    lblProducts:'مصنوعات کی فہرست', emptyProducts:'ابھی کوئی پراڈکٹ شامل نہیں کیا گیا۔', searchProductsPh:'پراڈکٹ تلاش کریں...',
+    lblProductCount:'کل اقسام', lblStockValue:'باقی مال کی مالیت',
+    bulkAddToggle:'ایک ساتھ کئی پراڈکٹ شامل کریں', bulkAddSave:'فہرست شامل کریں',
+    bulkAddNote:'ہر لائن میں لکھیں: نام, قیمت, مقدار — مثلاً:\nچینی, 150, 20\nچاول, 220, 15\n\nاگر آپ کے پاس فہرست کی تصویر ہے تو اسے چیٹ میں بھیج دیں، میں آپ کے لیے یہ فہرست تیار کر دوں گا جسے آپ یہاں پیسٹ کر سکیں۔',
+    bulkAddResult:(n)=>`${n} پراڈکٹ شامل ہو گئے۔`, bulkAddNone:'کوئی درست لائن نہیں ملی۔ فارمیٹ چیک کریں: نام, قیمت, مقدار',
+    productTotal:'کل مقدار', productSoldLbl:'فروخت شدہ', productRemaining:'باقی مقدار', productRemainingPct:'باقی فیصد', productStockValue:'باقی مال کی مالیت',
+    recordSale:'فروخت درج کریں', restock:'نیا مال شامل کریں', qtySoldPh:'فروخت شدہ مقدار', qtyAddPh:'نئی مقدار',
+    lowStockBadge:'کم مقدار', saleBadge:'فروخت', restockBadge:'نیا مال', noProdHistory:'ابھی کوئی ریکارڈ نہیں۔',
+    confirmDeleteProduct:'کیا اس پراڈکٹ کو حذف کر دیا جائے؟ تمام ریکارڈ ختم ہو جائے گا۔', notEnoughStock:'اتنی مقدار اسٹاک میں موجود نہیں۔',
+    prodViewList:'مصنوعات کی فہرست', prodViewNewStock:'نیا مال کی تفصیل',
+    lblNewStockAdd:'نیا مال درج کریں', selectProduct:'پراڈکٹ منتخب کریں', lblNewStockLog:'نئے مال کا ریکارڈ',
+    noNewStock:'ابھی کوئی نیا مال درج نہیں ہوا۔', remainingNow:'ابھی باقی', noProductsYet:'پہلے کوئی پراڈکٹ شامل کریں۔',
+
+    pinSectionTitle:'پن لاک', pinEnableBtn:'پن لاک فعال کریں', pinChangeBtn:'پن تبدیل کریں', pinDisableBtn:'پن لاک بند کریں',
+    pinEnabledNote:'پن لاک فعال ہے — ایپ کھولنے کے لیے پن درکار ہوگا۔',
+    pinCurrentPh:'موجودہ پن', pinNewPh:'نیا پن (کم از کم 4 ہندسے)', pinConfirmPh:'پن دوبارہ لکھیں',
+    pinSaveBtn:'محفوظ کریں', pinCancelBtn:'منسوخ کریں',
+    pinMismatch:'دونوں پن ایک جیسے نہیں ہیں۔', pinTooShort:'پن کم از کم 4 ہندسوں کا ہونا چاہیے۔', pinWrongCurrent:'موجودہ پن غلط ہے۔',
+    pinSetSuccess:'پن لاک فعال ہو گیا۔', pinChangedSuccess:'پن تبدیل ہو گیا۔', pinDisabledSuccess:'پن لاک بند ہو گیا۔',
+    lockTitle:'یہ کھاتہ محفوظ ہے', lockSub:'جاری رکھنے کے لیے پن درج کریں', unlockBtn:'کھولیں', wrongPin:'غلط پن، دوبارہ کوشش کریں۔',
+    forgotPin:'پن بھول گئے؟', forgotPinConfirm:'اگر آپ پن بھول گئے ہیں تو تمام ڈیٹا حذف کر کے دوبارہ شروع کرنا پڑے گا۔ یہ ناقابلِ واپسی ہے۔ کیا آپ جاری رکھنا چاہتے ہیں؟',
+
+    discountPh:'رعایت (اختیاری)', discountLbl:'رعایت', discountNote:(amt)=>`رعایت: -${amt}`,
+    invoiceBtn:'انوائس بنائیں', addItemBtn:'+ آئٹم شامل کریں', manualItemOpt:'دیگر / خود لکھیں',
+    itemQtyPh:'مقدار', itemPricePh:'قیمت', itemDescPh:'آئٹم کا نام',
+    subtotalLbl:'ذیلی مجموعہ', discountTypeFlat:'مقررہ رقم', discountTypePercent:'فیصد %',
+    totalLbl:'کل رقم', saveInvoiceBtn:'انوائس محفوظ کریں', invoiceNoItems:'کم از کم ایک آئٹم شامل کریں۔',
+    invoiceWord:'انوائس', printInvoiceBtn:'انوائس پرنٹ کریں',
+    reminderSectionTitle:'ادائیگی یاد دہانی', reminderSetBtn:'یاد دہانی مقرر کریں', reminderClearBtn:'یاد دہانی ختم کریں',
+    reminderDatePh:'یاد دہانی کی تاریخ', reminderDueBadge:'یاد دہانی واجب',
+    reportsRemindersTitle:'واجب الادا یاد دہانیاں', reportsNoReminders:'کوئی یاد دہانی واجب نہیں۔'
+  },
+  en:{
+    title:'Shop Ledger', shopPlaceholder:'Enter your shop name', tagline:'A complete record for every customer and every account',
+    tabReports:'Dashboard', tabCustomers:'Customer ledger', tabBusiness:'Business accounts', tabZakat:'Zakat & assets',
+    lblRepRevenue:'This month\'s revenue', lblRepCustomers:'Total customers', lblRepDue:'Total outstanding', lblRepStockVal:'Stock value',
+    lblRepTrend:'Last 6 months sales', lblRepTopCust:'Highest due customers', lblRepLowStock:'Low stock products',
+    repNoTopCust:'No outstanding dues.', repNoLowStock:'No products low on stock.',
+    voiceNotSupported:'Voice input is not supported in this browser.', voiceNotUnderstood:'Could not understand, please try again',
+    voiceSectionTitle:'Voice data entry', voiceEnableBtn:'🎤 Turn on voice', voiceDisableBtn:'🔇 Turn off voice',
+    voiceHeard:(text)=>`Heard: "${text}"`, voiceHeardSet:(text,val)=>`Heard: "${text}"\nFilled in: ${val}`,
+    voiceHeardSetBoth:(text,name,amt)=>`Heard: "${text}"\nName: ${name}\nAmount: ${amt}`, smartVoiceBtn:'🎤 Say name & price together', smartVoiceHint:'Speak the name and price in one go, e.g. "Sugar 500"',
+    voiceErrPermission:'Microphone permission was denied. Please allow microphone access in browser settings.', voiceErrNoSpeech:'No speech detected. Please try again.', voiceErrGeneric:(e)=>`Voice error (${e}). Please try again.`,
+    linkProductOpt:'No product (just a note)', linkProductLbl:'Link to a product (stock auto-deducts)', qtySoldOptionalPh:'Qty (if product selected)',
+    lblMonthSales:'This month\'s sales', lblTotalDue:'Total outstanding',
+    lblAddCustomer:'Add new customer', namePh:'Customer name', phonePh:'Phone number', addBtn:'Add',
+    lblCustomers:'Customer list', emptyCust:'No customers added yet.',
+    clear:'Settled', back:'Back to list',
+    total:'Total due', thisMonthDue:'Added this month',
+    addPurchase:'Record new purchase', recordPayment:'Record payment received',
+    itemPh:'Item / description', amountPh:'Amount',
+    saveTxn:'Save', noTxn:'No records yet.',
+    sendMsg:'WhatsApp message', delete:'Delete',
+    purchaseBadge:'Purchase', paymentBadge:'Payment',
+    msgTemplate:(name,shop,total,newAmt)=>`Hello ${name},\nThis is a reminder from ${shop}.\nNew entry: ${newAmt}\nTotal outstanding balance: ${total}\nPlease settle at your earliest. Thank you.`,
+    monthly:'Monthly record', yearly:'Yearly record',
+    totalSales:'Total sales (from customers)', totalStock:'New stock purchased', totalExpense:'Other expenses / bills',
+    totalSupplier:'Payments to suppliers', profit:'Profit',
+    addEntry:'Add new entry', entryTypeStock:'New stock', entryTypeExpense:'Expense / bill', entryTypeSupplier:'Supplier payment',
+    descPh:'Enter description', save:'Save', noEntries:'No entries for this period.', yearSummary:'Yearly summary',
+    monthNames:['January','February','March','April','May','June','July','August','September','October','November','December'],
+
+    inventoryLabel:'Current value of trade goods (inventory)', inventorySave:'Save',
+    cashBalance:'Cash in hand (shop balance)', cashBalanceSave:'Save', receivables:'Amount receivable from customers',
+    totalQarza:'Outstanding debt owed by shop (total of all years)', netZakatable:'Total zakatable amount', zakatDue:'Zakat due (2.5%)',
+    zakatNote:'Zakat rate is set at 2.5%. Please confirm nisab and other details with your religious scholar.',
+    addCashIn:'Add money into the shop', addCashOut:'Withdraw money from shop',
+    cashInDesc:'Source of the money', cashOutDesc:'Purpose of withdrawal',
+    addQarza:'Add a debt entry', qarzaDesc:'Debt to whom / for what',
+    historyCash:'Cash in / out history', historyQarza:'List of debts',
+    cashInBadge:'Cash in', cashOutBadge:'Cash out',
+    currencyTitle:'Amounts in other currencies', currencyNote:'Enter your exchange rate so amounts also show in that currency.',
+    baseCurrencyLbl:'Your currency name', currencyCode:'Currency code', currencyRate:'Value of 1 unit (in your currency)',
+    addCurrency:'Add currency', removeCurrency:'Remove', netInThisCurrency:'Zakatable amount', zakatInThisCurrency:'Zakat',
+    noEntriesShort:'No entries.',
+
+    searchPh:'Search customers...', sortByBalance:'Highest due first', sortByName:'By name', sortByRecent:'Recent activity',
+    overdueBadge:'Overdue', confirmDeleteEntry:'Delete this entry?', confirmDeleteCustomer:'Delete this customer? All records will be lost.',
+    printStatement:'Print statement', statementTitle:'Account statement', statementDate:'Date', statementTotal:'Total outstanding',
+    printBack:'Back', printNow:'Print', sendToCustomer:'Send to customer',
+    statementMsgTemplate:(name,shop,total)=>`Hello ${name},\nHere is your account statement from ${shop}.\nTotal outstanding balance: ${total}\nPlease settle at your earliest. Thank you.`,
+    settingsTitle:'Settings', settingsSub:'Back up your data or restore it on another device.',
+    backupExport:'Download backup', backupImport:'Restore backup', resetAll:'Reset data (debts kept)',
+    csvExport:'Download customer list (CSV/Excel)',
+    confirmReset:'This cannot be undone. Customer accounts and debts (what you owe and what customers owe you) will be kept — everything else (products, business records, cash) will be erased. Continue?',
+    restoreSuccess:'Backup restored successfully.', restoreError:'Invalid file. Please choose a valid backup file.',
+    closeBtn:'Close', noSearchResults:'No customers found.',
+
+    tabProducts:'Products', lblAddProduct:'Add new product', productNamePh:'Product name', pricePh:'Price (per unit)', qtyPh:'Quantity (stock)',
+    lblProducts:'Product list', emptyProducts:'No products added yet.', searchProductsPh:'Search products...',
+    lblProductCount:'Total items', lblStockValue:'Remaining stock value',
+    bulkAddToggle:'Add multiple products at once', bulkAddSave:'Add list',
+    bulkAddNote:'One per line: name, price, quantity — e.g:\nSugar, 150, 20\nRice, 220, 15\n\nIf you have a photo of your list, send it in chat and I\'ll prepare this text for you to paste here.',
+    bulkAddResult:(n)=>`${n} products added.`, bulkAddNone:'No valid lines found. Check the format: name, price, quantity',
+    productTotal:'Total stock', productSoldLbl:'Sold', productRemaining:'Remaining', productRemainingPct:'Remaining %', productStockValue:'Remaining stock value',
+    recordSale:'Record sale', restock:'Add new stock', qtySoldPh:'Quantity sold', qtyAddPh:'New quantity',
+    lowStockBadge:'Low stock', saleBadge:'Sale', restockBadge:'New stock', noProdHistory:'No records yet.',
+    confirmDeleteProduct:'Delete this product? All records will be lost.', notEnoughStock:'Not enough stock available.',
+    prodViewList:'Product list', prodViewNewStock:'New stock log',
+    lblNewStockAdd:'Add new stock', selectProduct:'Select product', lblNewStockLog:'New stock record',
+    noNewStock:'No new stock recorded yet.', remainingNow:'Remaining now', noProductsYet:'Add a product first.',
+
+    pinSectionTitle:'PIN lock', pinEnableBtn:'Enable PIN lock', pinChangeBtn:'Change PIN', pinDisableBtn:'Turn off PIN lock',
+    pinEnabledNote:'PIN lock is on — a PIN will be required to open the app.',
+    pinCurrentPh:'Current PIN', pinNewPh:'New PIN (min 4 digits)', pinConfirmPh:'Re-enter PIN',
+    pinSaveBtn:'Save', pinCancelBtn:'Cancel',
+    pinMismatch:'The two PINs don\'t match.', pinTooShort:'PIN must be at least 4 digits.', pinWrongCurrent:'Current PIN is incorrect.',
+    pinSetSuccess:'PIN lock enabled.', pinChangedSuccess:'PIN changed.', pinDisabledSuccess:'PIN lock turned off.',
+    lockTitle:'This ledger is protected', lockSub:'Enter PIN to continue', unlockBtn:'Unlock', wrongPin:'Wrong PIN, try again.',
+    forgotPin:'Forgot PIN?', forgotPinConfirm:'If you forgot your PIN, all data must be erased to start over. This cannot be undone. Continue?',
+
+    discountPh:'Discount (optional)', discountLbl:'Discount', discountNote:(amt)=>`Discount: -${amt}`,
+    invoiceBtn:'Create invoice', addItemBtn:'+ Add item', manualItemOpt:'Other / manual item',
+    itemQtyPh:'Qty', itemPricePh:'Price', itemDescPh:'Item name',
+    subtotalLbl:'Subtotal', discountTypeFlat:'Flat amount', discountTypePercent:'Percent %',
+    totalLbl:'Total', saveInvoiceBtn:'Save invoice', invoiceNoItems:'Add at least one item.',
+    invoiceWord:'Invoice', printInvoiceBtn:'Print invoice',
+    reminderSectionTitle:'Payment reminder', reminderSetBtn:'Set reminder', reminderClearBtn:'Clear reminder',
+    reminderDatePh:'Reminder date', reminderDueBadge:'Reminder due',
+    reportsRemindersTitle:'Payment reminders due', reportsNoReminders:'No reminders due.'
+  },
+  ar:{
+    title:'دفتر المحل', shopPlaceholder:'أدخل اسم متجرك', tagline:'سجل كامل لكل زبون وكل حساب',
+    tabReports:'لوحة المعلومات', tabCustomers:'دفتر الزبائن', tabBusiness:'الحسابات التجارية', tabZakat:'الزكاة والأصول',
+    lblRepRevenue:'إيرادات هذا الشهر', lblRepCustomers:'إجمالي الزبائن', lblRepDue:'إجمالي المستحق', lblRepStockVal:'قيمة المخزون',
+    lblRepTrend:'مبيعات آخر 6 أشهر', lblRepTopCust:'أعلى الزبائن استحقاقاً', lblRepLowStock:'منتجات منخفضة المخزون',
+    repNoTopCust:'لا يوجد مستحقات.', repNoLowStock:'لا توجد منتجات منخفضة المخزون.',
+    voiceNotSupported:'الإدخال الصوتي غير مدعوم في هذا المتصفح.', voiceNotUnderstood:'لم أفهم، حاول مرة أخرى',
+    voiceSectionTitle:'إدخال البيانات بالصوت', voiceEnableBtn:'🎤 تفعيل الصوت', voiceDisableBtn:'🔇 إيقاف الصوت',
+    voiceHeard:(text)=>`سمعت: "${text}"`, voiceHeardSet:(text,val)=>`سمعت: "${text}"\nتم الإدخال: ${val}`,
+    voiceHeardSetBoth:(text,name,amt)=>`سمعت: "${text}"\nالاسم: ${name}\nالمبلغ: ${amt}`, smartVoiceBtn:'🎤 قل الاسم والسعر معاً', smartVoiceHint:'انطق الاسم والسعر في جملة واحدة، مثل "سكر 500"',
+    voiceErrPermission:'تم رفض إذن الميكروفون. يرجى السماح بالوصول إلى الميكروفون في إعدادات المتصفح.', voiceErrNoSpeech:'لم يتم سماع أي كلام. حاول مرة أخرى.', voiceErrGeneric:(e)=>`حدث خطأ في الصوت (${e}). حاول مرة أخرى.`,
+    linkProductOpt:'بدون منتج (ملاحظة فقط)', linkProductLbl:'اربط بمنتج (يُخصم من المخزون تلقائياً)', qtySoldOptionalPh:'الكمية (إذا تم اختيار منتج)',
+    lblMonthSales:'مبيعات هذا الشهر', lblTotalDue:'إجمالي المستحق',
+    lblAddCustomer:'إضافة زبون جديد', namePh:'اسم الزبون', phonePh:'رقم الهاتف', addBtn:'إضافة',
+    lblCustomers:'قائمة الزبائن', emptyCust:'لم تتم إضافة أي زبون بعد.',
+    clear:'تمت التسوية', back:'العودة للقائمة',
+    total:'إجمالي المستحق', thisMonthDue:'أضيف هذا الشهر',
+    addPurchase:'تسجيل عملية شراء جديدة', recordPayment:'تسجيل دفعة مستلمة',
+    itemPh:'الصنف / الوصف', amountPh:'المبلغ',
+    saveTxn:'حفظ', noTxn:'لا توجد سجلات بعد.',
+    sendMsg:'رسالة واتساب', delete:'حذف',
+    purchaseBadge:'شراء', paymentBadge:'دفعة',
+    msgTemplate:(name,shop,total,newAmt)=>`مرحباً ${name}،\nهذه رسالة تذكير من ${shop}.\nإدخال جديد: ${newAmt}\nإجمالي الرصيد المستحق: ${total}\nيرجى التسوية في أقرب وقت. شكراً لك.`,
+    monthly:'السجل الشهري', yearly:'السجل السنوي',
+    totalSales:'إجمالي المبيعات (من الزبائن)', totalStock:'بضاعة جديدة تم شراؤها', totalExpense:'مصاريف أخرى / فواتير',
+    totalSupplier:'مدفوعات للموردين', profit:'الربح',
+    addEntry:'إضافة إدخال جديد', entryTypeStock:'بضاعة جديدة', entryTypeExpense:'مصروف / فاتورة', entryTypeSupplier:'دفعة للمورد',
+    descPh:'اكتب الوصف', save:'حفظ', noEntries:'لا توجد إدخالات لهذه الفترة.', yearSummary:'الملخص السنوي',
+    monthNames:['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+
+    inventoryLabel:'القيمة الحالية للبضاعة التجارية', inventorySave:'حفظ',
+    cashBalance:'النقد الموجود في المحل', cashBalanceSave:'حفظ', receivables:'المبالغ المستحقة من الزبائن',
+    totalQarza:'الدين المستحق على صاحب المحل (إجمالي كل السنوات)', netZakatable:'إجمالي المبلغ الخاضع للزكاة', zakatDue:'الزكاة المستحقة (٢.٥٪)',
+    zakatNote:'نسبة الزكاة محددة بـ ٢.٥٪. يرجى التأكد من النصاب والتفاصيل الشرعية الأخرى مع أهل العلم.',
+    addCashIn:'إدخال نقد إلى المحل', addCashOut:'سحب نقد من المحل',
+    cashInDesc:'مصدر المبلغ', cashOutDesc:'سبب السحب',
+    addQarza:'إضافة دين', qarzaDesc:'الدين لمن / لأي غرض',
+    historyCash:'سجل دخول وخروج النقد', historyQarza:'قائمة الديون',
+    cashInBadge:'دخول نقد', cashOutBadge:'خروج نقد',
+    currencyTitle:'المبالغ بعملات أخرى', currencyNote:'أدخل سعر الصرف ليظهر المبلغ بتلك العملة أيضاً.',
+    baseCurrencyLbl:'اسم عملتك', currencyCode:'رمز العملة', currencyRate:'قيمة وحدة واحدة (بعملتك)',
+    addCurrency:'إضافة عملة', removeCurrency:'حذف', netInThisCurrency:'المبلغ الخاضع للزكاة', zakatInThisCurrency:'الزكاة',
+    noEntriesShort:'لا توجد إدخالات.',
+
+    searchPh:'ابحث عن زبون...', sortByBalance:'الأعلى استحقاقاً أولاً', sortByName:'حسب الاسم', sortByRecent:'النشاط الأخير',
+    overdueBadge:'متأخر', confirmDeleteEntry:'هل تريد حذف هذا الإدخال؟', confirmDeleteCustomer:'هل تريد حذف هذا الزبون؟ سيتم فقدان جميع السجلات.',
+    printStatement:'طباعة الكشف', statementTitle:'كشف الحساب', statementDate:'التاريخ', statementTotal:'إجمالي المستحق',
+    printBack:'رجوع', printNow:'طباعة', sendToCustomer:'إرسال إلى الزبون',
+    statementMsgTemplate:(name,shop,total)=>`مرحباً ${name}،\nهذا كشف حسابك من ${shop}.\nإجمالي الرصيد المستحق: ${total}\nيرجى التسوية في أقرب وقت. شكراً لك.`,
+    settingsTitle:'الإعدادات', settingsSub:'انسخ بياناتك احتياطياً أو استعدها على جهاز آخر.',
+    backupExport:'تنزيل نسخة احتياطية', backupImport:'استعادة نسخة احتياطية', resetAll:'إعادة تعيين البيانات (تبقى الديون)',
+    csvExport:'تنزيل قائمة الزبائن (CSV/Excel)',
+    confirmReset:'لا يمكن التراجع عن هذا. سيتم الاحتفاظ بحسابات الزبائن والديون (ما عليك وما لك) — سيتم حذف كل شيء آخر (المنتجات، السجلات التجارية، النقد). المتابعة؟',
+    restoreSuccess:'تمت استعادة النسخة الاحتياطية بنجاح.', restoreError:'ملف غير صالح. يرجى اختيار ملف نسخة احتياطية صحيح.',
+    closeBtn:'إغلاق', noSearchResults:'لم يتم العثور على أي زبون.',
+
+    tabProducts:'المنتجات', lblAddProduct:'إضافة منتج جديد', productNamePh:'اسم المنتج', pricePh:'السعر (لكل وحدة)', qtyPh:'الكمية (المخزون)',
+    lblProducts:'قائمة المنتجات', emptyProducts:'لم تتم إضافة أي منتج بعد.', searchProductsPh:'ابحث عن منتج...',
+    lblProductCount:'إجمالي الأصناف', lblStockValue:'قيمة المخزون المتبقي',
+    bulkAddToggle:'إضافة عدة منتجات دفعة واحدة', bulkAddSave:'إضافة القائمة',
+    bulkAddNote:'سطر واحد لكل منتج: الاسم, السعر, الكمية — مثال:\nسكر, 150, 20\nأرز, 220, 15\n\nإذا كان لديك صورة لقائمتك، أرسلها في المحادثة وسأجهز لك هذا النص لتلصقه هنا.',
+    bulkAddResult:(n)=>`تمت إضافة ${n} منتج.`, bulkAddNone:'لم يتم العثور على أسطر صحيحة. تحقق من الصيغة: الاسم, السعر, الكمية',
+    productTotal:'إجمالي الكمية', productSoldLbl:'المباع', productRemaining:'المتبقي', productRemainingPct:'النسبة المتبقية', productStockValue:'قيمة المخزون المتبقي',
+    recordSale:'تسجيل عملية بيع', restock:'إضافة مخزون جديد', qtySoldPh:'الكمية المباعة', qtyAddPh:'الكمية الجديدة',
+    lowStockBadge:'مخزون منخفض', saleBadge:'بيع', restockBadge:'مخزون جديد', noProdHistory:'لا توجد سجلات بعد.',
+    confirmDeleteProduct:'هل تريد حذف هذا المنتج؟ سيتم فقدان جميع السجلات.', notEnoughStock:'الكمية غير كافية في المخزون.',
+    prodViewList:'قائمة المنتجات', prodViewNewStock:'سجل المخزون الجديد',
+    lblNewStockAdd:'إضافة مخزون جديد', selectProduct:'اختر المنتج', lblNewStockLog:'سجل المخزون الجديد',
+    noNewStock:'لم يتم تسجيل أي مخزون جديد بعد.', remainingNow:'المتبقي الآن', noProductsYet:'أضف منتجاً أولاً.',
+
+    pinSectionTitle:'قفل PIN', pinEnableBtn:'تفعيل قفل PIN', pinChangeBtn:'تغيير الرمز', pinDisableBtn:'إيقاف قفل PIN',
+    pinEnabledNote:'قفل PIN مفعّل — سيتطلب فتح التطبيق إدخال الرمز.',
+    pinCurrentPh:'الرمز الحالي', pinNewPh:'رمز جديد (4 أرقام على الأقل)', pinConfirmPh:'أعد إدخال الرمز',
+    pinSaveBtn:'حفظ', pinCancelBtn:'إلغاء',
+    pinMismatch:'الرمزان غير متطابقين.', pinTooShort:'يجب أن يتكون الرمز من 4 أرقام على الأقل.', pinWrongCurrent:'الرمز الحالي غير صحيح.',
+    pinSetSuccess:'تم تفعيل قفل PIN.', pinChangedSuccess:'تم تغيير الرمز.', pinDisabledSuccess:'تم إيقاف قفل PIN.',
+    lockTitle:'هذا الدفتر محمي', lockSub:'أدخل الرمز للمتابعة', unlockBtn:'فتح', wrongPin:'رمز خاطئ، حاول مرة أخرى.',
+    forgotPin:'نسيت الرمز؟', forgotPinConfirm:'إذا نسيت الرمز، يجب حذف جميع البيانات للبدء من جديد. لا يمكن التراجع عن هذا. المتابعة؟',
+
+    discountPh:'خصم (اختياري)', discountLbl:'خصم', discountNote:(amt)=>`خصم: -${amt}`,
+    invoiceBtn:'إنشاء فاتورة', addItemBtn:'+ إضافة صنف', manualItemOpt:'أخرى / إدخال يدوي',
+    itemQtyPh:'الكمية', itemPricePh:'السعر', itemDescPh:'اسم الصنف',
+    subtotalLbl:'المجموع الفرعي', discountTypeFlat:'مبلغ ثابت', discountTypePercent:'نسبة %',
+    totalLbl:'الإجمالي', saveInvoiceBtn:'حفظ الفاتورة', invoiceNoItems:'أضف صنفاً واحداً على الأقل.',
+    invoiceWord:'فاتورة', printInvoiceBtn:'طباعة الفاتورة',
+    reminderSectionTitle:'تذكير الدفع', reminderSetBtn:'تعيين تذكير', reminderClearBtn:'إلغاء التذكير',
+    reminderDatePh:'تاريخ التذكير', reminderDueBadge:'تذكير مستحق',
+    reportsRemindersTitle:'تذكيرات الدفع المستحقة', reportsNoReminders:'لا توجد تذكيرات مستحقة.'
+  }
+};
+
+let state = {
+  lang:'ur', shopName:'', customers:[], business:[], products:[], openProductId:null, prodSearch:'', prodView:'list',
+  openCustomerId:null, mainTab:'customers', bizPeriod:'monthly',
+  selMonth:new Date().getMonth(), selYear:new Date().getFullYear(),
+  inventoryValue:0, cashBalance:0, cashEntries:[], liabilities:[],
+  baseCurrencyLabel:'PKR', currencies:[{code:'USD',rate:280},{code:'SAR',rate:75},{code:'AED',rate:76}],
+  custSearch:'', custSort:'balance', theme:'light', voiceEnabled:true
+};
+
+function uid(){return Math.random().toString(36).slice(2,10);}
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      state = Object.assign(state, JSON.parse(raw));
+    } else {
+      const v3 = localStorage.getItem('dokan-khata-data-v3');
+      if(v3){ Object.assign(state, JSON.parse(v3)); }
+      else{
+        const old = localStorage.getItem('dokan-khata-data-v2');
+        if(old){ Object.assign(state, JSON.parse(old)); }
+      }
+    }
+  }catch(e){}
+  if(!state.shopName){ state.shopName = TXT[state.lang].title; }
+  if(state.cashBalance===undefined || state.cashBalance===null){
+    state.cashBalance = cashBalanceTotal();
+  }
+  if(!state.custSort) state.custSort = 'balance';
+  if(state.custSearch===undefined) state.custSearch = '';
+  if(Array.isArray(state.customers)) state.customers.forEach(c=>{ if(c.reminderDate===undefined) c.reminderDate = null; });
+  if(!Array.isArray(state.products)) state.products = [];
+  if(state.prodSearch===undefined) state.prodSearch = '';
+  if(!state.prodView) state.prodView = 'list';
+  if(!state.theme) state.theme = 'light';
+  if(state.voiceEnabled===undefined || state.voiceEnabled===null) state.voiceEnabled = true;
+}
+function applyTheme(){
+  document.body.setAttribute('data-theme', state.theme);
+  const btn = document.getElementById('btnTheme');
+  if(btn) btn.textContent = state.theme==='dark' ? '☀️' : '🌙';
+}
+async function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+function setLang(lang){
+  state.lang = lang;
+  document.body.setAttribute('data-lang', lang);
+  document.body.setAttribute('data-dir', lang==='en' ? 'ltr' : 'rtl');
+  document.querySelectorAll('.langbtn').forEach(b=> b.classList.toggle('active', b.dataset.l === lang));
+  renderStaticText(); renderAll(); saveState();
+}
+
+function renderStaticText(){
+  const t = TXT[state.lang];
+  document.getElementById('shopNameInput').placeholder = t.shopPlaceholder;
+  document.getElementById('shopNameInput').value = state.shopName;
+  document.getElementById('tagline').textContent = t.tagline;
+  document.getElementById('tabCustomersTxt').textContent = t.tabCustomers;
+  document.getElementById('tabBusinessBtn').textContent = t.tabBusiness;
+  document.getElementById('tabZakatBtn').textContent = t.tabZakat;
+  document.getElementById('tabReportsBtn').textContent = t.tabReports;
+  document.getElementById('lblRepRevenue').textContent = t.lblRepRevenue;
+  document.getElementById('lblRepCustomers').textContent = t.lblRepCustomers;
+  document.getElementById('lblRepDue').textContent = t.lblRepDue;
+  document.getElementById('lblRepStockVal').textContent = t.lblRepStockVal;
+  document.getElementById('lblRepTrend').textContent = t.lblRepTrend;
+  document.getElementById('lblRepReminders').textContent = t.reportsRemindersTitle;
+  document.getElementById('lblRepTopCust').textContent = t.lblRepTopCust;
+  document.getElementById('lblRepLowStock').textContent = t.lblRepLowStock;
+  document.getElementById('lblMonthSales').textContent = t.lblMonthSales;
+  document.getElementById('lblTotalDue').textContent = t.lblTotalDue;
+  document.getElementById('lblAddCustomer').textContent = t.lblAddCustomer;
+  document.getElementById('newName').placeholder = t.namePh;
+  document.getElementById('newPhone').placeholder = t.phonePh;
+  document.getElementById('btnAddCustomer').textContent = t.addBtn;
+  document.getElementById('lblCustomers').textContent = t.lblCustomers;
+  document.getElementById('tabProductsTxt').textContent = t.tabProducts;
+  document.getElementById('lblAddProduct').textContent = t.lblAddProduct;
+  document.getElementById('newProdName').placeholder = t.productNamePh;
+  document.getElementById('newProdPrice').placeholder = t.pricePh;
+  document.getElementById('newProdQty').placeholder = t.qtyPh;
+  document.getElementById('btnAddProduct').textContent = t.addBtn;
+  (function setupProdSmartVoice(){
+    let btn = document.getElementById('prodSmartVoiceBtn');
+    if(!btn && (window.SpeechRecognition || window.webkitSpeechRecognition)){
+      const nameEl = document.getElementById('newProdName');
+      const priceEl = document.getElementById('newProdPrice');
+      btn = document.createElement('button');
+      btn.type = 'button'; btn.id = 'prodSmartVoiceBtn'; btn.className = 'smart-voice-btn';
+      btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); startSmartVoiceInput(nameEl, priceEl, btn); });
+      nameEl.closest('.row2').insertAdjacentElement('beforebegin', btn);
+    }
+    if(btn){ btn.textContent = TXT[state.lang].smartVoiceBtn; btn.title = TXT[state.lang].smartVoiceHint; }
+  })();
+  document.getElementById('toggleBulkAdd').textContent = t.bulkAddToggle;
+  document.getElementById('bulkAddNoteTxt').textContent = t.bulkAddNote;
+  document.getElementById('btnBulkAddSave').textContent = t.bulkAddSave;
+  document.getElementById('lblProducts').textContent = t.lblProducts;
+  document.getElementById('prodSearch').placeholder = t.searchProductsPh;
+  document.getElementById('prodSearch').value = state.prodSearch;
+  document.getElementById('lblProductCount').textContent = t.lblProductCount;
+  document.getElementById('lblStockValue').textContent = t.lblStockValue;
+  document.getElementById('subProdListBtn').textContent = t.prodViewList;
+  document.getElementById('subNewStockBtn').textContent = t.prodViewNewStock;
+  document.getElementById('lblNewStockAdd').textContent = t.lblNewStockAdd;
+  document.getElementById('newStockQty').placeholder = t.qtyAddPh;
+  document.getElementById('btnAddNewStock').textContent = t.saveTxn;
+  document.getElementById('lblNewStockLog').textContent = t.lblNewStockLog;
+  document.getElementById('subMonthlyBtn').textContent = t.monthly;
+  document.getElementById('subYearlyBtn').textContent = t.yearly;
+  document.getElementById('custSearch').placeholder = t.searchPh;
+  document.getElementById('custSearch').value = state.custSearch;
+  const sortSel = document.getElementById('custSort');
+  sortSel.options[0].textContent = t.sortByBalance;
+  sortSel.options[1].textContent = t.sortByName;
+  sortSel.options[2].textContent = t.sortByRecent;
+  sortSel.value = state.custSort;
+  document.getElementById('settingsTitleTxt').textContent = t.settingsTitle;
+  document.getElementById('settingsSubTxt').textContent = t.settingsSub;
+  document.getElementById('btnExportBackup').textContent = t.backupExport;
+  document.getElementById('btnImportBackupTrigger').textContent = t.backupImport;
+  document.getElementById('btnExportCsv').textContent = t.csvExport;
+  document.getElementById('btnResetAll').textContent = t.resetAll;
+  document.getElementById('pinSectionTitleTxt').textContent = t.pinSectionTitle;
+  document.getElementById('voiceSectionTitleTxt').textContent = t.voiceSectionTitle;
+  document.getElementById('lockTitleTxt').textContent = t.lockTitle;
+  document.getElementById('lockSubTxt').textContent = t.lockSub;
+  document.getElementById('lockPinInput').placeholder = t.pinCurrentPh;
+  document.getElementById('btnUnlock').textContent = t.unlockBtn;
+  document.getElementById('btnForgotPin').textContent = t.forgotPin;
+  document.getElementById('btnCloseSettings').textContent = t.closeBtn;
+  populateMonthYearSelects();
+}
+
+function populateMonthYearSelects(){
+  const t = TXT[state.lang];
+  const selMonth = document.getElementById('selMonth');
+  const selYear = document.getElementById('selYear');
+  selMonth.innerHTML = t.monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  selMonth.value = state.selMonth;
+  const nowY = new Date().getFullYear();
+  let years=[]; for(let y=nowY-3;y<=nowY+1;y++) years.push(y);
+  selYear.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  selYear.value = state.selYear;
+  selMonth.style.display = state.bizPeriod==='monthly' ? '' : 'none';
+}
+
+function keyOf(dateStr){ const d=new Date(dateStr); return d.getFullYear()+'-'+d.getMonth(); }
+function fmt(n){ return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2}); }
+
+function customerBalance(c){ let bal=0; c.entries.forEach(e=> bal += e.type==='purchase'?Number(e.amount||0):-Number(e.amount||0)); return bal; }
+function customerMonthAdded(c){
+  const key = new Date().getFullYear()+'-'+new Date().getMonth();
+  let sum=0; c.entries.forEach(e=>{ if(e.type==='purchase' && keyOf(e.date)===key) sum+=Number(e.amount||0); });
+  return sum;
+}
+function customerLastActivity(c){
+  if(c.entries.length===0) return 0;
+  return Math.max(...c.entries.map(e=>new Date(e.date).getTime()));
+}
+function customerOverdue(c){
+  const bal = customerBalance(c);
+  if(bal<=0) return false;
+  const purchases = c.entries.filter(e=>e.type==='purchase');
+  if(purchases.length===0) return false;
+  const oldest = Math.min(...purchases.map(e=>new Date(e.date).getTime()));
+  return (Date.now()-oldest) > (30*24*60*60*1000);
+}
+function customerReminderDue(c){
+  if(!c.reminderDate) return false;
+  if(customerBalance(c)<=0) return false;
+  const today = new Date(); today.setHours(23,59,59,999);
+  return new Date(c.reminderDate).getTime() <= today.getTime();
+}
+function totalDueAllCustomers(){ return state.customers.reduce((s,c)=>s+customerBalance(c),0); }
+function monthlySalesTotal(){
+  const key = new Date().getFullYear()+'-'+new Date().getMonth();
+  let sum=0; state.customers.forEach(c=> c.entries.forEach(e=>{ if(e.type==='purchase' && keyOf(e.date)===key) sum+=Number(e.amount||0); }));
+  return sum;
+}
+function cashBalanceTotal(){
+  let sum=0; state.cashEntries.forEach(e=> sum += e.type==='in'?Number(e.amount||0):-Number(e.amount||0));
+  return sum;
+}
+function totalQarzaAmount(){ return state.liabilities.reduce((s,e)=>s+Number(e.amount||0),0); }
+
+function fmtDate(iso){ const d=new Date(iso); const t=TXT[state.lang]; return `${d.getDate()} ${t.monthNames[d.getMonth()]} ${d.getFullYear()}`; }
+function todayInputDate(){ const dt=new Date(); dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset()); return dt.toISOString().slice(0,10); }
+
+/* ===== Voice data input (text & number fields) ===== */
+function showVoiceToast(msg){
+  let toast = document.getElementById('voiceToast');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'voiceToast';
+    toast.className = 'voice-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>{ toast.classList.remove('show'); }, 3200);
+}
+
+function parseSpokenNumber(raw){
+  const text = (raw||'').trim();
+  const m = text.match(/[\d]+(?:[.,]\d+)?/);
+  if(m) return m[0].replace(',', '.');
+  return null;
+}
+
+function voiceErrorMessage(t, err){
+  if(err==='not-allowed' || err==='permission-denied' || err==='service-not-allowed') return t.voiceErrPermission;
+  if(err==='no-speech') return t.voiceErrNoSpeech;
+  return t.voiceErrGeneric(err);
+}
+
+function stopVoiceIfListening(btn){
+  if(btn.classList.contains('listening') && btn._rec){
+    try{ btn._rec.stop(); }catch(e){}
+    return true;
+  }
+  return false;
+}
+
+function startVoiceInput(input, btn){
+  const t = TXT[state.lang];
+  if(stopVoiceIfListening(btn)) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert(t.voiceNotSupported); return; }
+  const rec = new SR();
+  btn._rec = rec;
+  rec.lang = state.lang==='ur' ? 'ur-PK' : state.lang==='ar' ? 'ar-SA' : 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 4;
+  btn.classList.add('listening'); btn.textContent = '🔴';
+  try{ rec.start(); }catch(e){ btn.classList.remove('listening'); btn.textContent='🎤'; btn._rec=null; return; }
+  rec.onresult = (e)=>{
+    const alts = e.results[0];
+    const heard = alts[0] ? alts[0].transcript.trim() : '';
+    let value = null;
+    if(input.type==='number'){
+      for(let i=0;i<alts.length && value===null;i++){ value = parseSpokenNumber(alts[i].transcript); }
+    } else {
+      value = heard;
+    }
+    if(value){ input.value = value; input.dispatchEvent(new Event('change', {bubbles:true})); input.dispatchEvent(new Event('input', {bubbles:true})); showVoiceToast(t.voiceHeardSet(heard, value)); }
+    else { showVoiceToast(t.voiceNotUnderstood + (heard ? ': "'+heard+'"' : '')); }
+  };
+  rec.onerror = (e)=>{ showVoiceToast(voiceErrorMessage(t, e.error)); btn.classList.remove('listening'); btn.textContent='🎤'; btn._rec=null; };
+  rec.onend = ()=>{ btn.classList.remove('listening'); btn.textContent='🎤'; btn._rec=null; };
+}
+
+function parseNameAndNumber(raw){
+  const text = (raw||'').trim();
+  const trailing = text.match(/([\d]+(?:[.,]\d+)?)\s*$/);
+  const m = trailing || text.match(/([\d]+(?:[.,]\d+)?)/);
+  if(!m) return {name:text, number:null};
+  const number = m[1].replace(',', '.');
+  const name = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).replace(/\s+/g,' ').trim();
+  return {name: name || text, number};
+}
+
+function startSmartVoiceInput(nameInput, amtInput, btn){
+  const t = TXT[state.lang];
+  if(stopVoiceIfListening(btn)) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert(t.voiceNotSupported); return; }
+  const rec = new SR();
+  btn._rec = rec;
+  rec.lang = state.lang==='ur' ? 'ur-PK' : state.lang==='ar' ? 'ar-SA' : 'en-US';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  btn.classList.add('listening'); btn.textContent = '🔴';
+  try{ rec.start(); }catch(e){ btn.classList.remove('listening'); btn.textContent=t.smartVoiceBtn; btn._rec=null; return; }
+  rec.onresult = (e)=>{
+    const heard = e.results[0][0] ? e.results[0][0].transcript.trim() : '';
+    const {name, number} = parseNameAndNumber(heard);
+    if(name){ nameInput.value = name; nameInput.dispatchEvent(new Event('input',{bubbles:true})); nameInput.dispatchEvent(new Event('change',{bubbles:true})); }
+    if(number){ amtInput.value = number; amtInput.dispatchEvent(new Event('input',{bubbles:true})); amtInput.dispatchEvent(new Event('change',{bubbles:true})); }
+    if(name || number) showVoiceToast(t.voiceHeardSetBoth(heard, name||'—', number||'—'));
+    else showVoiceToast(t.voiceNotUnderstood + (heard ? ': "'+heard+'"' : ''));
+  };
+  rec.onerror = (e)=>{ showVoiceToast(voiceErrorMessage(t, e.error)); btn.classList.remove('listening'); btn.textContent=t.smartVoiceBtn; btn._rec=null; };
+  rec.onend = ()=>{ btn.classList.remove('listening'); btn.textContent = t.smartVoiceBtn; btn._rec=null; };
+}
+
+function attachSmartVoiceMic(nameInput, amtInput){
+  if(!(window.SpeechRecognition || window.webkitSpeechRecognition)) return null;
+  const wrap = document.createElement('div'); wrap.className='full';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'smart-voice-btn';
+  btn.textContent = TXT[state.lang].smartVoiceBtn;
+  btn.title = TXT[state.lang].smartVoiceHint;
+  btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); startSmartVoiceInput(nameInput, amtInput, btn); });
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+const VOICE_EXCLUDE_IDS = ['custSearch','prodSearch','shopNameInput','lockPinInput','invInput','cashInput','baseCurName'];
+const VOICE_EXCLUDE_CLASSES = ['cur-code','cur-rate'];
+function voiceEligible(input){
+  if(input.type!=='text' && input.type!=='number' && input.type!=='tel') return false;
+  if(VOICE_EXCLUDE_IDS.includes(input.id)) return false;
+  if(VOICE_EXCLUDE_CLASSES.some(cls=> input.classList.contains(cls))) return false;
+  return true;
+}
+
+function attachVoiceMic(input){
+  if(input.dataset.voiceReady) return;
+  input.dataset.voiceReady = '1';
+  const gridColumn = getComputedStyle(input).gridColumn;
+  const wrap = document.createElement('span');
+  wrap.style.position = 'relative';
+  wrap.style.display = 'block';
+  if(gridColumn && gridColumn !== 'auto') wrap.style.gridColumn = gridColumn;
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+  input.style.width = '100%';
+  input.style.paddingInlineEnd = '32px';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'voice-mic-btn';
+  btn.title = 'Voice';
+  btn.textContent = '🎤';
+  btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); startVoiceInput(input, btn); });
+  wrap.appendChild(btn);
+}
+
+function enableVoiceForInputs(){
+  if(!(window.SpeechRecognition || window.webkitSpeechRecognition)) return;
+  document.querySelectorAll('input:not([data-voice-ready])').forEach(inp=>{ if(voiceEligible(inp)) attachVoiceMic(inp); });
+  updateVoiceMicVisibility();
+}
+
+function updateVoiceMicVisibility(){
+  document.querySelectorAll('.voice-mic-btn').forEach(btn=>{
+    btn.classList.toggle('hidden', !state.voiceEnabled);
+  });
+  document.querySelectorAll('input[data-voice-ready]').forEach(inp=>{
+    inp.style.paddingInlineEnd = state.voiceEnabled ? '32px' : '';
+  });
+}
+
+function renderVoiceSettings(){
+  const t = TXT[state.lang];
+  document.getElementById('voiceSectionTitleTxt').textContent = t.voiceSectionTitle;
+  const btn = document.getElementById('btnToggleVoice');
+  const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  btn.textContent = state.voiceEnabled ? t.voiceDisableBtn : t.voiceEnableBtn;
+  btn.disabled = !supported;
+  btn.title = supported ? '' : t.voiceNotSupported;
+}
+document.getElementById('btnToggleVoice').addEventListener('click', ()=>{
+  state.voiceEnabled = !state.voiceEnabled;
+  saveState();
+  renderVoiceSettings();
+  updateVoiceMicVisibility();
+});
+
+
+function buildWaLink(c, newAmt){
+  const t = TXT[state.lang];
+  const total = customerBalance(c);
+  const msg = t.msgTemplate(c.name||'', state.shopName||t.title, fmt(total), fmt(newAmt||0));
+  const digits = (c.phone||'').replace(/[^0-9]/g,'');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+function renderAll(){
+  document.getElementById('viewReports').classList.toggle('active', state.mainTab==='reports');
+  document.getElementById('viewCustomers').classList.toggle('active', state.mainTab==='customers');
+  document.getElementById('viewProducts').classList.toggle('active', state.mainTab==='products');
+  document.getElementById('viewBusiness').classList.toggle('active', state.mainTab==='business');
+  document.getElementById('viewZakat').classList.toggle('active', state.mainTab==='zakat');
+  document.getElementById('tabReportsBtn').classList.toggle('active', state.mainTab==='reports');
+  document.getElementById('tabCustomersBtn').classList.toggle('active', state.mainTab==='customers');
+  document.getElementById('tabProductsBtn').classList.toggle('active', state.mainTab==='products');
+  document.getElementById('tabBusinessBtn').classList.toggle('active', state.mainTab==='business');
+  document.getElementById('tabZakatBtn').classList.toggle('active', state.mainTab==='zakat');
+  document.getElementById('subMonthlyBtn').classList.toggle('active', state.bizPeriod==='monthly');
+  document.getElementById('subYearlyBtn').classList.toggle('active', state.bizPeriod==='yearly');
+  document.getElementById('selMonth').style.display = state.bizPeriod==='monthly' ? '' : 'none';
+  document.getElementById('valMonthSales').textContent = fmt(monthlySalesTotal());
+  document.getElementById('valTotalDue').textContent = fmt(totalDueAllCustomers());
+  renderCustomerList();
+  renderProducts();
+  renderBusiness();
+  renderZakat();
+  renderReports();
+}
+
+function totalStockValueAll(){ return state.products.reduce((s,p)=>s+productStockValue(p),0); }
+
+function renderReports(){
+  const t = TXT[state.lang];
+  document.getElementById('valRepRevenue').textContent = fmt(monthlySalesTotal());
+  document.getElementById('valRepCustomers').textContent = fmt(state.customers.length);
+  document.getElementById('valRepDue').textContent = fmt(totalDueAllCustomers());
+  document.getElementById('valRepStockVal').textContent = fmt(totalStockValueAll());
+
+  // 6-month trend
+  const now = new Date();
+  const months = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({key:d.getFullYear()+'-'+d.getMonth(), label:t.monthNames[d.getMonth()].slice(0,3)});
+  }
+  const sums = months.map(m=>{
+    let s=0; state.customers.forEach(c=>c.entries.forEach(e=>{ if(e.type==='purchase' && keyOf(e.date)===m.key) s+=Number(e.amount||0); }));
+    return s;
+  });
+  const maxVal = Math.max(1, ...sums);
+  const trendArea = document.getElementById('repTrendChart');
+  trendArea.innerHTML = '';
+  months.forEach((m,i)=>{
+    const row = document.createElement('div'); row.className='barrow';
+    const pct = Math.max(3, (sums[i]/maxVal*100));
+    row.innerHTML = `<span class="m-label">${m.label}</span><div class="bartrack"><div class="barfill pos" style="width:${pct}%;"></div></div><span class="m-amt num">${fmt(sums[i])}</span>`;
+    trendArea.appendChild(row);
+  });
+
+  // Payment reminders due
+  const remArea = document.getElementById('repRemindersArea');
+  remArea.innerHTML = '';
+  const dueReminders = state.customers.filter(c=>customerReminderDue(c));
+  if(dueReminders.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent=t.reportsNoReminders; remArea.appendChild(e);
+  } else {
+    dueReminders.forEach(c=>{
+      const row = document.createElement('div'); row.className='cust-row';
+      const info = document.createElement('div');
+      info.innerHTML = `<div class="cust-row-name">🔔 ${escapeHtml(c.name)}</div><div class="cust-row-sub">${escapeHtml(c.phone||'')}</div>`;
+      const right = document.createElement('div'); right.style.textAlign='end';
+      right.innerHTML = `<div class="cust-row-bal num" style="color:var(--danger)">${fmt(customerBalance(c))}</div>`;
+      const waBtn = document.createElement('a'); waBtn.className='wa-link'; waBtn.style.marginTop='4px'; waBtn.target='_blank'; waBtn.rel='noopener';
+      waBtn.href = buildWaLink(c, 0); waBtn.textContent = t.sendMsg;
+      waBtn.addEventListener('click', e=>e.stopPropagation());
+      right.appendChild(waBtn);
+      row.appendChild(info); row.appendChild(right);
+      row.addEventListener('click', ()=>{ state.mainTab='customers'; state.openCustomerId=c.id; saveState(); renderAll(); });
+      remArea.appendChild(row);
+    });
+  }
+
+  // Top due customers
+  const topArea = document.getElementById('repTopCustArea');
+  topArea.innerHTML = '';
+  const topCust = [...state.customers].filter(c=>customerBalance(c)>0).sort((a,b)=>customerBalance(b)-customerBalance(a)).slice(0,5);
+  if(topCust.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent=t.repNoTopCust; topArea.appendChild(e);
+  } else {
+    topCust.forEach(c=>{
+      const row = document.createElement('div'); row.className='cust-row';
+      row.innerHTML = `<div class="cust-row-name">${escapeHtml(c.name)}</div><div class="cust-row-bal num" style="color:var(--danger)">${fmt(customerBalance(c))}</div>`;
+      row.addEventListener('click', ()=>{ state.mainTab='customers'; state.openCustomerId=c.id; saveState(); renderAll(); });
+      topArea.appendChild(row);
+    });
+  }
+
+  // Low stock products
+  const lowArea = document.getElementById('repLowStockArea');
+  lowArea.innerHTML = '';
+  const lowProds = state.products.filter(p=>productRemainingPct(p) <= 15 && productTotalStock(p) > 0);
+  if(lowProds.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent=t.repNoLowStock; lowArea.appendChild(e);
+  } else {
+    lowProds.forEach(p=>{
+      const row = document.createElement('div'); row.className='prod-row';
+      row.innerHTML = `<div class="prod-row-top"><span class="prod-row-name">${escapeHtml(p.name)}</span><span class="overdue-tag">${t.lowStockBadge}</span></div><div class="prod-row-meta"><span>${t.productRemaining}: ${fmt(productRemaining(p))}</span></div>`;
+      row.addEventListener('click', ()=>{ state.mainTab='products'; state.openProductId=p.id; saveState(); renderAll(); });
+      lowArea.appendChild(row);
+    });
+  }
+}
+
+function updateOverdueBadge(){
+  const overdueCount = state.customers.filter(c=>customerOverdue(c)).length;
+  const badge = document.getElementById('overdueBadgeCount');
+  badge.textContent = overdueCount;
+  badge.classList.toggle('hidden', overdueCount===0);
+}
+
+function renderCustomerList(){
+  const t = TXT[state.lang];
+  updateOverdueBadge();
+  const area = document.getElementById('customerListArea');
+  area.innerHTML = '';
+  if(state.customers.length===0){
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML = `<span class="empty-icon">✎</span>${t.emptyCust}`;
+    area.appendChild(e); return;
+  }
+  const searchSortBar = document.querySelector('.searchsort');
+  if(state.openCustomerId){
+    const c = state.customers.find(x=>x.id===state.openCustomerId);
+    if(c){ if(searchSortBar) searchSortBar.style.display='none'; renderCustomerDetail(area, c); return; }
+    state.openCustomerId = null;
+  }
+  if(searchSortBar) searchSortBar.style.display='';
+  let list = state.customers.filter(c=>{
+    const q = (state.custSearch||'').trim().toLowerCase();
+    if(!q) return true;
+    return (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q);
+  });
+  if(state.custSort==='balance') list = [...list].sort((a,b)=>customerBalance(b)-customerBalance(a));
+  else if(state.custSort==='name') list = [...list].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(state.custSort==='recent') list = [...list].sort((a,b)=>customerLastActivity(b)-customerLastActivity(a));
+
+  if(list.length===0){
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML = `<span class="empty-icon">🔍</span>${t.noSearchResults}`;
+    area.appendChild(e); return;
+  }
+  list.forEach(c=>{
+    const bal = customerBalance(c);
+    const overdue = customerOverdue(c);
+    const remindDue = customerReminderDue(c);
+    const row = document.createElement('div');
+    row.className = 'cust-row';
+    row.innerHTML = `<div><div class="cust-row-name">${overdue?'<span class=\"overdue-dot\"></span>':''}${escapeHtml(c.name)}</div><div class="cust-row-sub">${escapeHtml(c.phone||'')}</div></div>
+      <div style="text-align:end;">
+        <div class="cust-row-bal num" style="color:${bal>0?'var(--danger)':'var(--green)'}">${bal>0?fmt(bal):t.clear}</div>
+        ${overdue?`<div class="overdue-tag">${t.overdueBadge}</div>`:''}
+        ${remindDue?`<div class="overdue-tag" style="background:var(--gold-light);color:#5C4416;">🔔 ${t.reminderDueBadge}</div>`:''}
+      </div>`;
+    row.addEventListener('click', ()=>{ state.openCustomerId=c.id; saveState(); renderCustomerList(); });
+    area.appendChild(row);
+  });
+}
+
+function renderCustomerDetail(area, c){
+  const t = TXT[state.lang];
+  const bal = customerBalance(c);
+  const monthAdded = customerMonthAdded(c);
+  const wrap = document.createElement('div');
+  const back = document.createElement('button');
+  back.className='backbtn'; back.textContent = '‹ ' + t.back;
+  back.addEventListener('click', ()=>{ state.openCustomerId=null; saveState(); renderCustomerList(); });
+  wrap.appendChild(back);
+
+  const card = document.createElement('div'); card.className='customer-detail';
+  const head = document.createElement('div'); head.className='detail-head';
+  const nameWrap = document.createElement('div'); nameWrap.style.flex='1'; nameWrap.style.minWidth='150px';
+  const nameInput = document.createElement('input'); nameInput.className='cname-edit'; nameInput.value=c.name;
+  nameInput.addEventListener('change', ()=>{ c.name=nameInput.value; saveState(); renderCustomerList(); });
+  const phoneInput = document.createElement('input'); phoneInput.className='cphone'; phoneInput.type='tel'; phoneInput.value=c.phone;
+  phoneInput.addEventListener('change', ()=>{ c.phone=phoneInput.value; saveState(); });
+  nameWrap.appendChild(nameInput); nameWrap.appendChild(phoneInput);
+  const delBtn = document.createElement('button'); delBtn.className='small danger'; delBtn.textContent=t.delete;
+  delBtn.addEventListener('click', ()=>{
+    if(!confirm(t.confirmDeleteCustomer)) return;
+    state.customers=state.customers.filter(x=>x.id!==c.id); state.openCustomerId=null; saveState(); renderCustomerList();
+  });
+  head.appendChild(nameWrap); head.appendChild(delBtn); card.appendChild(head);
+
+  const totalsRow = document.createElement('div'); totalsRow.className='cust-totals';
+  totalsRow.innerHTML = `<span>${t.total}: <b class="num">${fmt(bal)}</b></span><span>${t.thisMonthDue}: <b class="num" style="color:var(--ink-soft)">${fmt(monthAdded)}</b></span>`;
+  card.appendChild(totalsRow);
+
+  const actions = document.createElement('div'); actions.className='actions-row';
+  const purBtn = document.createElement('button'); purBtn.className='toggle-form small'; purBtn.textContent=t.addPurchase;
+  const payBtn = document.createElement('button'); payBtn.className='paidbtn small'; payBtn.textContent=t.recordPayment;
+  const invBtn = document.createElement('button'); invBtn.className='small ghost'; invBtn.textContent=t.invoiceBtn;
+  const waLink = document.createElement('a'); waLink.className='wa-link'; waLink.target='_blank'; waLink.rel='noopener';
+  const lastPurchase = [...c.entries].filter(e=>e.type==='purchase').sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  waLink.href = buildWaLink(c, lastPurchase?lastPurchase.amount:0);
+  waLink.textContent = t.sendMsg;
+  const printBtn = document.createElement('button'); printBtn.className='small ghost'; printBtn.textContent = t.printStatement;
+  printBtn.addEventListener('click', ()=> printCustomerStatement(c));
+  actions.appendChild(purBtn); actions.appendChild(payBtn); actions.appendChild(invBtn); actions.appendChild(waLink); actions.appendChild(printBtn);
+  card.appendChild(actions);
+
+  const reminderRow = document.createElement('div'); reminderRow.className='row2'; reminderRow.style.marginTop='8px';
+  const reminderLabel = document.createElement('span'); reminderLabel.style.fontSize='12.5px'; reminderLabel.style.color='var(--ink-soft)'; reminderLabel.style.alignSelf='center';
+  reminderLabel.textContent = t.reminderSectionTitle;
+  const reminderDate = document.createElement('input'); reminderDate.type='date'; reminderDate.value = c.reminderDate ? c.reminderDate.slice(0,10) : '';
+  reminderDate.title = t.reminderDatePh;
+  reminderDate.addEventListener('change', ()=>{
+    c.reminderDate = reminderDate.value ? new Date(reminderDate.value).toISOString() : null;
+    saveState(); renderCustomerList();
+  });
+  reminderRow.appendChild(reminderLabel); reminderRow.appendChild(reminderDate);
+  card.appendChild(reminderRow);
+
+  function makeForm(type){
+    const form = document.createElement('div'); form.className='entry-form hidden';
+    form.innerHTML = `${type==='purchase' ? `<select class="e-prod full"><option value="">${t.linkProductOpt}</option>${state.products.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.name)}</option>`).join('')}</select>` : ''}
+      <input type="text" class="e-desc" placeholder="${t.itemPh}">
+      <input type="number" class="e-amt" placeholder="${t.amountPh}" min="0">
+      ${type==='purchase' ? `<input type="number" class="e-qty full" placeholder="${t.qtySoldOptionalPh}" min="0">` : ''}
+      ${type==='purchase' ? `<input type="number" class="e-disc full" placeholder="${t.discountPh}" min="0">` : ''}
+      <input type="date" class="e-date full">
+      <div class="full status-msg err hidden e-err">${t.notEnoughStock}</div>
+      <button class="primary full e-save">${t.saveTxn}</button>`;
+    form.querySelector('.e-date').value = todayInputDate();
+    const smartWrap = attachSmartVoiceMic(form.querySelector('.e-desc'), form.querySelector('.e-amt'));
+    if(smartWrap) form.insertBefore(smartWrap, form.firstChild);
+    const prodSel = form.querySelector('.e-prod');
+    if(prodSel){
+      prodSel.addEventListener('change', ()=>{
+        const pr = state.products.find(x=>x.id===prodSel.value);
+        if(pr){
+          form.querySelector('.e-desc').value = pr.name;
+          const qtyEl = form.querySelector('.e-qty');
+          const q = Number(qtyEl.value)||1;
+          qtyEl.value = q;
+          form.querySelector('.e-amt').value = (pr.price * q) || pr.price;
+        }
+      });
+    }
+    form.querySelector('.e-save').addEventListener('click', ()=>{
+      const desc = form.querySelector('.e-desc').value.trim();
+      const amt = form.querySelector('.e-amt').value;
+      const discEl = form.querySelector('.e-disc');
+      const disc = discEl ? Math.abs(Number(discEl.value)||0) : 0;
+      const dateVal = form.querySelector('.e-date').value;
+      const errEl = form.querySelector('.e-err');
+      if(!amt || Number(amt)<=0 || !dateVal) return;
+      const prId = prodSel ? prodSel.value : '';
+      const qtyEl = form.querySelector('.e-qty');
+      const qty = qtyEl ? Math.abs(Number(qtyEl.value)||0) : 0;
+      let linkedProduct = null;
+      if(prId){
+        linkedProduct = state.products.find(x=>x.id===prId);
+        if(linkedProduct && qty>0 && qty > productRemaining(linkedProduct)){
+          errEl.classList.remove('hidden'); return;
+        }
+      }
+      if(errEl) errEl.classList.add('hidden');
+      const gross = Math.abs(Number(amt));
+      const net = Math.max(0, gross - disc);
+      if(linkedProduct && qty>0){
+        linkedProduct.entries.push({id:uid(), type:'sale', qty, price: net/qty, date:new Date(dateVal).toISOString()});
+      }
+      c.entries.push({id:uid(), type, desc, amount:net, gross:disc>0?gross:undefined, discount:disc>0?disc:undefined, date:new Date(dateVal).toISOString()});
+      saveState(); renderCustomerList();
+    });
+    return form;
+  }
+  function makeInvoiceForm(){
+    const form = document.createElement('div'); form.className='entry-form hidden';
+    const itemsArea = document.createElement('div'); itemsArea.className='full';
+    const addRowBtn = document.createElement('button'); addRowBtn.type='button'; addRowBtn.className='ghost small full'; addRowBtn.textContent=t.addItemBtn;
+    const discRow = document.createElement('div'); discRow.className='row2 full';
+    discRow.innerHTML = `<select class="inv-disc-type"><option value="flat">${t.discountTypeFlat}</option><option value="percent">${t.discountTypePercent}</option></select>
+      <input type="number" class="inv-disc-val" placeholder="${t.discountPh}" min="0">`;
+    const totalsPreview = document.createElement('div'); totalsPreview.className='full'; totalsPreview.style.fontSize='12.5px'; totalsPreview.style.color='var(--ink-soft)';
+    const dateInput = document.createElement('input'); dateInput.type='date'; dateInput.className='full'; dateInput.value = todayInputDate();
+    const errDiv = document.createElement('div'); errDiv.className='full status-msg err hidden';
+    const saveBtn = document.createElement('button'); saveBtn.type='button'; saveBtn.className='primary full'; saveBtn.textContent = t.saveInvoiceBtn;
+
+    let rows = [];
+    function computeTotals(){
+      let subtotal = 0;
+      rows.forEach(r=>{ subtotal += (Number(r.qtyInput.value)||0) * (Number(r.priceInput.value)||0); });
+      const discType = discRow.querySelector('.inv-disc-type').value;
+      const discVal = Number(discRow.querySelector('.inv-disc-val').value)||0;
+      const discount = Math.min(subtotal, discType==='percent' ? subtotal*discVal/100 : discVal);
+      return {subtotal, discount, total: Math.max(0, subtotal-discount)};
+    }
+    function updatePreview(){
+      const {subtotal, discount, total} = computeTotals();
+      totalsPreview.innerHTML = `${t.subtotalLbl}: <b class="num">${fmt(subtotal)}</b> &nbsp;·&nbsp; ${t.discountLbl}: <b class="num">${fmt(discount)}</b> &nbsp;·&nbsp; ${t.totalLbl}: <b class="num">${fmt(total)}</b>`;
+    }
+    function addRow(){
+      const line1 = document.createElement('div'); line1.className='row3'; line1.style.marginBottom='4px';
+      const sel = document.createElement('select');
+      sel.innerHTML = `<option value="">${t.manualItemOpt}</option>` + state.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+      const qtyInput = document.createElement('input'); qtyInput.type='number'; qtyInput.min='0'; qtyInput.placeholder=t.itemQtyPh;
+      const rmBtn = document.createElement('button'); rmBtn.type='button'; rmBtn.className='del-icon'; rmBtn.innerHTML='&times;';
+      line1.appendChild(sel); line1.appendChild(qtyInput); line1.appendChild(rmBtn);
+      const line2 = document.createElement('div'); line2.className='row2'; line2.style.marginBottom='8px';
+      const descInput = document.createElement('input'); descInput.type='text'; descInput.placeholder=t.itemDescPh;
+      const priceInput = document.createElement('input'); priceInput.type='number'; priceInput.min='0'; priceInput.placeholder=t.itemPricePh;
+      line2.appendChild(descInput); line2.appendChild(priceInput);
+      sel.addEventListener('change', ()=>{
+        const p = state.products.find(x=>x.id===sel.value);
+        if(p){ descInput.value = p.name; priceInput.value = p.price; }
+        updatePreview();
+      });
+      [qtyInput, priceInput, descInput].forEach(inp=> inp.addEventListener('input', updatePreview));
+      rmBtn.addEventListener('click', ()=>{
+        itemsArea.removeChild(line1); itemsArea.removeChild(line2);
+        rows = rows.filter(r=>r.sel!==sel);
+        updatePreview();
+      });
+      itemsArea.appendChild(line1); itemsArea.appendChild(line2);
+      rows.push({sel, qtyInput, priceInput, descInput});
+      updatePreview();
+    }
+    discRow.querySelector('.inv-disc-type').addEventListener('change', updatePreview);
+    discRow.querySelector('.inv-disc-val').addEventListener('input', updatePreview);
+    addRowBtn.addEventListener('click', addRow);
+
+    form.appendChild(itemsArea); form.appendChild(addRowBtn); form.appendChild(discRow);
+    form.appendChild(totalsPreview); form.appendChild(dateInput); form.appendChild(errDiv); form.appendChild(saveBtn);
+
+    saveBtn.addEventListener('click', ()=>{
+      const lineItems = rows.map(r=>({
+        productId: r.sel.value || null,
+        name: (r.descInput.value||'').trim() || ((state.products.find(p=>p.id===r.sel.value)||{}).name || ''),
+        qty: Number(r.qtyInput.value)||0,
+        price: Number(r.priceInput.value)||0
+      })).filter(it=> it.qty>0 && it.name);
+      if(lineItems.length===0){ errDiv.textContent = t.invoiceNoItems; errDiv.classList.remove('hidden'); return; }
+      for(const it of lineItems){
+        if(it.productId){
+          const p = state.products.find(x=>x.id===it.productId);
+          if(p && it.qty > productRemaining(p)){ errDiv.textContent = t.notEnoughStock; errDiv.classList.remove('hidden'); return; }
+        }
+      }
+      errDiv.classList.add('hidden');
+      const {subtotal, discount, total} = computeTotals();
+      const dateVal = dateInput.value || todayInputDate();
+      const isoDate = new Date(dateVal).toISOString();
+      lineItems.forEach(it=>{
+        if(it.productId){
+          const p = state.products.find(x=>x.id===it.productId);
+          if(p) p.entries.push({id:uid(), type:'sale', qty:it.qty, price:it.price, date:isoDate});
+        }
+      });
+      const desc = `${t.invoiceWord}: ` + lineItems.map(it=>`${it.name} x${fmt(it.qty)}`).join(', ');
+      c.entries.push({id:uid(), type:'purchase', desc, amount:total, gross:discount>0?subtotal:undefined, discount:discount>0?discount:undefined, isInvoice:true, items:lineItems, date:isoDate});
+      saveState(); renderCustomerList();
+    });
+
+    addRow();
+    return form;
+  }
+
+  const purForm = makeForm('purchase'); const payForm = makeForm('payment'); const invForm = makeInvoiceForm();
+  purBtn.addEventListener('click', ()=>{ purForm.classList.toggle('hidden'); payForm.classList.add('hidden'); invForm.classList.add('hidden'); });
+  payBtn.addEventListener('click', ()=>{ payForm.classList.toggle('hidden'); purForm.classList.add('hidden'); invForm.classList.add('hidden'); });
+  invBtn.addEventListener('click', ()=>{ invForm.classList.toggle('hidden'); purForm.classList.add('hidden'); payForm.classList.add('hidden'); });
+  card.appendChild(purForm); card.appendChild(payForm); card.appendChild(invForm);
+
+  const hist = document.createElement('div'); hist.className='hist';
+  if(c.entries.length===0){ hist.innerHTML = `<div class="empty">${t.noTxn}</div>`; }
+  else{
+    [...c.entries].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(e=>{
+      const row = document.createElement('div'); row.className='hist-row';
+      const descLine = e.discount ? `${escapeHtml(e.desc||'')}${e.desc?' — ':''}${t.discountNote(fmt(e.discount))}` : escapeHtml(e.desc||'');
+      row.innerHTML = `<span class="hist-badge ${e.type}">${e.type==='purchase'?(e.isInvoice?t.invoiceWord:t.purchaseBadge):t.paymentBadge}</span>
+        <span class="hist-item">${descLine}</span>
+        <span class="hist-date">${fmtDate(e.date)}</span>
+        <span class="hist-amt num ${e.type}">${e.type==='purchase'?'+':'-'}${fmt(e.amount)}</span>`;
+      const del = document.createElement('button'); del.className='del-icon'; del.innerHTML='&times;';
+      del.addEventListener('click', ()=>{
+        if(!confirm(t.confirmDeleteEntry)) return;
+        c.entries = c.entries.filter(x=>x.id!==e.id); saveState(); renderCustomerList();
+      });
+      row.appendChild(del);
+      hist.appendChild(row);
+    });
+  }
+  card.appendChild(hist);
+  wrap.appendChild(card); area.appendChild(wrap);
+}
+
+/* ===== Products ===== */
+function productTotalStock(p){ return p.entries.filter(e=>e.type==='restock').reduce((s,e)=>s+Number(e.qty||0),0); }
+function productSold(p){ return p.entries.filter(e=>e.type==='sale').reduce((s,e)=>s+Number(e.qty||0),0); }
+function productRemaining(p){ return productTotalStock(p) - productSold(p); }
+function entryValue(p, e){ const price = e.price!=null ? Number(e.price) : Number(p.price||0); return Number(e.qty||0) * price; }
+function productTotalStockValue0(p){ return p.entries.filter(e=>e.type==='restock').reduce((s,e)=>s+entryValue(p,e),0); }
+function productSoldValue(p){ return p.entries.filter(e=>e.type==='sale').reduce((s,e)=>s+entryValue(p,e),0); }
+function productRemainingValue0(p){ return productTotalStockValue0(p) - productSoldValue(p); }
+function productRemainingPct(p){ const tot=productTotalStockValue0(p); return tot>0 ? Math.max(0, productRemainingValue0(p)/tot*100) : 0; }
+function productSoldPct(p){ const tot=productTotalStockValue0(p); return tot>0 ? Math.min(100, productSoldValue(p)/tot*100) : 0; }
+function productStockValue(p){ return productRemaining(p) * Number(p.price||0); }
+function productLowStock(p){ const tot=productTotalStock(p); return tot>0 && productRemainingPct(p) <= 15; }
+function totalStockValueAll(){ return state.products.reduce((s,p)=>s+productStockValue(p),0); }
+
+function updateLowStockBadge(){
+  const count = state.products.filter(p=>productLowStock(p)).length;
+  const badge = document.getElementById('lowStockBadgeCount');
+  badge.textContent = count;
+  badge.classList.toggle('hidden', count===0);
+}
+
+function renderProducts(){
+  const t = TXT[state.lang];
+  updateLowStockBadge();
+  document.getElementById('valProductCount').textContent = state.products.length;
+  document.getElementById('valStockValue').textContent = fmt(totalStockValueAll());
+  document.getElementById('subProdListBtn').classList.toggle('active', state.prodView==='list');
+  document.getElementById('subNewStockBtn').classList.toggle('active', state.prodView==='newstock');
+  document.getElementById('prodListSection').classList.toggle('hidden', state.prodView!=='list');
+  document.getElementById('prodNewStockSection').classList.toggle('hidden', state.prodView!=='newstock');
+  if(state.prodView==='newstock'){ renderNewStockSection(); return; }
+  const area = document.getElementById('productListArea');
+  area.innerHTML = '';
+  const searchBar = document.getElementById('prodSearch');
+  if(state.openProductId){
+    const p = state.products.find(x=>x.id===state.openProductId);
+    if(p){ searchBar.style.display='none'; renderProductDetail(area, p); return; }
+    state.openProductId = null;
+  }
+  searchBar.style.display='';
+  if(state.products.length===0){
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML = `<span class="empty-icon">📦</span>${t.emptyProducts}`;
+    area.appendChild(e); return;
+  }
+  const q = (state.prodSearch||'').trim().toLowerCase();
+  const list = state.products.filter(p=> !q || (p.name||'').toLowerCase().includes(q));
+  if(list.length===0){
+    const e=document.createElement('div'); e.className='empty';
+    e.innerHTML = `<span class="empty-icon">🔍</span>${t.noSearchResults}`;
+    area.appendChild(e); return;
+  }
+  list.forEach(p=>{
+    const remaining = productRemaining(p);
+    const total = productTotalStock(p);
+    const pct = productRemainingPct(p);
+    const low = productLowStock(p);
+    const row = document.createElement('div'); row.className='prod-row';
+    row.innerHTML = `
+      <div class="prod-row-top">
+        <div class="prod-row-name">${low?'<span class="overdue-dot"></span>':''}${escapeHtml(p.name)}</div>
+        <div class="prod-row-price num">${fmt(p.price)}</div>
+      </div>
+      <div class="stockbar-track"><div class="stockbar-fill ${low?'low':''}" style="width:${Math.max(0,Math.min(100,pct))}%;"></div></div>
+      <div class="prod-row-meta">
+        <span>${t.productRemaining}: <b class="num">${fmt(remaining)}</b> / ${fmt(total)}</span>
+        <span class="num">${pct.toFixed(0)}%${low?` · <span class="overdue-tag" style="display:inline;">${t.lowStockBadge}</span>`:''}</span>
+      </div>`;
+    row.addEventListener('click', ()=>{ state.openProductId=p.id; saveState(); renderProducts(); });
+    area.appendChild(row);
+  });
+}
+
+function renderProductDetail(area, p){
+  const t = TXT[state.lang];
+  const wrap = document.createElement('div');
+  const back = document.createElement('button'); back.className='backbtn'; back.textContent = '‹ ' + t.back;
+  back.addEventListener('click', ()=>{ state.openProductId=null; saveState(); renderProducts(); });
+  wrap.appendChild(back);
+
+  const card = document.createElement('div'); card.className='customer-detail';
+  const head = document.createElement('div'); head.className='detail-head';
+  const nameWrap = document.createElement('div'); nameWrap.style.flex='1'; nameWrap.style.minWidth='150px';
+  const nameInput = document.createElement('input'); nameInput.className='cname-edit'; nameInput.value=p.name;
+  nameInput.addEventListener('change', ()=>{ p.name=nameInput.value; saveState(); renderProducts(); });
+  const priceInput = document.createElement('input'); priceInput.className='cphone'; priceInput.type='number'; priceInput.min='0'; priceInput.value=p.price;
+  priceInput.addEventListener('change', ()=>{ p.price=Math.abs(Number(priceInput.value))||0; saveState(); renderProducts(); });
+  nameWrap.appendChild(nameInput); nameWrap.appendChild(priceInput);
+  const delBtn = document.createElement('button'); delBtn.className='small danger'; delBtn.textContent=t.delete;
+  delBtn.addEventListener('click', ()=>{
+    if(!confirm(t.confirmDeleteProduct)) return;
+    state.products=state.products.filter(x=>x.id!==p.id); state.openProductId=null; saveState(); renderProducts();
+  });
+  head.appendChild(nameWrap); head.appendChild(delBtn); card.appendChild(head);
+
+  const totalsRow = document.createElement('div'); totalsRow.className='cust-totals';
+  totalsRow.innerHTML = `<span>${t.productTotal}: <b class="num" style="color:var(--ink-soft)">${fmt(productTotalStock(p))}</b></span>
+    <span>${t.productSoldLbl}: <b class="num" style="color:var(--ink-soft)">${fmt(productSold(p))}</b></span>
+    <span>${t.productRemaining}: <b class="num">${fmt(productRemaining(p))}</b></span>
+    <span>${t.productRemainingPct}: <b class="num" style="color:${productLowStock(p)?'var(--danger)':'var(--ink)'}">${productRemainingPct(p).toFixed(0)}%</b></span>
+    <span>${t.productStockValue}: <b class="num" style="color:var(--ink-soft)">${fmt(productStockValue(p))}</b></span>`;
+  card.appendChild(totalsRow);
+
+  const actions = document.createElement('div'); actions.className='actions-row';
+  const stockBtn = document.createElement('button'); stockBtn.className='paidbtn small'; stockBtn.textContent=t.restock;
+  actions.appendChild(stockBtn);
+  card.appendChild(actions);
+
+  function makeQtyForm(type, ph){
+    const form = document.createElement('div'); form.className='entry-form hidden';
+    form.innerHTML = `<input type="number" class="e-amt full" placeholder="${ph}" min="0">
+      <input type="date" class="e-date full">
+      <button class="primary full e-save">${t.saveTxn}</button>`;
+    form.querySelector('.e-date').value = todayInputDate();
+    const err = document.createElement('div'); err.className='status-msg err hidden'; err.textContent=t.notEnoughStock; form.appendChild(err);
+    form.querySelector('.e-save').addEventListener('click', ()=>{
+      const qtyVal = form.querySelector('.e-amt').value;
+      const dateVal = form.querySelector('.e-date').value;
+      if(!qtyVal || Number(qtyVal)<=0 || !dateVal) return;
+      const qty = Math.abs(Number(qtyVal));
+      if(type==='sale' && qty > productRemaining(p)){ err.classList.remove('hidden'); return; }
+      err.classList.add('hidden');
+      p.entries.push({id:uid(), type, qty, price:Number(p.price||0), date:new Date(dateVal).toISOString()});
+      saveState(); renderProducts();
+    });
+    return form;
+  }
+  const stockForm = makeQtyForm('restock', t.qtyAddPh);
+  stockBtn.addEventListener('click', ()=>{ stockForm.classList.toggle('hidden'); });
+  card.appendChild(stockForm);
+
+  const hist = document.createElement('div'); hist.className='hist';
+  if(p.entries.length===0){ hist.innerHTML = `<div class="empty">${t.noProdHistory}</div>`; }
+  else{
+    [...p.entries].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(e=>{
+      const row = document.createElement('div'); row.className='hist-row';
+      row.innerHTML = `<span class="hist-badge ${e.type==='restock'?'payment':'purchase'}">${e.type==='restock'?t.restockBadge:t.saleBadge}</span>
+        <span class="hist-item"></span>
+        <span class="hist-date">${fmtDate(e.date)}</span>
+        <span class="hist-amt num ${e.type==='restock'?'payment':'purchase'}">${e.type==='restock'?'+':'-'}${fmt(e.qty)}</span>`;
+      const del = document.createElement('button'); del.className='del-icon'; del.innerHTML='&times;';
+      del.addEventListener('click', ()=>{
+        if(!confirm(t.confirmDeleteEntry)) return;
+        p.entries = p.entries.filter(x=>x.id!==e.id); saveState(); renderProducts();
+      });
+      row.appendChild(del);
+      hist.appendChild(row);
+    });
+  }
+  card.appendChild(hist);
+  wrap.appendChild(card); area.appendChild(wrap);
+}
+
+function renderNewStockSection(){
+  const t = TXT[state.lang];
+  const sel = document.getElementById('newStockProdSelect');
+  const prevVal = sel.value;
+  sel.innerHTML = state.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  if(state.products.some(p=>p.id===prevVal)) sel.value = prevVal;
+  document.getElementById('newStockDate').value = document.getElementById('newStockDate').value || todayInputDate();
+
+  const area = document.getElementById('newStockLogArea');
+  area.innerHTML = '';
+  if(state.products.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent=t.noProductsYet; area.appendChild(e); return;
+  }
+  let logEntries = [];
+  state.products.forEach(p=>{
+    p.entries.filter(e=>e.type==='restock').forEach(e=>{
+      logEntries.push({entryId:e.id, product:p, qty:e.qty, date:e.date});
+    });
+  });
+  if(logEntries.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent=t.noNewStock; area.appendChild(e); return;
+  }
+  logEntries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  logEntries.forEach(le=>{
+    const row = document.createElement('div'); row.className='hist-row';
+    row.innerHTML = `<span class="hist-badge payment">${t.restockBadge}</span>
+      <span class="hist-item">${escapeHtml(le.product.name)}</span>
+      <span class="hist-date">${fmtDate(le.date)}</span>
+      <span class="hist-amt num payment">+${fmt(le.qty)}</span>`;
+    const remSpan = document.createElement('span'); remSpan.className='hist-date num'; remSpan.style.marginInlineStart='6px';
+    remSpan.textContent = `(${t.remainingNow}: ${fmt(productRemaining(le.product))})`;
+    row.appendChild(remSpan);
+    const del = document.createElement('button'); del.className='del-icon'; del.innerHTML='&times;';
+    del.addEventListener('click', ()=>{
+      if(!confirm(t.confirmDeleteEntry)) return;
+      le.product.entries = le.product.entries.filter(x=>x.id!==le.entryId);
+      saveState(); renderProducts();
+    });
+    row.appendChild(del);
+    area.appendChild(row);
+  });
+}
+
+document.querySelectorAll('#viewProducts .subtab').forEach(b=> b.addEventListener('click', ()=>{ state.prodView=b.dataset.pv; saveState(); renderProducts(); }));
+document.getElementById('btnAddNewStock').addEventListener('click', ()=>{
+  const t = TXT[state.lang];
+  const sel = document.getElementById('newStockProdSelect');
+  const qtyEl = document.getElementById('newStockQty');
+  const dateEl = document.getElementById('newStockDate');
+  const p = state.products.find(x=>x.id===sel.value);
+  if(!p || !qtyEl.value || Number(qtyEl.value)<=0 || !dateEl.value) return;
+  p.entries.push({id:uid(), type:'restock', qty:Math.abs(Number(qtyEl.value)), price:Number(p.price||0), date:new Date(dateEl.value).toISOString()});
+  qtyEl.value='';
+  saveState(); renderProducts();
+});
+
+function parseBulkProductLines(text){
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line=>{
+    const parts = line.split(',').map(x=>x.trim());
+    if(parts.length < 3) return;
+    const name = parts[0];
+    const price = Number(parts[1]);
+    const qty = Number(parts[2]);
+    if(!name || isNaN(price) || price<0 || isNaN(qty) || qty<0) return;
+    const entries = qty>0 ? [{id:uid(), type:'restock', qty:Math.abs(qty), price:Math.abs(price), date:new Date().toISOString()}] : [];
+    state.products.push({id:uid(), name, price:Math.abs(price), entries});
+    added++;
+  });
+  return added;
+}
+
+document.getElementById('btnAddProduct').addEventListener('click', ()=>{
+  const nameEl = document.getElementById('newProdName');
+  const priceEl = document.getElementById('newProdPrice');
+  const qtyEl = document.getElementById('newProdQty');
+  const name = nameEl.value.trim();
+  const price = Math.abs(Number(priceEl.value))||0;
+  const qty = Math.abs(Number(qtyEl.value))||0;
+  if(!name) return;
+  const entries = qty>0 ? [{id:uid(), type:'restock', qty, price, date:new Date().toISOString()}] : [];
+  state.products.push({id:uid(), name, price, entries});
+  nameEl.value=''; priceEl.value=''; qtyEl.value=''; saveState(); renderProducts();
+});
+document.getElementById('prodSearch').addEventListener('input', e=>{ state.prodSearch = e.target.value; saveState(); renderProducts(); });
+document.getElementById('toggleBulkAdd').addEventListener('click', ()=>{ document.getElementById('bulkAddCard').classList.toggle('hidden'); });
+document.getElementById('btnBulkAddSave').addEventListener('click', ()=>{
+  const t = TXT[state.lang];
+  const textEl = document.getElementById('bulkAddText');
+  const added = parseBulkProductLines(textEl.value);
+  const statusEl = document.getElementById('bulkAddStatus');
+  if(added>0){
+    statusEl.innerHTML = `<div class="status-msg ok">${t.bulkAddResult(added)}</div>`;
+    textEl.value=''; saveState(); renderProducts();
+  } else {
+    statusEl.innerHTML = `<div class="status-msg err">${t.bulkAddNone}</div>`;
+  }
+});
+
+function printCustomerStatement(c){
+  const t = TXT[state.lang];
+  const bal = customerBalance(c);
+  const rows = [...c.entries].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(e=>
+    `<tr><td>${fmtDate(e.date)}</td><td>${escapeHtml(e.desc||'')}</td><td>${e.type==='purchase'?t.purchaseBadge:t.paymentBadge}</td><td style="text-align:end;">${e.type==='purchase'?'+':'-'}${fmt(e.amount)}</td></tr>`
+  ).join('');
+  const area = document.getElementById('printArea');
+  area.innerHTML = `
+    <div class="print-actions">
+      <button class="pa-back">‹ ${t.printBack}</button>
+      <button class="pa-send">${t.sendToCustomer}</button>
+      <button class="pa-print">${t.printNow}</button>
+    </div>
+    <div class="p-body">
+      <div class="p-head">
+        <div><strong style="font-size:18px;">${escapeHtml(state.shopName||t.title)}</strong><br><span style="font-size:12px;color:#555;">${t.statementTitle}</span></div>
+        <div style="text-align:end;font-size:12px;color:#555;">${t.statementDate}: ${fmtDate(new Date().toISOString())}</div>
+      </div>
+      <div style="margin-bottom:10px;"><strong>${escapeHtml(c.name)}</strong> ${c.phone?('— '+escapeHtml(c.phone)):''}</div>
+      <table><thead><tr><th>${t.statementDate}</th><th>${t.itemPh}</th><th></th><th style="text-align:end;">${t.amountPh}</th></tr></thead><tbody>${rows || `<tr><td colspan="4">${t.noTxn}</td></tr>`}</tbody></table>
+      <div class="p-total">${t.statementTotal}: ${fmt(bal)}</div>
+    </div>
+  `;
+  area.querySelector('.pa-back').addEventListener('click', closeStatementPreview);
+  area.querySelector('.pa-print').addEventListener('click', ()=> window.print());
+  area.querySelector('.pa-send').addEventListener('click', ()=>{
+    const msg = t.statementMsgTemplate(c.name||'', state.shopName||t.title, fmt(bal));
+    const digits = (c.phone||'').replace(/[^0-9]/g,'');
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+  document.body.classList.add('statement-open');
+}
+function closeStatementPreview(){
+  document.body.classList.remove('statement-open');
+  document.getElementById('printArea').innerHTML = '';
+}
+window.addEventListener('afterprint', closeStatementPreview);
+
+function bizFilteredEntries(){
+  return state.business.filter(e=>{
+    const d = new Date(e.date);
+    if(state.bizPeriod==='monthly') return d.getFullYear()===Number(state.selYear) && d.getMonth()===Number(state.selMonth);
+    return d.getFullYear()===Number(state.selYear);
+  });
+}
+function customerEntriesFiltered(){
+  let list=[]; state.customers.forEach(c=> c.entries.forEach(e=>{ if(e.type==='purchase') list.push(e); }));
+  return list.filter(e=>{
+    const d = new Date(e.date);
+    if(state.bizPeriod==='monthly') return d.getFullYear()===Number(state.selYear) && d.getMonth()===Number(state.selMonth);
+    return d.getFullYear()===Number(state.selYear);
+  });
+}
+
+function renderBusiness(){
+  const t = TXT[state.lang];
+  const area = document.getElementById('businessArea'); area.innerHTML='';
+  const sales = customerEntriesFiltered().reduce((s,e)=>s+Number(e.amount||0),0);
+  const entries = bizFilteredEntries();
+  const stock = entries.filter(e=>e.type==='stock').reduce((s,e)=>s+Number(e.amount||0),0);
+  const expense = entries.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount||0),0);
+  const supplier = entries.filter(e=>e.type==='supplier').reduce((s,e)=>s+Number(e.amount||0),0);
+  const profit = sales - stock - expense - supplier;
+
+  const metrics = document.createElement('div'); metrics.className='metric-row';
+  metrics.innerHTML = `<div class="metric-card"><div class="metric-label">${t.totalSales}</div><div class="metric-value num">${fmt(sales)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.totalStock}</div><div class="metric-value num">${fmt(stock)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.totalExpense}</div><div class="metric-value num">${fmt(expense)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.totalSupplier}</div><div class="metric-value num">${fmt(supplier)}</div></div>`;
+  area.appendChild(metrics);
+
+  const profitCard = document.createElement('div'); profitCard.className='metric-card'; profitCard.style.marginBottom='18px';
+  profitCard.innerHTML = `<div class="metric-label">${t.profit}</div><div class="metric-value num" style="color:${profit>=0?'var(--green)':'var(--danger)'}">${fmt(profit)}</div>`;
+  area.appendChild(profitCard);
+
+  if(state.bizPeriod==='yearly'){
+    const summary = document.createElement('div'); summary.className='section-title'; summary.textContent=t.yearSummary;
+    area.appendChild(summary);
+    const monthData = [];
+    for(let m=0;m<12;m++){
+      const mSales = state.customers.reduce((s,c)=> s + c.entries.filter(e=>e.type==='purchase' && new Date(e.date).getFullYear()===Number(state.selYear) && new Date(e.date).getMonth()===m).reduce((a,e)=>a+Number(e.amount||0),0), 0);
+      const mEntries = state.business.filter(e=>{ const d=new Date(e.date); return d.getFullYear()===Number(state.selYear) && d.getMonth()===m; });
+      const mStock = mEntries.filter(e=>e.type==='stock').reduce((s,e)=>s+Number(e.amount||0),0);
+      const mExp = mEntries.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount||0),0);
+      const mSup = mEntries.filter(e=>e.type==='supplier').reduce((s,e)=>s+Number(e.amount||0),0);
+      const mProfit = mSales - mStock - mExp - mSup;
+      if(mSales===0 && mStock===0 && mExp===0 && mSup===0) continue;
+      monthData.push({m, mProfit});
+    }
+    if(monthData.length){
+      const maxAbs = Math.max(...monthData.map(d=>Math.abs(d.mProfit)), 1);
+      const chart = document.createElement('div'); chart.className='barchart';
+      monthData.forEach(d=>{
+        const pct = Math.min(100, Math.abs(d.mProfit)/maxAbs*100);
+        const row = document.createElement('div'); row.className='barrow';
+        row.innerHTML = `<span class="m-label">${t.monthNames[d.m].slice(0,3)}</span>
+          <span class="bartrack"><span class="barfill ${d.mProfit>=0?'pos':'neg'}" style="width:${pct}%;${state.lang==='en'?'left':'right'}:0;"></span></span>
+          <span class="m-amt num" style="color:${d.mProfit>=0?'var(--green)':'var(--danger)'}">${fmt(d.mProfit)}</span>`;
+        chart.appendChild(row);
+      });
+      area.appendChild(chart);
+    }
+  }
+
+  const addTitle = document.createElement('div'); addTitle.className='section-title'; addTitle.textContent=t.addEntry;
+  area.appendChild(addTitle);
+  const form = document.createElement('div'); form.className='card';
+  form.innerHTML = `<select class="b-type">
+      <option value="stock">${t.entryTypeStock}</option>
+      <option value="expense">${t.entryTypeExpense}</option>
+      <option value="supplier">${t.entryTypeSupplier}</option>
+    </select>
+    <input type="text" class="b-desc" placeholder="${t.descPh}">
+    <div class="row2"><input type="number" class="b-amt" placeholder="${t.amountPh}" min="0"><input type="date" class="b-date"></div>
+    <button class="primary b-save">${t.save}</button>`;
+  form.querySelector('.b-date').value = todayInputDate();
+  form.querySelector('.b-save').addEventListener('click', ()=>{
+    const type = form.querySelector('.b-type').value;
+    const desc = form.querySelector('.b-desc').value.trim();
+    const amt = form.querySelector('.b-amt').value;
+    const dateVal = form.querySelector('.b-date').value;
+    if(!amt || Number(amt)<=0 || !dateVal) return;
+    state.business.push({id:uid(), type, desc, amount:Math.abs(Number(amt)), date:new Date(dateVal).toISOString()});
+    saveState(); renderBusiness();
+  });
+  area.appendChild(form);
+
+  const listTitle = document.createElement('div'); listTitle.className='section-title';
+  listTitle.textContent = state.bizPeriod==='monthly' ? t.monthly : t.yearly;
+  area.appendChild(listTitle);
+  if(entries.length===0){ const e=document.createElement('div'); e.className='empty'; e.textContent=t.noEntries; area.appendChild(e); }
+  else{
+    const typeLabel = {stock:t.entryTypeStock, expense:t.entryTypeExpense, supplier:t.entryTypeSupplier};
+    [...entries].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(e=>{
+      const row = document.createElement('div'); row.className='hist-row';
+      row.innerHTML = `<span class="hist-badge purchase" style="background:var(--paper-2);color:var(--ink-soft)">${typeLabel[e.type]}</span>
+        <span class="hist-item">${escapeHtml(e.desc||'')}</span>
+        <span class="hist-date">${fmtDate(e.date)}</span>
+        <span class="hist-amt num" style="color:var(--ink)">${fmt(e.amount)}</span>`;
+      const del = document.createElement('button'); del.className='del-icon'; del.innerHTML='&times;';
+      del.addEventListener('click', ()=>{
+        if(!confirm(t.confirmDeleteEntry)) return;
+        state.business = state.business.filter(x=>x.id!==e.id); saveState(); renderBusiness();
+      });
+      row.appendChild(del);
+      area.appendChild(row);
+    });
+  }
+}
+
+function renderZakat(){
+  const t = TXT[state.lang];
+  const area = document.getElementById('zakatArea'); area.innerHTML='';
+
+  const inv = Number(state.inventoryValue||0);
+  const cash = Number(state.cashBalance||0);
+  const recv = totalDueAllCustomers();
+  const qarza = totalQarzaAmount();
+  const assets = inv + cash + recv;
+  const net = assets - qarza;
+  const zakat = net > 0 ? net * 0.025 : 0;
+
+  const invRow = document.createElement('div'); invRow.className='card';
+  invRow.innerHTML = `<div class="metric-label">${t.inventoryLabel}</div>
+    <div class="inv-row"><input type="number" id="invInput" min="0" value="${inv}"><button class="primary small" id="invSaveBtn">${t.inventorySave}</button></div>`;
+  area.appendChild(invRow);
+
+  const cashRow = document.createElement('div'); cashRow.className='card'; cashRow.style.marginTop='10px';
+  cashRow.innerHTML = `<div class="metric-label">${t.cashBalance}</div>
+    <div class="inv-row"><input type="number" id="cashInput" value="${cash}"><button class="primary small" id="cashSaveBtn">${t.cashBalanceSave}</button></div>`;
+  area.appendChild(cashRow);
+
+  const metrics = document.createElement('div'); metrics.className='metric-row'; metrics.style.marginTop='14px';
+  metrics.innerHTML = `<div class="metric-card"><div class="metric-label">${t.receivables}</div><div class="metric-value num">${fmt(recv)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.totalQarza}</div><div class="metric-value num owe">${fmt(qarza)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.netZakatable}</div><div class="metric-value num">${fmt(net)}</div></div>
+    <div class="metric-card"><div class="metric-label">${t.zakatDue}</div><div class="metric-value num paid">${fmt(zakat)}</div></div>`;
+  area.appendChild(metrics);
+
+  const note = document.createElement('div'); note.className='section-note'; note.style.marginTop='6px'; note.textContent = t.zakatNote;
+  area.appendChild(note);
+
+  const qarzaTitle = document.createElement('div'); qarzaTitle.className='section-title'; qarzaTitle.textContent = t.historyQarza;
+  area.appendChild(qarzaTitle);
+  const qarzaForm = document.createElement('div'); qarzaForm.className='card';
+  qarzaForm.innerHTML = `<input type="text" class="q-desc" placeholder="${t.qarzaDesc}">
+    <div class="row2"><input type="number" class="q-amt" placeholder="${t.amountPh}" min="0"><input type="date" class="q-date"></div>
+    <button class="primary q-save">${t.addQarza}</button>`;
+  qarzaForm.querySelector('.q-date').value = todayInputDate();
+  qarzaForm.querySelector('.q-save').addEventListener('click', ()=>{
+    const desc = qarzaForm.querySelector('.q-desc').value.trim();
+    const amt = qarzaForm.querySelector('.q-amt').value;
+    const dateVal = qarzaForm.querySelector('.q-date').value;
+    if(!amt || Number(amt)<=0 || !dateVal) return;
+    state.liabilities.push({id:uid(), desc, amount:Math.abs(Number(amt)), date:new Date(dateVal).toISOString()});
+    saveState(); renderZakat();
+  });
+  area.appendChild(qarzaForm);
+
+  if(state.liabilities.length===0){ const e=document.createElement('div'); e.className='empty'; e.textContent=t.noEntriesShort; area.appendChild(e); }
+  else{
+    [...state.liabilities].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(e=>{
+      const row = document.createElement('div'); row.className='hist-row';
+      row.innerHTML = `<span class="hist-item">${escapeHtml(e.desc||'')}</span>
+        <span class="hist-date">${fmtDate(e.date)}</span>
+        <span class="hist-amt num" style="color:var(--danger)">${fmt(e.amount)}</span>`;
+      const delBtn = document.createElement('button'); delBtn.className='del-icon'; delBtn.innerHTML='&times;';
+      delBtn.addEventListener('click', ()=>{
+        if(!confirm(t.confirmDeleteEntry)) return;
+        state.liabilities=state.liabilities.filter(x=>x.id!==e.id); saveState(); renderZakat();
+      });
+      row.appendChild(delBtn);
+      area.appendChild(row);
+    });
+  }
+
+  const curDetails = document.createElement('details'); curDetails.className='cur-folder';
+  curDetails.open = !!state.currencyPanelOpen;
+  const curSummary = document.createElement('summary'); curSummary.className='section-title'; curSummary.textContent = t.currencyTitle;
+  curDetails.appendChild(curSummary);
+  curDetails.addEventListener('toggle', ()=>{ state.currencyPanelOpen = curDetails.open; saveState(); });
+  area.appendChild(curDetails);
+  const curNote = document.createElement('div'); curNote.className='section-note'; curNote.textContent = t.currencyNote;
+  curDetails.appendChild(curNote);
+
+  const baseRow = document.createElement('div'); baseRow.className='cur-row';
+  baseRow.innerHTML = `<span style="flex:1;font-size:13px;color:var(--ink-soft)">${t.baseCurrencyLbl}</span><input class="cur-code" id="baseCurName" value="${escapeHtml(state.baseCurrencyLabel)}">`;
+  curDetails.appendChild(baseRow);
+  baseRow.querySelector('#baseCurName').addEventListener('change', (e)=>{ state.baseCurrencyLabel = e.target.value || 'PKR'; saveState(); renderZakat(); });
+
+  state.currencies.forEach(cur=>{
+    const row = document.createElement('div'); row.className='cur-row';
+    const convNet = cur.rate>0 ? net / cur.rate : 0;
+    const convZakat = cur.rate>0 ? zakat / cur.rate : 0;
+    row.innerHTML = `<input class="cur-code" value="${escapeHtml(cur.code)}">
+      <input class="cur-rate" type="number" min="0" step="0.01" value="${cur.rate}">
+      <span class="cur-conv num">${t.netInThisCurrency}: ${fmt(convNet)}<br>${t.zakatInThisCurrency}: ${fmt(convZakat)}</span>
+      <button class="small danger cur-del">×</button>`;
+    row.querySelector('.cur-code').addEventListener('change', e=>{ cur.code = e.target.value; saveState(); });
+    row.querySelector('.cur-rate').addEventListener('change', e=>{ cur.rate = Number(e.target.value)||0; saveState(); renderZakat(); });
+    row.querySelector('.cur-del').addEventListener('click', ()=>{ state.currencies = state.currencies.filter(x=>x!==cur); saveState(); renderZakat(); });
+    curDetails.appendChild(row);
+  });
+  const addCurBtn = document.createElement('button'); addCurBtn.className='small'; addCurBtn.textContent = t.addCurrency;
+  addCurBtn.addEventListener('click', ()=>{ state.currencies.push({code:'USD', rate:280}); saveState(); renderZakat(); });
+  curDetails.appendChild(addCurBtn);
+
+  document.getElementById('invSaveBtn').addEventListener('click', ()=>{
+    state.inventoryValue = Number(document.getElementById('invInput').value)||0;
+    saveState(); renderZakat();
+  });
+  document.getElementById('cashSaveBtn').addEventListener('click', ()=>{
+    state.cashBalance = Number(document.getElementById('cashInput').value)||0;
+    saveState(); renderZakat();
+  });
+}
+
+document.querySelectorAll('.langbtn').forEach(b=> b.addEventListener('click', ()=> setLang(b.dataset.l)));
+document.querySelectorAll('.maintab').forEach(b=> b.addEventListener('click', ()=>{ state.mainTab=b.dataset.t; saveState(); renderAll(); }));
+document.querySelectorAll('#viewBusiness .subtab').forEach(b=> b.addEventListener('click', ()=>{ state.bizPeriod=b.dataset.p; saveState(); renderAll(); }));
+document.getElementById('selMonth').addEventListener('change', e=>{ state.selMonth=Number(e.target.value); saveState(); renderBusiness(); });
+document.getElementById('selYear').addEventListener('change', e=>{ state.selYear=Number(e.target.value); saveState(); renderAll(); });
+document.getElementById('shopNameInput').addEventListener('change', (e)=>{ state.shopName = e.target.value || TXT[state.lang].title; saveState(); });
+document.getElementById('btnAddCustomer').addEventListener('click', ()=>{
+  const nameEl = document.getElementById('newName'); const phoneEl = document.getElementById('newPhone');
+  const name = nameEl.value.trim(); const phone = phoneEl.value.trim();
+  if(!name) return;
+  state.customers.push({id:uid(), name, phone, entries:[], reminderDate:null});
+  nameEl.value=''; phoneEl.value=''; saveState(); renderCustomerList();
+});
+document.getElementById('custSearch').addEventListener('input', e=>{ state.custSearch = e.target.value; saveState(); renderCustomerList(); });
+document.getElementById('custSort').addEventListener('change', e=>{ state.custSort = e.target.value; saveState(); renderCustomerList(); });
+
+/* Settings modal */
+const settingsModal = document.getElementById('settingsModal');
+document.getElementById('btnCloseSettings').addEventListener('click', ()=> settingsModal.classList.add('hidden'));
+settingsModal.addEventListener('click', (e)=>{ if(e.target===settingsModal) settingsModal.classList.add('hidden'); });
+
+document.getElementById('btnExportBackup').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = todayInputDate();
+  a.href = url; a.download = `dokan-khata-backup-${dateStr}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btnImportBackupTrigger').addEventListener('click', ()=>{
+  document.getElementById('fileImportBackup').click();
+});
+document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+  const t = TXT[state.lang];
+  const header = ['Name','Phone','Balance','Overdue'];
+  const rows = state.customers.map(c=> [
+    (c.name||'').replace(/"/g,'""'),
+    (c.phone||'').replace(/"/g,'""'),
+    customerBalance(c),
+    customerOverdue(c) ? 'Yes' : 'No'
+  ]);
+  let csv = '\uFEFF' + header.join(',') + '\n' + rows.map(r=> r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dokan-khata-customers-${todayInputDate()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('fileImportBackup').addEventListener('change', (e)=>{
+  const t = TXT[state.lang];
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.customers)) throw new Error('invalid');
+      state = Object.assign(state, parsed);
+      saveState();
+      document.querySelectorAll('.langbtn').forEach(b=> b.classList.toggle('active', b.dataset.l===state.lang));
+      document.body.setAttribute('data-lang', state.lang);
+      document.body.setAttribute('data-dir', state.lang==='en' ? 'ltr' : 'rtl');
+      renderStaticText(); renderAll();
+      document.getElementById('backupStatus').innerHTML = `<div class="status-msg ok">${t.restoreSuccess}</div>`;
+    }catch(err){
+      document.getElementById('backupStatus').innerHTML = `<div class="status-msg err">${t.restoreError}</div>`;
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+document.getElementById('btnResetAll').addEventListener('click', ()=>{
+  const t = TXT[state.lang];
+  if(!confirm(t.confirmReset)) return;
+  const lang = state.lang;
+  const keepCustomers = state.customers;
+  const keepLiabilities = state.liabilities;
+  state = {
+    lang, shopName:'', customers:keepCustomers, business:[], products:[], openProductId:null, prodSearch:'', prodView:'list',
+    openCustomerId:null, mainTab:'customers', bizPeriod:'monthly',
+    selMonth:new Date().getMonth(), selYear:new Date().getFullYear(),
+    inventoryValue:0, cashBalance:0, cashEntries:[], liabilities:keepLiabilities,
+    baseCurrencyLabel:'PKR', currencies:[{code:'USD',rate:280},{code:'SAR',rate:75},{code:'AED',rate:76}],
+    custSearch:'', custSort:'balance'
+  };
+  state.shopName = TXT[lang].title;
+  saveState(); renderStaticText(); renderAll();
+  settingsModal.classList.add('hidden');
+});
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+
+/* ===== PIN lock ===== */
+const PIN_KEY = 'dokan-khata-pin-hash';
+async function hashPin(pin){
+  try{
+    const enc = new TextEncoder().encode('dokan-khata-salt-v1-'+pin);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h=0; const s='dk-'+pin;
+    for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; }
+    return 'fb'+h;
+  }
+}
+function getPinHash(){ try{ return localStorage.getItem(PIN_KEY); }catch(e){ return null; } }
+function setPinHash(h){ try{ if(h===null) localStorage.removeItem(PIN_KEY); else localStorage.setItem(PIN_KEY, h); }catch(e){} }
+
+function renderPinSettings(){
+  const t = TXT[state.lang];
+  const box = document.getElementById('pinSection');
+  const hasPin = !!getPinHash();
+  if(!hasPin){
+    box.innerHTML = `<button class="paidbtn small" style="width:100%;" id="pinEnableBtn">${t.pinEnableBtn}</button>
+      <div class="entry-form hidden" id="pinSetForm" style="margin-top:8px;">
+        <input type="password" inputmode="numeric" class="full" id="pinNewInput" placeholder="${t.pinNewPh}">
+        <input type="password" inputmode="numeric" class="full" id="pinConfirmInput" placeholder="${t.pinConfirmPh}">
+        <button class="primary full" id="pinSaveNewBtn">${t.pinSaveBtn}</button>
+        <div id="pinFormStatus"></div>
+      </div>`;
+    document.getElementById('pinEnableBtn').addEventListener('click', ()=> document.getElementById('pinSetForm').classList.toggle('hidden'));
+    document.getElementById('pinSaveNewBtn').addEventListener('click', async ()=>{
+      const p1 = document.getElementById('pinNewInput').value;
+      const p2 = document.getElementById('pinConfirmInput').value;
+      const st = document.getElementById('pinFormStatus');
+      if(p1.length<4){ st.innerHTML = `<div class="status-msg err">${t.pinTooShort}</div>`; return; }
+      if(p1!==p2){ st.innerHTML = `<div class="status-msg err">${t.pinMismatch}</div>`; return; }
+      setPinHash(await hashPin(p1));
+      st.innerHTML = `<div class="status-msg ok">${t.pinSetSuccess}</div>`;
+      setTimeout(renderPinSettings, 900);
+    });
+  } else {
+    box.innerHTML = `<div class="section-note" style="margin:0 0 8px;">${t.pinEnabledNote}</div>
+      <div class="row2">
+        <button class="ghost small" id="pinChangeBtn">${t.pinChangeBtn}</button>
+        <button class="danger small" id="pinDisableBtn">${t.pinDisableBtn}</button>
+      </div>
+      <div class="entry-form hidden" id="pinActionForm" style="margin-top:8px;">
+        <input type="password" inputmode="numeric" class="full" id="pinCurrentInput" placeholder="${t.pinCurrentPh}">
+        <input type="password" inputmode="numeric" class="full hidden" id="pinNewInput2" placeholder="${t.pinNewPh}">
+        <input type="password" inputmode="numeric" class="full hidden" id="pinConfirmInput2" placeholder="${t.pinConfirmPh}">
+        <button class="primary full" id="pinActionSaveBtn">${t.pinSaveBtn}</button>
+        <div id="pinFormStatus2"></div>
+      </div>`;
+    let mode = null;
+    const actionForm = document.getElementById('pinActionForm');
+    const newInputs = [document.getElementById('pinNewInput2'), document.getElementById('pinConfirmInput2')];
+    document.getElementById('pinChangeBtn').addEventListener('click', ()=>{
+      mode='change'; actionForm.classList.remove('hidden'); newInputs.forEach(i=>i.classList.remove('hidden'));
+    });
+    document.getElementById('pinDisableBtn').addEventListener('click', ()=>{
+      mode='disable'; actionForm.classList.remove('hidden'); newInputs.forEach(i=>i.classList.add('hidden'));
+    });
+    document.getElementById('pinActionSaveBtn').addEventListener('click', async ()=>{
+      const st = document.getElementById('pinFormStatus2');
+      const current = document.getElementById('pinCurrentInput').value;
+      const currentHash = await hashPin(current);
+      if(currentHash !== getPinHash()){ st.innerHTML = `<div class="status-msg err">${t.pinWrongCurrent}</div>`; return; }
+      if(mode==='disable'){
+        setPinHash(null);
+        st.innerHTML = `<div class="status-msg ok">${t.pinDisabledSuccess}</div>`;
+        setTimeout(renderPinSettings, 900);
+      } else if(mode==='change'){
+        const p1 = document.getElementById('pinNewInput2').value;
+        const p2 = document.getElementById('pinConfirmInput2').value;
+        if(p1.length<4){ st.innerHTML = `<div class="status-msg err">${t.pinTooShort}</div>`; return; }
+        if(p1!==p2){ st.innerHTML = `<div class="status-msg err">${t.pinMismatch}</div>`; return; }
+        setPinHash(await hashPin(p1));
+        st.innerHTML = `<div class="status-msg ok">${t.pinChangedSuccess}</div>`;
+        setTimeout(renderPinSettings, 900);
+      }
+    });
+  }
+}
+
+function showLockScreen(onUnlock){
+  const lockEl = document.getElementById('lockScreen');
+  lockEl.classList.remove('hidden');
+  const input = document.getElementById('lockPinInput');
+  const err = document.getElementById('lockError');
+  input.value=''; err.classList.add('hidden');
+  setTimeout(()=>input.focus(), 100);
+  async function tryUnlock(){
+    const t = TXT[state.lang];
+    const h = await hashPin(input.value);
+    if(h === getPinHash()){
+      lockEl.classList.add('hidden');
+      onUnlock();
+    } else {
+      err.textContent = t.wrongPin; err.classList.remove('hidden');
+      input.value=''; input.focus();
+    }
+  }
+  document.getElementById('btnUnlock').onclick = tryUnlock;
+  input.onkeydown = (e)=>{ if(e.key==='Enter') tryUnlock(); };
+  document.getElementById('btnForgotPin').onclick = ()=>{
+    const t = TXT[state.lang];
+    if(!confirm(t.forgotPinConfirm)) return;
+    try{ localStorage.clear(); }catch(e){}
+    location.reload();
+  };
+}
+
+document.getElementById('btnSettings').addEventListener('click', ()=>{
+  document.getElementById('backupStatus').innerHTML='';
+  renderPinSettings();
+  renderVoiceSettings();
+  settingsModal.classList.remove('hidden');
+});
+
+document.getElementById('btnTheme').addEventListener('click', ()=>{
+  state.theme = state.theme==='dark' ? 'light' : 'dark';
+  applyTheme(); saveState();
+});
+
+const voiceInputObserver = new MutationObserver(()=> enableVoiceForInputs());
+voiceInputObserver.observe(document.body, {childList:true, subtree:true});
+enableVoiceForInputs();
+
+(async function init(){
+  document.body.setAttribute('data-lang', 'ur');
+  document.body.setAttribute('data-dir', 'rtl');
+  async function boot(){
+    await loadState();
+    document.querySelectorAll('.langbtn').forEach(b=> b.classList.toggle('active', b.dataset.l===state.lang));
+    document.body.setAttribute('data-lang', state.lang);
+    document.body.setAttribute('data-dir', state.lang==='en' ? 'ltr' : 'rtl');
+    applyTheme();
+    renderStaticText();
+    renderAll();
+  }
+  if(getPinHash()){
+    renderStaticText_lockOnly();
+    showLockScreen(boot);
+  } else {
+    await boot();
+  }
+})();
+function renderStaticText_lockOnly(){
+  const t = TXT['ur'];
+  document.getElementById('lockTitleTxt').textContent = t.lockTitle;
+  document.getElementById('lockSubTxt').textContent = t.lockSub;
+  document.getElementById('lockPinInput').placeholder = t.pinCurrentPh;
+  document.getElementById('btnUnlock').textContent = t.unlockBtn;
+  document.getElementById('btnForgotPin').textContent = t.forgotPin;
+}
+</script>
+</body>
+</html>

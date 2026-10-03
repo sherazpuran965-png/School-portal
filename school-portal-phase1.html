@@ -1,0 +1,293 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>School Portal</title>
+<style>
+:root{--g:#1F3B33;--b:#B4884A}*{box-sizing:border-box}body{margin:0;font:15px "Noto Naskh Arabic","Noto Nastaliq Urdu",system-ui,sans-serif;background:#F5F1E7;color:#24211B}
+header{background:var(--g);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+nav{display:flex;gap:6px;padding:8px;overflow-x:auto}nav button{white-space:nowrap}
+button{background:var(--g);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.o{background:#fff;color:var(--g);border:1px solid var(--g)}button.on{background:var(--b)}button.r{background:#B0453A}
+input,select,textarea{padding:8px;border:1px solid #D9CFB8;border-radius:8px;font:inherit;max-width:100%}
+main{padding:10px;max-width:900px;margin:auto}.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;overflow-x:auto}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee;text-align:start}
+.due{color:#B0453A;font-weight:600}.ok{color:#4C7A5C;font-weight:600}
+</style></head><body>
+<header><b data-k="School Portal">School Portal</b> <small data-k="first login: admin / admin123">first login: admin / admin123</small><span><button class="o" id="lg" onclick="setLang()"></button> <span id="who"></span></span></header><nav id="nav"></nav><div id="bk"></div><main id="app"></main>
+<script>
+let T=localStorage.t,ROLE=localStorage.r,NAME=localStorage.n,tab='students';
+const $=s=>document.querySelector(s),app=$('#app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},month=()=>today().slice(0,7);
+
+// ---- Local engine (data is saved inside this browser, no server) ----
+let D=JSON.parse(localStorage.sp_db||'null')||{users:[],students:[],payments:[],att:{},rseq:0,seq:1};
+const save=()=>{try{localStorage.sp_db=JSON.stringify(D)}catch(e){alert('Storage full! Latest changes are NOT saved. Download a backup now and remove some student photos.')}};
+const nu=s=>String(s||'').trim().toLowerCase();D.users.forEach(u=>u.username=nu(u.username));
+const PERM={fees:['admin','accountant'],att:['admin','teacher'],admin:['admin']};
+async function H(p,s){try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+p)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch{let h=5381;for(const c of s+p)h=(h*33^c.charCodeAt(0))>>>0;return''+h}}
+async function setUser(username,password,role,name){username=nu(username);password=String(password).trim();const salt=Math.random().toString(36).slice(2),hash=await H(password,salt),u=D.users.find(x=>x.username==username);
+ if(u)Object.assign(u,{salt,hash,role,name:name||username});else D.users.push({username,salt,hash,role,name:name||username});save()}
+async function api(p,o){
+ const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{},fail=m=>{alert(m);throw 0};
+ if(!D.users.length)await setUser('admin','admin123','admin','Admin');
+ if(path==='login'){const u=D.users.find(x=>x.username==nu(b.username));if(!u||await H(String(b.password||'').trim(),u.salt)!==u.hash)fail('Wrong username or password');return{token:'local',role:u.role,name:u.name}}
+ if(!T)throw 0;
+ const ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active);
+ const srt=a=>a.sort((x,y)=>(x.class+x.name).localeCompare(y.class+y.name));
+ if(path==='students'&&!o)return srt([...act]);
+ if(path==='students'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,father:b.father||'',phone:b.phone||'',class:b.class||'',fee:+b.fee||0,disc:+b.disc||0,old:+b.old||0};if(b.photo)v.photo=b.photo;
+  if(b.id)Object.assign(D.students.find(s=>s.id==b.id),v);else D.students.push({id:D.seq++,...v,admitted:today(),active:1});save();return{ok:1}}
+ if(path==='students/delete'){ok('admin');D.students.find(s=>s.id==b.id).active=0;save();return{ok:1}}
+ if(path==='fees'){ok('fees');return srt(act.map(s=>({...s,paid:D.payments.filter(x=>x.student_id==s.id&&x.month==q.get('month')).reduce((a,x)=>a+x.amount,0),oldpaid:D.payments.filter(x=>x.student_id==s.id&&x.month=='old').reduce((a,x)=>a+x.amount,0)})))}
+ if(path==='pay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');const id=++D.rseq;D.payments.push({id,student_id:+b.student_id,month:b.month,amount:+b.amount,date:today(),by:NAME});save();return{receipt:id,date:today()}}
+ if(path==='attendance'&&!o){ok('att');const d=D.att[q.get('date')]||{};return srt(act.map(s=>({id:s.id,name:s.name,class:s.class,status:d[s.id]||null})))}
+ if(path==='attendance'){ok('att');D.att[b.date]=D.att[b.date]||{};for(const m of b.marks||[])D.att[b.date][m.id]=m.status;save();return{ok:1}}
+ if(path==='att-report'){ok('att');const m=q.get('month');return srt(act.map(s=>{const r={name:s.name,class:s.class,p:0,a:0,l:0};
+  for(const d in D.att)if(d.startsWith(m)){const x=D.att[d][s.id];if(x)r[x.toLowerCase()]++}return r}))}
+ if(path==='history'){ok('fees');return D.payments.filter(x=>x.student_id==q.get('id')).sort((a,b)=>b.id-a.id)}
+ if(path==='pay/delete'){ok('admin');D.payments=D.payments.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='pay/edit'){ok('admin');if(!(+b.amount>0))fail('Invalid amount');D.payments.find(x=>x.id==b.id).amount=+b.amount;save();return{ok:1}}
+ if(path==='users'&&!o){ok('admin');return D.users.map(({username,name,role})=>({username,name,role}))}
+ if(path==='users'){ok('admin');if(!b.username||!b.password||!['admin','teacher','accountant'].includes(b.role))fail('Username, password and role required');await setUser(b.username,b.password,b.role,b.name);return{ok:1}}
+}
+function logout(){['t','r','n'].forEach(k=>localStorage.removeItem(k));T=null;boot()}
+const TABS={students:['Students',['admin','teacher','accountant']],fees:['Fees',['admin','accountant']],att:['Attendance',['admin','teacher']],admin:['Users & Backup',['admin']]};
+function boot(){ document.querySelector('header small').style.display=T?'none':'';$('#who').innerHTML=T?esc(NAME)+' ('+ROLE+') <button class="o" onclick="logout()">Logout</button>':'';
+ if(!T){$('#nav').innerHTML='';$('#bk').innerHTML='';app.innerHTML=`<div class="card"><h3>Login</h3><div class="row"><input id="u" placeholder="Username" autocapitalize="none" autocorrect="off" spellcheck="false"><input id="p" type="password" placeholder="Password" autocapitalize="none" autocorrect="off"><button onclick="login()">Login</button></div><label><input type="checkbox" onchange="document.getElementById('p').type=this.checked?'text':'password'"> Show password</label></div>`;return}
+ $('#nav').innerHTML=Object.entries(TABS).filter(([k,v])=>v[1].includes(ROLE)).map(([k,v])=>`<button class="${k==tab?'on':'o'}" onclick="tab='${k}';boot()">${v[0]}</button>`).join('');
+ if(!TABS[tab][1].includes(ROLE))tab='students';$('#bk').innerHTML=(ROLE=='admin'&&D.students.length&&Date.now()-(D.lastBackup||0)>7*864e5)?'<div class="card" style="background:#F6E5E1;margin:8px">Backup liye 7 din se zyada ho gaye. <button onclick="dl();boot()">Download backup</button></div>':'';V[tab]()}
+async function login(){const j=await api('login',{username:$('#u').value,password:$('#p').value});T=j.token;ROLE=j.role;NAME=j.name;
+ localStorage.t=T;localStorage.r=ROLE;localStorage.n=NAME;boot()}
+const V={
+async students(){const L=await api('students'),adm=ROLE=='admin';window.L=L;
+ app.innerHTML=(adm?`<div class="card"><h4 id="ft">Add student</h4><div class="row"><input id="n" placeholder="Name"><input id="f" placeholder="Father name"><input id="ph" placeholder="Phone"><input id="c" placeholder="Class"><input id="fe" type="number" placeholder="Monthly fee"><input id="di" type="number" placeholder="Discount per month"><input id="ol" type="number" placeholder="Old dues (purana baqaya)"><label>Photo: <input id="pf" type="file" accept="image/*"></label><button onclick="saveS()">Save</button></div></div>`:'')+
+ `<div class="card"><input id="q" placeholder="Search..." oninput="filt()"><table id="tb"></table></div>`;filt()},
+async fees(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:'Paid'}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>Due this month: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | Old dues: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`},
+async att(){const d=window.ad||today();const L=await api('attendance?date='+d);window.AL=L;const cl=[...new Set(L.map(s=>s.class))];
+ app.innerHTML=`<div class="card"><div class="row"><input type="date" id="d" value="${d}" onchange="ad=this.value;boot()"><select id="cf" onchange="attRows()"><option value="">All classes</option>${cl.map(c=>`<option>${esc(c)}</option>`).join('')}</select><button onclick="saveA()">Save attendance</button><button class="o" onclick="attRep()">Monthly report</button></div><table id="at"></table></div><div id="rep"></div>`;attRows()},
+async admin(){const U=await api('users');
+ app.innerHTML=`<div class="card"><h4>Users (same username = reset password)</h4><div class="row"><input id="un" placeholder="Username" autocapitalize="none" autocorrect="off"><input id="nm" placeholder="Full name"><input id="pw" placeholder="Password" autocapitalize="none" autocorrect="off"><select id="rl"><option>teacher</option><option>accountant</option><option>admin</option></select><button onclick="addU()">Save user</button></div>
+ <table>${U.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${u.role}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Backup</h4><p><b>Data is stored only in this browser on this device.</b> Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.</p><div class="row"><button onclick="dl()">Download backup</button><label>Restore: <input type="file" accept=".json" onchange="rs(this)"></label></div></div>`}};
+function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin';
+ $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(adm?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(adm?`<td><button class="o" onclick="editS(${s.id})">Edit</button> <button class="r" onclick="delS(${s.id})">X</button></td>`:'')+'</tr>').join('')}
+let eid=null;
+function editS(id){const s=L.find(x=>x.id==id);eid=id;n.value=s.name;f.value=s.father;ph.value=s.phone;c.value=s.class;fe.value=s.fee;di.value=s.disc||0;ol.value=s.old||0;$('#ft').textContent='Edit student';scrollTo(0,0)}
+function rsz(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,160/Math.max(i.width,i.height));cv.width=i.width*k;cv.height=i.height*k;cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);r(cv.toDataURL('image/jpeg',.7))};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+async function saveS(){const pic=await rsz(pf.files[0]);let ff=null;
+ if(eid){const o=L.find(x=>x.id==eid);if(o&&((+fe.value||0)!=o.fee||(+di.value||0)!=(o.disc||0))){ff=prompt('Fee change from which month? (YYYY-MM)',month());if(ff===null)return;ff=ff.trim();if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(ff)){alert('Invalid month');return}}}
+ await api('students',{id:eid,name:n.value,father:f.value,phone:ph.value,class:c.value,fee:fe.value,disc:di.value,old:ol.value,photo:pic,feeFrom:ff});eid=null;boot()}
+async function delS(id){if(confirm('Remove this student from active list?')){await api('students/delete',{id});boot()}}
+async function pay(i,old){const s=FL[i],m=old?'old':$('#m').value,due=old?Math.max(0,(s.old||0)-s.oldpaid):Math.max(0,s.fee-(s.disc||0)-s.paid);
+ const a=prompt((old?'OLD dues received from ':'Amount received from ')+s.name,due);if(!a||!(+a>0))return;
+ const r=await api('pay',{student_id:s.id,month:m,amount:a});rcpt(s,m,+a,r,Math.max(0,due-a));boot()}
+function rcpt(s,m,a,r,rem){const t=`Fee Receipt #${r.receipt}\nDate: ${r.date}\nStudent: ${s.name} (${s.class})\nFather: ${s.father}\n${m=='old'?'Old dues':'Month: '+m}\nReceived: ${a}\nRemaining: ${rem}`;
+ let wp=String(s.phone||'').replace(/\D/g,'');if(wp.startsWith('0'))wp='92'+wp.slice(1);else if(wp.length==10)wp='92'+wp;
+ modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(t)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${wp?`<a href="https://wa.me/${wp}?text=${encodeURIComponent(t)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function modal(x){closeM();const d=document.createElement('div');d.id='md';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:9';d.innerHTML='<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto">'+x+'</div>';document.body.appendChild(d)}
+function closeM(){const d=$('#md');if(d)d.remove()}
+function printEl(id){const w=open('','_blank');if(!w)return alert('Popup blocked: allow popups to print');w.document.write('<body style="font-family:sans-serif">'+$('#'+id).innerHTML+'</body>');w.document.close();w.print()}
+async function hist(i){const s=FL[i],hx=await api('history?id='+s.id),adm=ROLE=='admin';
+ modal(`<h4>${esc(s.name)} - fee history</h4><table><tr><th>#</th><th>Date</th><th>For</th><th>Amount</th>${adm?'<th></th>':''}</tr>`+(hx.map(x=>`<tr><td>${x.id}</td><td>${x.date}</td><td>${x.month=='old'?'Old dues':x.month}</td><td>${x.amount}</td>${adm?`<td><button class="o" onclick="pedit(${x.id},${x.amount})">Edit</button> <button class="r" onclick="pdel(${x.id})">X</button></td>`:''}</tr>`).join('')||'<tr><td colspan=5>No payments yet</td></tr>')+`</table><div class="row"><button class="o" onclick="closeM()">Close</button></div>`)}
+async function pedit(id,a){const v=prompt('Correct amount',a);if(!v)return;await api('pay/edit',{id,amount:v});closeM();boot()}
+async function pdel(id){if(confirm('Delete this payment entry?')){await api('pay/delete',{id});closeM();boot()}}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')}</td></tr>`).join('')}
+function mark(id,x){AL.find(s=>s.id==id).status=x;attRows()}
+async function saveA(){await api('attendance',{date:$('#d').value,marks:AL.filter(s=>s.status).map(s=>({id:s.id,status:s.status}))});alert('Saved')}
+async function attRep(){const R=await api('att-report?month='+$('#d').value.slice(0,7));$('#rep').innerHTML=`<div class="card"><h4>Monthly report</h4><table><tr><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Leave</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.class)}</td><td>${r.p||0}</td><td>${r.a||0}</td><td>${r.l||0}</td></tr>`).join('')}</table></div>`}
+async function addU(){await api('users',{username:un.value,name:nm.value,password:pw.value,role:rl.value});alert('Saved: '+un.value.trim().toLowerCase());boot()}
+function dl(){D.lastBackup=Date.now();save();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='school-backup-'+today()+'.json';a.click()}
+function rs(e){const f=e.files[0];if(!f||!confirm('Restore will REPLACE all current data. Continue?'))return;f.text().then(t=>{try{const x=JSON.parse(t);if(!x.users||!x.students)throw 0;D=x;save();logout()}catch{alert('Invalid backup file')}})}
+// ===== Phase 2 + language =====
+let LANG=localStorage.lang||'en';
+const UR={"School Portal":"اسکول پورٹل","first login: admin / admin123":"پہلا لاگ اِن: admin / admin123","Login":"لاگ اِن","Username":"صارف نام","Password":"پاس ورڈ","Logout":"لاگ آؤٹ","Show password":"پاس ورڈ دکھائیں",
+"Students":"طلبہ","Fees":"فیس","Attendance":"حاضری","Exams":"امتحانات","Teachers":"اساتذہ","Accounts":"حسابات","Users & Backup":"صارفین اور بیک اپ",
+"Add student":"طالب علم شامل کریں","Edit student":"طالب علم میں ترمیم","Name":"نام","Father name":"والد کا نام","Phone":"فون","Class":"جماعت","Monthly fee":"ماہانہ فیس","Discount per month":"ماہانہ رعایت","Old dues (purana baqaya)":"پرانا بقایا","Photo:":"تصویر:","Save":"محفوظ کریں","Search...":"تلاش...","Father":"والد","Fee":"فیس","Edit":"ترمیم",
+"Paid":"وصول","Due":"بقایا","Old due":"پرانا بقایا","Old dues":"پرانا بقایا","Receive":"وصول کریں","Old":"پرانا","History":"ریکارڈ","Remind":"یاد دہانی","Due this month":"اس ماہ کا بقایا",
+"Print":"پرنٹ","WhatsApp":"واٹس ایپ","Close":"بند کریں","Fee Receipt":"فیس کی رسید","Date":"تاریخ","Student":"طالب علم","Month":"ماہ","Received":"وصول شدہ","Remaining":"باقی","Fee reminder":"فیس کی یاد دہانی","For":"کس کے لیے","Amount":"رقم","No payments yet":"ابھی کوئی ادائیگی نہیں",
+"All classes":"تمام جماعتیں","Save attendance":"حاضری محفوظ کریں","Monthly report":"ماہانہ رپورٹ","Present":"حاضر","Absent":"غیر حاضر","Leave":"رخصت","Msg":"پیغام",
+"Users (same username = reset password)":"صارفین (وہی صارف نام = پاس ورڈ نیا)","Full name":"پورا نام","Save user":"صارف محفوظ کریں","Backup":"بیک اپ",
+"Data is stored only in this browser on this device.":"یہ ڈیٹا صرف اسی ڈیوائس کے براؤزر میں محفوظ ہے۔","Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.":"باقاعدگی سے بیک اپ ڈاؤن لوڈ کریں اور محفوظ رکھیں (اس میں پاس ورڈ ہیش ہوتے ہیں)۔ براؤزر کا ڈیٹا صاف کرنے سے سب کچھ ختم ہو جاتا ہے۔",
+"Download backup":"بیک اپ ڈاؤن لوڈ کریں","Restore:":"بحال کریں:","Backup liye 7 din se zyada ho gaye.":"بیک اپ لیے 7 دن سے زیادہ ہو گئے۔",
+"New exam":"نیا امتحان","Exam name":"امتحان کا نام","Subjects (comma separated)":"مضامین (کوما سے الگ کریں)","Max marks per subject":"ہر مضمون کے زیادہ سے زیادہ نمبر","Exam":"امتحان","Subjects":"مضامین","Marks":"نمبر","Results":"نتائج","Save marks":"نمبر محفوظ کریں","Total":"کل","Grade":"گریڈ","Position":"پوزیشن","Card":"رزلٹ کارڈ",
+"Add teacher":"استاد شامل کریں","Edit teacher":"استاد میں ترمیم","Subject":"مضمون","Monthly salary":"ماہانہ تنخواہ","Salary":"تنخواہ","Advance":"پیشگی","Balance":"بقایا","Pay salary":"تنخواہ دیں","Slip":"پرچی","Salary slip":"تنخواہ کی پرچی","Salary amount":"تنخواہ کی رقم","Advance amount":"پیشگی کی رقم",
+"Income (fees)":"آمدنی (فیس)","Teacher salaries":"اساتذہ کی تنخواہیں","Expenses":"اخراجات","Net":"بچت","Add expense":"خرچ شامل کریں","Title":"تفصیل",
+"Wrong username or password":"غلط صارف نام یا پاس ورڈ","Not allowed for your role":"آپ کے کردار کو اجازت نہیں","Name required":"نام ضروری ہے","Invalid amount":"غلط رقم","Saved":"محفوظ ہو گیا","Restore will REPLACE all current data. Continue?":"بحالی موجودہ تمام ڈیٹا بدل دے گی۔ جاری رکھیں؟","Invalid backup file":"غلط بیک اپ فائل","Delete this payment entry?":"یہ ادائیگی حذف کریں؟","Remove this student from active list?":"اس طالب علم کو فہرست سے ہٹائیں؟","Correct amount":"درست رقم","Username, password and role required":"صارف نام، پاس ورڈ اور کردار ضروری ہیں","Title and amount required":"تفصیل اور رقم ضروری ہیں","Name and subjects required":"نام اور مضامین ضروری ہیں","Delete this exam?":"یہ امتحان حذف کریں؟","Delete this teacher?":"یہ استاد ہٹائیں؟","Delete this expense?":"یہ خرچ حذف کریں؟"};
+const PAT=[[/^Amount received from (.*)$/,'$1 سے وصول شدہ رقم'],[/^OLD dues received from (.*)$/,'$1 سے پرانا بقایا وصول'],[/^Saved: (.*)$/,'محفوظ: $1'],[/^(.*) - fee history$/,'$1 - فیس کا ریکارڈ'],[/^(.*) - Results$/,'$1 - نتائج']];
+const t=s=>LANG=='ur'?(UR[s]||PAT.reduce((a,[r,v])=>a==s&&r.test(s)?s.replace(r,v):a,s)):s;
+function tr(n){if(LANG!='ur'||!n)return;const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),a=[];let x;while(x=w.nextNode())a.push(x);
+ a.forEach(x=>{const k=x.nodeValue.trim(),v=t(k);if(v!=k)x.nodeValue=x.nodeValue.replace(k,v)});
+ if(n.querySelectorAll)n.querySelectorAll('[placeholder]').forEach(e=>{const v=t(e.placeholder);if(v!=e.placeholder)e.placeholder=v})}
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>tr(n.nodeType==1?n:n.parentNode)))).observe(document.body,{childList:true,subtree:true});
+const _al=alert,_pr=prompt,_cf=confirm;window.alert=m=>_al(t(m));window.prompt=(m,d)=>_pr(t(m),d);window.confirm=m=>_cf(t(m));
+function apply(){document.documentElement.lang=LANG;document.documentElement.dir=LANG=='ur'?'rtl':'ltr';$('#lg').textContent=LANG=='ur'?'English':'اردو';document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k))}
+function setLang(){LANG=LANG=='ur'?'en':'ur';localStorage.lang=LANG;apply();closeM();boot()}
+// ---- new API routes ----
+const api0=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ ['teachers','tpay','exams','exp'].forEach(k=>D[k]=D[k]||[]);D.marks=D.marks||{};
+ if(!['teachers','teachers/delete','tpay','exp','exp/delete','summary','exams','exams/delete','marks'].includes(path)){
+  if(path=='attendance'&&!o)return(await api0(p,o)).map(s=>({...s,phone:(D.students.find(x=>x.id==s.id)||{}).phone}));return api0(p,o)}
+ if(!T)throw 0;
+ const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active),sm=a=>a.reduce((s,x)=>s+x.amount,0);
+ if(path==='teachers'&&!o){ok('fees');const m=q.get('month');return D.teachers.filter(x=>x.active).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const f=ty=>sm(D.tpay.filter(y=>y.teacher_id==x.id&&y.month==m&&y.type==ty));return{...x,adv:f('advance'),paid:f('salary')}})}
+ if(path==='teachers'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,phone:b.phone||'',subject:b.subject||'',salary:+b.salary||0};
+  if(b.id)Object.assign(D.teachers.find(x=>x.id==b.id),v);else D.teachers.push({id:D.seq++,...v,active:1});save();return{ok:1}}
+ if(path==='teachers/delete'){ok('admin');D.teachers.find(x=>x.id==b.id).active=0;save();return{ok:1}}
+ if(path==='tpay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');D.tpay.push({id:D.seq++,teacher_id:+b.teacher_id,month:b.month,type:b.type,amount:+b.amount,date:today()});save();return{ok:1}}
+ if(path==='exp'&&!o){ok('fees');return D.exp.filter(x=>x.date.startsWith(q.get('month'))).sort((a,b)=>b.id-a.id)}
+ if(path==='exp'){ok('fees');if(!b.title||!(+b.amount>0))fail('Title and amount required');D.exp.push({id:D.seq++,date:today(),title:b.title,amount:+b.amount});save();return{ok:1}}
+ if(path==='exp/delete'){ok('admin');D.exp=D.exp.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='summary'){ok('fees');const m=q.get('month');return{fees:sm(D.payments.filter(x=>x.date.startsWith(m))),exp:sm(D.exp.filter(x=>x.date.startsWith(m))),sal:sm(D.tpay.filter(x=>x.date.startsWith(m)))}}
+ if(path==='exams'&&!o){ok('att');return D.exams}
+ if(path==='exams'){ok('att');if(!b.name||!b.subjects)fail('Name and subjects required');D.exams.push({id:D.seq++,name:b.name,class:b.class||'',subjects:b.subjects.split(/[,،]/).map(s=>s.trim()).filter(Boolean),max:+b.max||100});save();return{ok:1}}
+ if(path==='exams/delete'){ok('admin');D.exams=D.exams.filter(e=>e.id!=b.id);delete D.marks[b.id];save();return{ok:1}}
+ if(path==='marks'&&!o){ok('att');const e=D.exams.find(e=>e.id==q.get('id')),mk=D.marks[e.id]||{};return{exam:e,rows:act.filter(s=>!e.class||s.class==e.class).sort((a,b)=>a.name.localeCompare(b.name)).map(s=>({id:s.id,name:s.name,class:s.class,phone:s.phone,m:mk[s.id]||[]}))}}
+ if(path==='marks'){ok('att');D.marks[b.id]=D.marks[b.id]||{};for(const r of b.rows)D.marks[b.id][r.id]=r.m;save();return{ok:1}}
+}
+// ---- send box (receipts, results, reminders, slips) ----
+const waNum=p=>{let w=String(p||'').replace(/\D/g,'').replace(/^00/,'');return w.startsWith('0')?'92'+w.slice(1):w.length==10?'92'+w:w};
+function sendBox(tx,ph){const w=waNum(ph);modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function rcpt(s,m,a,r,rem){sendBox(`${t('Fee Receipt')} #${r.receipt}\n${t('Date')}: ${r.date}\n${t('Student')}: ${s.name} (${s.class})\n${t('Father')}: ${s.father}\n${m=='old'?t('Old dues'):t('Month')+': '+m}\n${t('Received')}: ${a}\n${t('Remaining')}: ${rem}`,s.phone)}
+function remind(i){const s=FL[i],m=$('#m').value;sendBox(`${t('Fee reminder')}: ${s.name} (${s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${s.fee-(s.disc||0)-s.paid}`,s.phone)}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${pl(x)}</button>`).join(' ')} ${s.status=='A'&&s.phone?`<button class="o" onclick="absMsg(${s.id})">Msg</button>`:''}</td></tr>`).join('')}
+function absMsg(id){const s=AL.find(x=>x.id==id);sendBox(`${t('Absent')}: ${s.name} (${s.class}) - ${$('#d').value}`,s.phone)}
+// ---- views ----
+V.fees=async function(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:t('Paid')}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}${d>0?`<button class="o" onclick="remind(${i})">Remind</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>${t('Due this month')}: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | ${t('Old dues')}: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`};
+V.exams=async function(){const E=await api('exams');
+ app.innerHTML=`<div class="card"><h4>New exam</h4><div class="row"><input id="exn" placeholder="Exam name"><input id="exc" placeholder="Class"><input id="exs" placeholder="Subjects (comma separated)"><input id="exm" type="number" placeholder="Max marks per subject"><button onclick="addE()">Save</button></div></div><div class="card"><table><tr><th>Exam</th><th>Class</th><th>Subjects</th><th></th></tr>`+
+ E.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.class)}</td><td>${esc(e.subjects.join(', '))}</td><td><button onclick="marks(${e.id})">Marks</button> <button class="o" onclick="resu(${e.id})">Results</button>${ROLE=='admin'?` <button class="r" onclick="delE(${e.id})">X</button>`:''}</td></tr>`).join('')+`</table></div><div id="mk"></div>`};
+async function addE(){await api('exams',{name:exn.value,class:exc.value,subjects:exs.value,max:exm.value});boot()}
+async function delE(id){if(confirm('Delete this exam?')){await api('exams/delete',{id});boot()}}
+async function marks(id){const r=await api('marks?id='+id);window.MK=r;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(r.exam.name)}</h4><table><tr><th>Name</th>${r.exam.subjects.map(s=>`<th>${esc(s)}</th>`).join('')}</tr>`+r.rows.map((s,i)=>`<tr><td>${esc(s.name)}</td>${r.exam.subjects.map((x,j)=>`<td><input type="number" style="width:64px" value="${s.m[j]??''}" onchange="clampM(this,${i},${j})"></td>`).join('')}</tr>`).join('')+`</table><div class="row"><button onclick="saveM()">Save marks</button></div></div>`;$('#mk').scrollIntoView()}
+async function saveM(){await api('marks',{id:MK.exam.id,rows:MK.rows.map(s=>({id:s.id,m:Array.from(s.m,x=>x??null)}))});alert('Saved')}
+const grade=p=>p>=80?'A+':p>=70?'A':p>=60?'B':p>=50?'C':p>=40?'D':'F';
+async function resu(id){const r=await api('marks?id='+id),e=r.exam,tot=e.max*e.subjects.length;
+ const R=r.rows.map(s=>({...s,t:Array.from(s.m).reduce((a,x)=>a+(+x||0),0)})).sort((a,b)=>b.t-a.t);R.forEach((s,i)=>s.pos=i&&R[i-1].t==s.t?R[i-1].pos:i+1);window.RS=R;window.RE=e;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(e.name)} - Results</h4><table><tr><th>#</th><th>Name</th><th>Total</th><th>%</th><th>Grade</th><th></th></tr>`+R.map((s,i)=>{const p=Math.round(s.t*1000/tot)/10;return`<tr><td>${s.pos}</td><td>${esc(s.name)}</td><td>${s.t}/${tot}</td><td>${p}</td><td>${grade(p)}</td><td><button class="o" onclick="card(${i})">Card</button></td></tr>`}).join('')+`</table></div>`;$('#mk').scrollIntoView()}
+function card(i){const s=RS[i],e=RE,tot=e.max*e.subjects.length,p=Math.round(s.t*1000/tot)/10;
+ sendBox(`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${e.max}`).join('\n')+`\n${t('Total')}: ${s.t}/${tot} (${p}%)\n${t('Grade')}: ${grade(p)}\n${t('Position')}: ${s.pos}`,s.phone)}
+let teid=null;
+V.teachers=async function(){const m=window.tm||month(),L=await api('teachers?month='+m);window.TL=L;const adm=ROLE=='admin';
+ app.innerHTML=(adm?`<div class="card"><h4 id="tth">Add teacher</h4><div class="row"><input id="thn" placeholder="Name"><input id="thp" placeholder="Phone"><input id="ths" placeholder="Subject"><input id="thl" type="number" placeholder="Monthly salary"><button onclick="saveT()">Save</button></div></div>`:'')+
+ `<div class="card"><div class="row"><input type="month" value="${m}" onchange="tm=this.value;boot()"></div><table><tr><th>Name</th><th>Salary</th><th>Advance</th><th>Paid</th><th>Balance</th><th></th></tr>`+L.map((x,i)=>{const b=x.salary-x.adv-x.paid;return`<tr><td>${esc(x.name)}<br><small>${esc(x.subject)}</small></td><td>${x.salary}</td><td>${x.adv}</td><td>${x.paid}</td><td class="${b>0?'due':'ok'}">${b}</td><td><button onclick="tpay(${i},'salary')">Pay salary</button> <button class="o" onclick="tpay(${i},'advance')">Advance</button> <button class="o" onclick="slip(${i})">Slip</button>${adm?` <button class="o" onclick="editT(${i})">Edit</button> <button class="r" onclick="delT(${x.id})">X</button>`:''}</td></tr>`}).join('')+`</table></div>`};
+async function saveT(){await api('teachers',{id:teid,name:thn.value,phone:thp.value,subject:ths.value,salary:thl.value});teid=null;boot()}
+function editT(i){const x=TL[i];teid=x.id;thn.value=x.name;thp.value=x.phone;ths.value=x.subject;thl.value=x.salary;$('#tth').textContent=t('Edit teacher');scrollTo(0,0)}
+async function delT(id){if(confirm('Delete this teacher?')){await api('teachers/delete',{id});boot()}}
+async function tpay(i,ty){const x=TL[i],m=window.tm||month(),a=prompt(x.name+' - '+t(ty=='salary'?'Salary amount':'Advance amount'),ty=='salary'?Math.max(0,x.salary-x.adv-x.paid):'');if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}
+function slip(i){const x=TL[i];sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}`,x.phone)}
+V.acct=async function(){const m=window.am||month(),[S,X]=await Promise.all([api('summary?month='+m),api('exp?month='+m)]),net=S.fees-S.sal-S.exp;
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="am=this.value;boot()"></div><table><tr><td>Income (fees)</td><td>${S.fees}</td></tr><tr><td>Teacher salaries</td><td>${S.sal}</td></tr><tr><td>Expenses</td><td>${S.exp}</td></tr><tr><th>Net</th><th class="${net<0?'due':'ok'}">${net}</th></tr></table></div>
+ <div class="card"><h4>Add expense</h4><div class="row"><input id="xt" placeholder="Title"><input id="xa" type="number" placeholder="Amount"><button onclick="addX()">Save</button></div><table><tr><th>Date</th><th>Title</th><th>Amount</th><th></th></tr>`+X.map(x=>`<tr><td>${x.date}</td><td>${esc(x.title)}</td><td>${x.amount}</td><td>${ROLE=='admin'?`<button class="r" onclick="delX(${x.id})">X</button>`:''}</td></tr>`).join('')+`</table></div>`};
+async function addX(){await api('exp',{title:xt.value,amount:xa.value});boot()}
+async function delX(id){if(confirm('Delete this expense?')){await api('exp/delete',{id});boot()}}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{exams:['Exams',['admin','teacher']],teachers:['Teachers',['admin','accountant']],acct:['Accounts',['admin','accountant']],admin:a})}
+// ---- Excel/CSV import ----
+Object.assign(UR,{"Import from Excel":"ایکسل سے درآمد کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","students found":"طلبہ ملے","No students found in file":"فائل میں کوئی طالب علم نہیں ملا","Import all":"سب درآمد کریں","added":"شامل ہوئے","skipped (duplicate)":"چھوڑے (پہلے سے موجود)","Could not read file":"فائل نہیں پڑھی جا سکی"});
+async function inflate(u){const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzip(buf){const v=new DataView(buf),u=new Uint8Array(buf),out={};let e=u.length-22;while(e>=0&&v.getUint32(e,true)!=0x06054b50)e--;
+ const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);
+ for(let i=0;i<n;i++){const m=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true),name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));
+  const st=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true),d=u.subarray(st,st+cs);out[name]=m==0?d:await inflate(d);p+=46+nl+xl+cl}return out}
+async function readXlsx(buf){const z=await unzip(buf),td=new TextDecoder(),dp=new DOMParser(),X=n=>z[n]?dp.parseFromString(td.decode(z[n]),'text/xml'):null;
+ const ss=X('xl/sharedStrings.xml'),S=ss?[...ss.getElementsByTagName('si')].map(s=>[...s.getElementsByTagName('t')].map(q=>q.textContent).join('')):[];
+ const sn=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0],rows=[];
+ for(const r of X(sn).getElementsByTagName('row')){const row=[];for(const c of r.getElementsByTagName('c')){const col=c.getAttribute('r').replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('t')[0];
+  row[col]=ty=='s'&&v?S[+v.textContent]:ty=='inlineStr'&&is?is.textContent:v?v.textContent:''}rows.push(Array.from(row,x=>x??''))}return rows}
+function readCsv(tx){return tx.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim()).map(l=>{const o=[];let c='',q=false;for(const ch of l){if(ch=='"')q=!q;else if((ch==','||ch==';'||ch=='\t')&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o})}
+function mapRows(R){const hi=R.findIndex(r=>r.some(x=>/name|naam|نام/i.test(x))),idx={};
+ if(hi>=0)R[hi].forEach((h,i)=>{h=String(h).toLowerCase();const k=/father|walid|والد/.test(h)?'father':/disc|رعایت/.test(h)?'disc':/old|baqaya|بقایا|arrear/.test(h)?'old':/phone|mobile|contact|cell|فون|موبائل/.test(h)?'phone':/class|جماعت|grade/.test(h)?'class':/fee|فیس/.test(h)?'fee':/name|naam|نام/.test(h)?'name':null;if(k&&!(k in idx))idx[k]=i});
+ else['name','father','phone','class','fee','disc','old'].forEach((k,i)=>idx[k]=i);
+ if(hi>=0&&!('name' in idx)){const u=R[hi].findIndex((_,i)=>!Object.values(idx).includes(i));if(u>=0)idx.name=u}
+ return R.slice(hi+1).map(r=>{const o={};for(const k in idx)o[k]=String(r[idx[k]]??'').trim();if(/^\d{10}$/.test(o.phone))o.phone='0'+o.phone;return o}).filter(o=>o.name)}
+const api1=api;api=async function(p,o){if(p!=='students/import')return api1(p,o);if(ROLE!='admin'){alert('Not allowed for your role');throw 0}
+ const key=s=>[s.name,s.father||'',s.class||''].join('|').toLowerCase(),ex=new Set(D.students.filter(s=>s.active).map(key));let n=0,sk=0;
+ for(const r of o.rows){if(!r.name||ex.has(key(r))){sk++;continue}ex.add(key(r));D.students.push({id:D.seq++,name:r.name,father:r.father||'',phone:r.phone||'',class:r.class||'',fee:+r.fee||0,disc:+r.disc||0,old:+r.old||0,admitted:today(),active:1});n++}
+ save();return{added:n,skipped:sk}};
+const vs=V.students;V.students=async function(){await vs();if(ROLE=='admin')app.firstElementChild.insertAdjacentHTML('afterend',`<div class="card"><h4>Import from Excel</h4><div class="row"><input type="file" id="xf" accept=".xlsx,.csv,.txt" onchange="impF(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div></div>`)};
+async function impF(el){const f=el.files[0];if(!f)return;let R;try{R=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):readCsv(await f.text())}catch(e){return alert('Could not read file')}
+ window.IMP=mapRows(R);$('#imp').innerHTML=IMP.length?`<p><b>${IMP.length}</b> ${t('students found')}</p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${esc(r.fee)}</td></tr>`).join('')}</table><div class="row"><button onclick="doImp()">Import all</button></div>`:`<p class="due">${t('No students found in file')}</p>`}
+async function doImp(){const r=await api('students/import',{rows:IMP});alert(r.added+' '+t('added')+', '+r.skipped+' '+t('skipped (duplicate)'));boot()}
+function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFFName,Father,Phone,Class,Fee,Discount,Old dues\nAli,Ahmed,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
+// ---- Phase 2 rest: notices, teacher attendance, fee defaulters, time table ----
+const DAYS=['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday'];
+Object.assign(UR,{"Notices":"اعلانات","Time table":"ٹائم ٹیبل","Teacher attendance":"اساتذہ کی حاضری","Fee defaulters":"فیس نادہندگان",
+"New notice":"نیا اعلان","Notice text":"اعلان کا متن","Share":"شیئر","Send to parents":"والدین کو بھیجیں","No notices yet":"ابھی کوئی اعلان نہیں","Title and text required":"عنوان اور متن ضروری ہیں","Delete this notice?":"یہ اعلان حذف کریں؟","No students with phone":"کسی طالب علم کا فون نمبر نہیں","Send":"بھیجیں",
+"No teachers yet":"ابھی کوئی استاد نہیں","Total due":"کل بقایا","No fee defaulters":"کوئی نادہندہ نہیں",
+"Class and subject required":"جماعت اور مضمون ضروری ہیں","Add period":"پیریڈ شامل کریں","Day":"دن","Period":"پیریڈ","Time (e.g. 8:00-8:40)":"وقت (مثلاً 8:00-8:40)","Teacher":"استاد","Delete this period?":"یہ پیریڈ حذف کریں؟","No time table yet":"ابھی کوئی ٹائم ٹیبل نہیں",
+"Saturday":"ہفتہ","Sunday":"اتوار","Monday":"پیر","Tuesday":"منگل","Wednesday":"بدھ","Thursday":"جمعرات"});
+const api2=api;api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ if(!['notices','notices/delete','tatt','tatt-report','tt','tt/delete'].includes(path))return api2(p,o);
+ if(!T)throw 0;
+ ['notices','tt','teachers'].forEach(k=>D[k]=D[k]||[]);D.tatt=D.tatt||{};
+ const fail=m=>{alert(m);throw 0},adm=()=>ROLE=='admin'||fail('Not allowed for your role'),fin=()=>['admin','accountant'].includes(ROLE)||fail('Not allowed for your role'),
+  tch=()=>D.teachers.filter(x=>x.active).sort((a,b)=>a.name.localeCompare(b.name));
+ if(path==='notices'&&!o)return[...D.notices].sort((a,b)=>b.id-a.id);
+ if(path==='notices'){adm();if(!b.title||!b.text)fail('Title and text required');D.notices.push({id:D.seq++,date:today(),title:b.title,text:b.text});save();return{ok:1}}
+ if(path==='notices/delete'){adm();D.notices=D.notices.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='tatt'&&!o){fin();const d=D.tatt[q.get('date')]||{};return tch().map(x=>({id:x.id,name:x.name,subject:x.subject,status:d[x.id]||null}))}
+ if(path==='tatt'){fin();D.tatt[b.date]=D.tatt[b.date]||{};for(const m of b.marks||[])if(m.status)D.tatt[b.date][m.id]=m.status;save();return{ok:1}}
+ if(path==='tatt-report'){fin();const m=q.get('month');return tch().map(x=>{const r={name:x.name,subject:x.subject,p:0,a:0,l:0};for(const d in D.tatt)if(d.startsWith(m)){const s=D.tatt[d][x.id];if(s)r[s.toLowerCase()]++}return r})}
+ if(path==='tt'&&!o)return D.tt;
+ if(path==='tt'){adm();if(!String(b.class||'').trim()||!b.subject)fail('Class and subject required');D.tt.push({id:D.seq++,class:b.class.trim(),day:b.day,period:+b.period||1,time:b.time||'',subject:b.subject,teacher:b.teacher||''});save();return{ok:1}}
+ if(path==='tt/delete'){adm();D.tt=D.tt.filter(x=>x.id!=b.id);save();return{ok:1}}
+};
+// Notices
+V.notices=async function(){const L=await api('notices'),adm=ROLE=='admin';window.NL=L;
+ app.innerHTML=(adm?`<div class="card"><h4>New notice</h4><div class="row"><input id="nt" placeholder="Title"><textarea id="nx" placeholder="Notice text" rows="3" style="width:100%"></textarea><button onclick="addN()">Save</button></div></div>`:'')+
+ (L.length?L.map((x,i)=>`<div class="card"><b>${esc(x.title)}</b> <small>${x.date}</small><p style="white-space:pre-wrap">${esc(x.text)}</p><div class="row"><button class="o" onclick="shareN(${i})">Share</button> <button class="o" onclick="parentsN(${i})">Send to parents</button>${adm?` <button class="r" onclick="delN(${x.id})">X</button>`:''}</div></div>`).join(''):'<div class="card">No notices yet</div>')};
+async function addN(){await api('notices',{title:nt.value.trim(),text:nx.value.trim()});boot()}
+async function delN(id){if(confirm('Delete this notice?')){await api('notices/delete',{id});boot()}}
+const ntxt=x=>`${x.title}\n${x.date}\n\n${x.text}`;
+function shareN(i){const tx=ntxt(NL[i]);modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button><a href="https://wa.me/?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a><button class="o" onclick="closeM()">Close</button></div>`)}
+async function parentsN(i){const tx=ntxt(NL[i]),S=(await api('students')).filter(s=>waNum(s.phone).length>=11);
+ modal(`<h4>${esc(NL[i].title)}</h4>`+(S.length?`<table>`+S.map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.father)} - ${esc(s.class)}</small></td><td><a href="https://wa.me/${waNum(s.phone)}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a></td></tr>`).join('')+`</table>`:'<p>No students with phone</p>')+`<div class="row"><button class="o" onclick="closeM()">Close</button></div>`)}
+// Teacher attendance
+V.tatt=async function(){const d=window.tad||today();window.TA=await api('tatt?date='+d);const R=await api('tatt-report?month='+d.slice(0,7));
+ app.innerHTML=`<div class="card"><div class="row"><input type="date" value="${d}" onchange="tad=this.value;boot()"></div><table id="tat"></table><div class="row"><button onclick="saveTA()">Save attendance</button></div></div><div class="card"><h4>Monthly report</h4><table><tr><th>Name</th><th>${pl('P')}</th><th>${pl('A')}</th><th>${pl('L')}</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}<br><small>${esc(r.subject)}</small></td><td>${r.p}</td><td>${r.a}</td><td>${r.l}</td></tr>`).join('')}</table></div>`;drawTA()};
+function drawTA(){$('#tat').innerHTML=TA.length?TA.map(x=>`<tr><td>${esc(x.name)}<br><small>${esc(x.subject)}</small></td><td>${['P','A','L'].map(s=>`<button class="${x.status==s?'on':'o'}" onclick="setTA(${x.id},'${s}')">${pl(s)}</button>`).join(' ')}</td></tr>`).join(''):'<tr><td>No teachers yet</td></tr>'}
+function setTA(id,s){TA.find(x=>x.id==id).status=s;drawTA()}
+async function saveTA(){await api('tatt',{date:window.tad||today(),marks:TA.map(x=>({id:x.id,status:x.status}))});alert('Saved');boot()}
+// Fee defaulters
+V.defaulters=async function(){const m=window.dm||month(),cf=window.dc||'',L=await api('fees?month='+m),cls=[...new Set(L.map(s=>s.class))].filter(Boolean).sort();
+ const R=L.map(s=>({s,due:Math.max(0,s.fee-(s.disc||0)-s.paid),od:Math.max(0,(s.old||0)-s.oldpaid)})).filter(r=>r.due+r.od>0&&(!cf||r.s.class==cf));window.DF=R;window.DFm=m;
+ const tot=R.reduce((a,r)=>a+r.due+r.od,0);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="dm=this.value;boot()"><select onchange="dc=this.value;boot()"><option value="">All classes</option>${cls.map(c=>`<option value="${esc(c)}"${c==cf?' selected':''}>${esc(c)}</option>`).join('')}</select><button class="o" onclick="printDF()">Print</button></div>`+
+ (R.length?`<table><tr><th>Name</th><th>Class</th><th>Due</th><th>Old due</th><th></th></tr>${R.map((r,i)=>`<tr><td>${esc(r.s.name)}<br><small>${esc(r.s.father)}</small></td><td>${esc(r.s.class)}</td><td class="due">${r.due||'-'}</td><td class="due">${r.od||'-'}</td><td><button class="o" onclick="remDF(${i})">Remind</button></td></tr>`).join('')}</table><p><b>${t('Total due')}: ${tot}</b></p>`:'<p class="ok">No fee defaulters</p>')+`</div>`};
+function remDF(i){const r=DF[i],s=r.s;sendBox(`${t('Fee reminder')}: ${s.name} (${s.class})\n${t('Month')}: ${DFm}\n${t('Due')}: ${r.due}`+(r.od?`\n${t('Old due')}: ${r.od}`:'')+`\n${t('Total')}: ${r.due+r.od}`,s.phone)}
+function printDF(){const w=open('','_blank');if(!w)return alert('Popup blocked: allow popups to print');w.document.write(`<body style="font-family:sans-serif"><h3>${t('Fee defaulters')} - ${DFm}</h3><table border="1" cellpadding="6" style="border-collapse:collapse"><tr><th>${t('Name')}</th><th>${t('Father')}</th><th>${t('Class')}</th><th>${t('Phone')}</th><th>${t('Due')}</th><th>${t('Old due')}</th></tr>${DF.map(r=>`<tr><td>${esc(r.s.name)}</td><td>${esc(r.s.father)}</td><td>${esc(r.s.class)}</td><td>${esc(r.s.phone)}</td><td>${r.due}</td><td>${r.od}</td></tr>`).join('')}</table><p><b>${t('Total due')}: ${DF.reduce((a,r)=>a+r.due+r.od,0)}</b></p></body>`);w.document.close();w.print()}
+// Time table
+function ttHtml(rows,adm){const per=[...new Set(rows.map(x=>x.period))].sort((a,b)=>a-b);
+ return`<table><tr><th>Period</th>${DAYS.map(d=>`<th>${t(d)}</th>`).join('')}</tr>${per.map(p=>`<tr><td>${p}<br><small>${esc((rows.find(x=>x.period==p&&x.time)||{}).time||'')}</small></td>${DAYS.map(d=>`<td>${rows.filter(x=>x.period==p&&x.day==d).map(x=>`${esc(x.subject)}<br><small>${esc(x.teacher)}</small>${adm?` <button class="r" onclick="delTT(${x.id})">X</button>`:''}`).join('<hr>')}</td>`).join('')}</tr>`).join('')}</table>`}
+V.tt=async function(){const L=await api('tt'),adm=ROLE=='admin',cl=[...new Set(L.map(x=>x.class))].sort(),c=(window.tc&&cl.includes(window.tc))?window.tc:(cl[0]||'');window.TTc=c;window.TT=L;
+ app.innerHTML=(adm?`<div class="card"><h4>Add period</h4><div class="row"><input id="tcl" placeholder="Class" value="${esc(c)}"><select id="tdy">${DAYS.map(d=>`<option value="${d}">${d}</option>`).join('')}</select><input id="tpe" type="number" placeholder="Period" value="1"><input id="tti" placeholder="Time (e.g. 8:00-8:40)"><input id="tsu" placeholder="Subject"><input id="tte" list="tl" placeholder="Teacher"><datalist id="tl">${D.teachers.filter(x=>x.active).map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist><button onclick="addTT()">Save</button></div></div>`:'')+
+ `<div class="card">`+(cl.length?`<div class="row"><select onchange="tc=this.value;boot()">${cl.map(x=>`<option value="${esc(x)}"${x==c?' selected':''}>${esc(x)}</option>`).join('')}</select><button class="o" onclick="printTT()">Print</button></div><div style="overflow-x:auto">${ttHtml(L.filter(x=>x.class==c),adm)}</div>`:'No time table yet')+`</div>`};
+async function addTT(){await api('tt',{class:tcl.value,day:tdy.value,period:tpe.value,time:tti.value,subject:tsu.value.trim(),teacher:tte.value.trim()});window.tc=tcl.value.trim();boot()}
+async function delTT(id){if(confirm('Delete this period?')){await api('tt/delete',{id});boot()}}
+function printTT(){const w=open('','_blank');if(!w)return alert('Popup blocked: allow popups to print');w.document.write(`<body style="font-family:sans-serif"><h3>${t('Time table')} - ${esc(TTc)}</h3>${ttHtml(TT.filter(x=>x.class==TTc),false).replace('<table>','<table border="1" cellpadding="6" style="border-collapse:collapse">')}</body>`);w.document.close();w.print()}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{notices:['Notices',['admin','teacher','accountant']],tt:['Time table',['admin','teacher','accountant']],tatt:['Teacher attendance',['admin','accountant']],defaulters:['Fee defaulters',['admin','accountant']],admin:a})}
+// ---- bug fixes ----
+const pl=x=>LANG=='ur'?({P:'ح',A:'غ',L:'ر'})[x]:x;
+Object.assign(UR,{"Storage full! Latest changes are NOT saved. Download a backup now and remove some student photos.":"سٹوریج بھر گئی! تازہ تبدیلیاں محفوظ نہیں ہوئیں۔ ابھی بیک اپ ڈاؤن لوڈ کریں اور کچھ تصاویر ہٹا دیں۔","Popup blocked: allow popups to print":"پاپ اپ بند ہے: پرنٹ کے لیے پاپ اپ کی اجازت دیں","Marks must be between 0 and max":"نمبر 0 اور زیادہ سے زیادہ کے درمیان ہونے چاہییں","Cannot change the role of the last admin":"آخری ایڈمن کا کردار تبدیل نہیں ہو سکتا"});
+function clampM(el,i,j){let v=el.value===''?null:+el.value;if(v!==null&&(isNaN(v)||v<0||v>MK.exam.max)){alert('Marks must be between 0 and max');v=null;el.value=''}MK.rows[i].m[j]=v}
+const api3=api;api=async function(p,o){if(p==='users'&&o){const u=D.users.find(x=>x.username==nu(o.username));if(u&&u.role=='admin'&&o.role!='admin'&&D.users.filter(x=>x.role=='admin').length<2){alert('Cannot change the role of the last admin');throw 0}}return api3(p,o)};
+// ---- fee history per month ----
+Object.assign(UR,{"Fee change from which month? (YYYY-MM)":"فیس کی تبدیلی کس ماہ سے؟ (YYYY-MM)","Invalid month":"غلط ماہ"});
+const feeAt=(s,m)=>{const h=s.fh;if(!h||!h.length)return{fee:s.fee,disc:s.disc||0};let r=null;for(const e of h)if(e.from<=m)r=e;return r||h[0]};
+const api4=api;api=async function(p,o){const [path,qs]=p.split('?');
+ if(path==='students'&&o&&o.id&&o.feeFrom){const s=D.students.find(x=>x.id==o.id),of=s.fee,od=s.disc||0;const r=await api4(p,o);
+  if(!s.fh||!s.fh.length)s.fh=[{from:'0000-00',fee:of,disc:od}];
+  const e={from:o.feeFrom,fee:+o.fee||0,disc:+o.disc||0},i=s.fh.findIndex(x=>x.from==e.from);if(i>=0)s.fh[i]=e;else s.fh.push(e);
+  s.fh.sort((a,b)=>a.from<b.from?-1:a.from>b.from?1:0);const l=s.fh[s.fh.length-1];s.fee=l.fee;s.disc=l.disc;save();return r}
+ const r=await api4(p,o);
+ if(path==='fees'&&!o){const m=new URLSearchParams(qs||'').get('month');return r.map(x=>{const s=D.students.find(y=>y.id==x.id);const f=feeAt(s,m);return{...x,fee:f.fee,disc:f.disc}})}
+ return r};
+apply();
+boot();
+</script></body></html>

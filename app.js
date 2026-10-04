@@ -1,0 +1,494 @@
+let T=localStorage.t,ROLE=localStorage.r,NAME=localStorage.n,tab='students';
+const $=s=>document.querySelector(s),app=$('#app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),month=()=>today().slice(0,7);
+
+// ---- Local engine (data is saved inside this browser, no server) ----
+let D=JSON.parse(localStorage.sp_db||'null')||{users:[],students:[],payments:[],att:{},rseq:0,seq:1};
+const save=()=>{try{localStorage.sp_db=JSON.stringify(D)}catch(e){alert('Storage is full! Download a backup now and remove old photos.')}};
+const nu=s=>String(s||'').trim().toLowerCase();D.users.forEach(u=>u.username=nu(u.username));
+const PERM={fees:['admin','accountant'],att:['admin','teacher'],admin:['admin']};
+async function H(p,s){try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+p)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch{let h=5381;for(const c of s+p)h=(h*33^c.charCodeAt(0))>>>0;return''+h}}
+async function setUser(username,password,role,name){username=nu(username);password=String(password).trim();const salt=Math.random().toString(36).slice(2),hash=await H(password,salt),u=D.users.find(x=>x.username==username);
+ if(u)Object.assign(u,{salt,hash,role,name:name||username});else D.users.push({username,salt,hash,role,name:name||username});save()}
+async function api(p,o){
+ const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{},fail=m=>{alert(m);throw 0};
+ if(!D.users.length)await setUser('admin','admin123','admin','Admin');
+ if(path==='login'){const u=D.users.find(x=>x.username==nu(b.username));if(!u||await H(String(b.password||'').trim(),u.salt)!==u.hash)fail('Wrong username or password');return{token:'local',role:u.role,name:u.name}}
+ if(!T)throw 0;
+ const ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active);
+ const srt=a=>a.sort((x,y)=>(x.class+x.name).localeCompare(y.class+y.name));
+ if(path==='students'&&!o)return srt([...act]);
+ if(path==='students'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,father:b.father||'',phone:b.phone||'',class:b.class||'',fee:+b.fee||0,disc:+b.disc||0,old:+b.old||0};if(b.photo)v.photo=b.photo;
+  if(b.id)Object.assign(D.students.find(s=>s.id==b.id),v);else D.students.push({id:D.seq++,...v,admitted:today(),active:1});save();return{ok:1}}
+ if(path==='students/delete'){ok('admin');D.students.find(s=>s.id==b.id).active=0;save();return{ok:1}}
+ if(path==='fees'){ok('fees');return srt(act.map(s=>({...s,paid:D.payments.filter(x=>x.student_id==s.id&&x.month==q.get('month')).reduce((a,x)=>a+x.amount,0),oldpaid:D.payments.filter(x=>x.student_id==s.id&&x.month=='old').reduce((a,x)=>a+x.amount,0)})))}
+ if(path==='pay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');const id=++D.rseq;D.payments.push({id,student_id:+b.student_id,month:b.month,amount:+b.amount,date:today(),by:NAME});save();return{receipt:id,date:today()}}
+ if(path==='attendance'&&!o){ok('att');const d=D.att[q.get('date')]||{};return srt(act.map(s=>({id:s.id,name:s.name,class:s.class,status:d[s.id]||null})))}
+ if(path==='attendance'){ok('att');D.att[b.date]=D.att[b.date]||{};for(const m of b.marks||[])D.att[b.date][m.id]=m.status;save();return{ok:1}}
+ if(path==='att-report'){ok('att');const m=q.get('month');return srt(act.map(s=>{const r={name:s.name,class:s.class,p:0,a:0,l:0};
+  for(const d in D.att)if(d.startsWith(m)){const x=D.att[d][s.id];if(x)r[x.toLowerCase()]++}return r}))}
+ if(path==='history'){ok('fees');return D.payments.filter(x=>x.student_id==q.get('id')).sort((a,b)=>b.id-a.id)}
+ if(path==='pay/delete'){ok('admin');D.payments=D.payments.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='pay/edit'){ok('admin');if(!(+b.amount>0))fail('Invalid amount');D.payments.find(x=>x.id==b.id).amount=+b.amount;save();return{ok:1}}
+ if(path==='users'&&!o){ok('admin');return D.users.map(({username,name,role})=>({username,name,role}))}
+ if(path==='users'){ok('admin');if(!b.username||!b.password||!['admin','teacher','accountant'].includes(b.role))fail('Username, password and role required');await setUser(b.username,b.password,b.role,b.name);return{ok:1}}
+}
+function logout(){['t','r','n'].forEach(k=>localStorage.removeItem(k));T=null;boot()}
+const TABS={students:['Students',['admin','teacher','accountant']],fees:['Fees',['admin','accountant']],att:['Attendance',['admin','teacher']],admin:['Users & Backup',['admin']]};
+function boot(){ $('#who').innerHTML=T?esc(NAME)+' ('+ROLE+') <button class="o" onclick="logout()">Logout</button>':'';
+ if(!T){$('#nav').innerHTML='';$('#bk').innerHTML='';app.innerHTML=`<div class="card"><h3>Login</h3><div class="row"><input id="u" placeholder="Username" autocapitalize="none" autocorrect="off" spellcheck="false"><input id="p" type="password" placeholder="Password" autocapitalize="none" autocorrect="off"><button onclick="login()">Login</button></div><label><input type="checkbox" onchange="document.getElementById('p').type=this.checked?'text':'password'"> Show password</label></div>`;return}
+ $('#nav').innerHTML=Object.entries(TABS).filter(([k,v])=>v[1].includes(ROLE)).map(([k,v])=>`<button class="${k==tab?'on':'o'}" onclick="tab='${k}';boot()">${v[0]}</button>`).join('');
+ if(!TABS[tab][1].includes(ROLE))tab='students';$('#bk').innerHTML=(ROLE=='admin'&&D.students.length&&Date.now()-(D.lastBackup||0)>7*864e5)?'<div class="card" style="background:#F6E5E1;margin:8px">Last backup is more than 7 days old. <button onclick="dl();boot()">Download backup</button></div>':'';V[tab]()}
+async function login(){const j=await api('login',{username:$('#u').value,password:$('#p').value});T=j.token;ROLE=j.role;NAME=j.name;
+ localStorage.t=T;localStorage.r=ROLE;localStorage.n=NAME;boot()}
+const V={
+async students(){const L=await api('students'),adm=ROLE=='admin';window.L=L;
+ app.innerHTML=(adm?`<div class="card"><h4 id="ft">Add student</h4><div class="row"><input id="n" placeholder="Name"><input id="f" placeholder="Father name"><input id="ph" placeholder="Phone"><input id="c" placeholder="Class"><input id="fe" type="number" placeholder="Monthly fee"><input id="di" type="number" placeholder="Discount per month"><input id="ol" type="number" placeholder="Old dues (purana baqaya)"><label>Photo: <input id="pf" type="file" accept="image/*"></label><button onclick="saveS()">Save</button></div></div>`:'')+
+ `<div class="card"><input id="q" placeholder="Search..." oninput="filt()"><table id="tb"></table></div>`;filt()},
+async fees(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:'Paid'}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>Due this month: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | Old dues: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`},
+async att(){const d=window.ad||today();const L=await api('attendance?date='+d);window.AL=L;const cl=[...new Set(L.map(s=>s.class))];
+ app.innerHTML=`<div class="card"><div class="row"><input type="date" id="d" value="${d}" onchange="ad=this.value;boot()"><select id="cf" onchange="attRows()"><option value="">All classes</option>${cl.map(c=>`<option>${esc(c)}</option>`)}</select><button onclick="saveA()">Save attendance</button><button class="o" onclick="attRep()">Monthly report</button></div><table id="at"></table></div><div id="rep"></div>`;attRows()},
+async admin(){const U=await api('users');
+ app.innerHTML=`<div class="card"><h4>Users (same username = reset password)</h4><div class="row"><input id="un" placeholder="Username" autocapitalize="none" autocorrect="off"><input id="nm" placeholder="Full name"><input id="pw" placeholder="Password" autocapitalize="none" autocorrect="off"><select id="rl"><option>teacher</option><option>accountant</option><option>admin</option></select><button onclick="addU()">Save user</button></div>
+ <table>${U.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${u.role}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Backup</h4><p><b>Data is stored only in this browser on this device.</b> Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.</p><div class="row"><button onclick="dl()">Download backup</button><label>Restore: <input type="file" accept=".json,.txt,application/json,text/plain" onchange="rs(this)"></label></div></div>`}};
+function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin';
+ $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(adm?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(adm?`<td><button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button></td>`:'')+'</tr>').join('')}
+let eid=null;
+function editS(id){const s=L.find(x=>x.id==id);eid=id;n.value=s.name;f.value=s.father;ph.value=s.phone;c.value=s.class;fe.value=s.fee;di.value=s.disc||0;ol.value=s.old||0;$('#ft').textContent='Edit student';scrollTo(0,0)}
+function rsz(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,160/Math.max(i.width,i.height));cv.width=i.width*k;cv.height=i.height*k;cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);r(cv.toDataURL('image/jpeg',.7))};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+async function saveS(){const pic=await rsz(pf.files[0]);await api('students',{id:eid,name:n.value,father:f.value,phone:ph.value,class:c.value,fee:fe.value,disc:di.value,old:ol.value,photo:pic});eid=null;boot()}
+async function delS(id){if(await ask('Remove this student from active list?')){await api('students/delete',{id});boot()}}
+async function pay(i,old){const s=FL[i],m=old?'old':$('#m').value,due=old?Math.max(0,(s.old||0)-s.oldpaid):Math.max(0,s.fee-(s.disc||0)-s.paid);
+ const a=await askVal((old?'OLD dues received from ':'Amount received from ')+s.name,due);if(!a||!(+a>0))return;
+ const r=await api('pay',{student_id:s.id,month:m,amount:a});rcpt(s,m,+a,r,Math.max(0,due-a));boot()}
+function rcpt(s,m,a,r,rem){const t=`Fee Receipt #${r.receipt}\nDate: ${r.date}\nStudent: ${s.name} (${s.class})\nFather: ${s.father}\n${m=='old'?'Old dues':'Month: '+m}\nReceived: ${a}\nRemaining: ${rem}`;
+ let wp=String(s.phone||'').replace(/\D/g,'');if(wp.startsWith('0'))wp='92'+wp.slice(1);else if(wp.length==10)wp='92'+wp;
+ modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(t)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${wp?`<a href="https://wa.me/${wp}?text=${encodeURIComponent(t)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function modal(x){closeM();const d=document.createElement('div');d.id='md';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:9';d.innerHTML='<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto">'+x+'</div>';document.body.appendChild(d)}
+function closeM(){const d=$('#md');if(d)d.remove()}
+function printEl(id){let s=document.getElementById('prs');if(!s){s=document.createElement('style');s.id='prs';s.textContent='#pr{display:none}@media print{body>*:not(#pr){display:none!important}#pr{display:block!important;font-family:sans-serif;padding:12px}}';document.head.appendChild(s)}
+ let d=document.getElementById('pr');if(d)d.remove();d=document.createElement('div');d.id='pr';d.innerHTML=(id=='cvp'||id=='vprint'?'':brandHdr())+document.getElementById(id).innerHTML;document.body.appendChild(d);
+ const done=()=>{d.remove();removeEventListener('afterprint',done)};addEventListener('afterprint',done);
+ try{window.print()}catch(e){alert('Print is not supported here. Open this file in Chrome.')}}
+async function hist(i){const s=FL[i],hx=await api('history?id='+s.id),adm=ROLE=='admin';
+ modal(`<h4>${esc(s.name)} - fee history</h4><table><tr><th>#</th><th>Date</th><th>For</th><th>Amount</th>${adm?'<th></th>':''}</tr>`+(hx.map(x=>`<tr><td>${x.id}</td><td>${x.date}</td><td>${x.month=='old'?'Old dues':x.month}</td><td>${x.amount}</td>${adm?`<td><button class="o" onclick="pedit(${x.id},${x.amount})">Edit</button> <button class="r sm" onclick="pdel(${x.id})">Delete</button></td>`:''}</tr>`).join('')||'<tr><td colspan=5>No payments yet</td></tr>')+`</table><div class="row"><button class="o" onclick="closeM()">Close</button></div>`)}
+async function pedit(id,a){const v=await askVal('Correct amount',a);if(!v)return;await api('pay/edit',{id,amount:v});closeM();boot()}
+async function pdel(id){if(await ask('Delete this payment entry?')){await api('pay/delete',{id});closeM();boot()}}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')}</td></tr>`).join('')}
+function mark(id,x){AL.find(s=>s.id==id).status=x;attRows()}
+async function saveA(){await api('attendance',{date:$('#d').value,marks:AL.filter(s=>s.status).map(s=>({id:s.id,status:s.status}))});alert('Saved')}
+async function attRep(){const R=await api('att-report?month='+$('#d').value.slice(0,7));$('#rep').innerHTML=`<div class="card"><h4>Monthly report</h4><table><tr><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Leave</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.class)}</td><td>${r.p||0}</td><td>${r.a||0}</td><td>${r.l||0}</td></tr>`).join('')}</table></div>`}
+async function addU(){await api('users',{username:un.value,name:nm.value,password:pw.value,role:rl.value});alert('Saved: '+un.value.trim().toLowerCase());boot()}
+function dl(){D.lastBackup=Date.now();save();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='school-backup-'+today()+'.json';a.click()}
+async function rs(e){const f=e.files[0];if(!f||!await ask('Restore will REPLACE all current data. Continue?'))return;f.text().then(t=>{try{const x=JSON.parse(t);if(!x.users||!x.students)throw 0;D=x;save();logout()}catch{alert('Invalid backup file')}})}
+// ===== Phase 2 + language =====
+let LANG=localStorage.lang||'en';
+const UR={"School Portal":"اسکول پورٹل","first login: admin / admin123":"پہلا لاگ اِن: admin / admin123","Login":"لاگ اِن","Username":"صارف نام","Password":"پاس ورڈ","Logout":"لاگ آؤٹ","Show password":"پاس ورڈ دکھائیں",
+"Students":"طلبہ","Fees":"فیس","Attendance":"حاضری","Exams":"امتحانات","Teachers":"اساتذہ","Accounts":"حسابات","Users & Backup":"صارفین اور بیک اپ",
+"Add student":"طالب علم شامل کریں","Edit student":"طالب علم میں ترمیم","Name":"نام","Father name":"والد کا نام","Phone":"فون","Class":"جماعت","Monthly fee":"ماہانہ فیس","Discount per month":"ماہانہ رعایت","Old dues (purana baqaya)":"پرانا بقایا","Photo:":"تصویر:","Save":"محفوظ کریں","Search...":"تلاش...","Father":"والد","Fee":"فیس","Edit":"ترمیم",
+"Paid":"وصول","Due":"بقایا","Old due":"پرانا بقایا","Old dues":"پرانا بقایا","Receive":"وصول کریں","Old":"پرانا","History":"ریکارڈ","Remind":"یاد دہانی","Due this month":"اس ماہ کا بقایا",
+"Print":"پرنٹ","WhatsApp":"واٹس ایپ","Close":"بند کریں","Fee Receipt":"فیس کی رسید","Date":"تاریخ","Student":"طالب علم","Month":"ماہ","Received":"وصول شدہ","Remaining":"باقی","Fee reminder":"فیس کی یاد دہانی","For":"کس کے لیے","Amount":"رقم","No payments yet":"ابھی کوئی ادائیگی نہیں",
+"All classes":"تمام جماعتیں","Save attendance":"حاضری محفوظ کریں","Monthly report":"ماہانہ رپورٹ","Present":"حاضر","Absent":"غیر حاضر","Leave":"رخصت","P":"ح","A":"غ","L":"ر","Msg":"پیغام",
+"Users (same username = reset password)":"صارفین (وہی صارف نام = پاس ورڈ نیا)","Full name":"پورا نام","Save user":"صارف محفوظ کریں","Backup":"بیک اپ",
+"Data is stored only in this browser on this device.":"یہ ڈیٹا صرف اسی ڈیوائس کے براؤزر میں محفوظ ہے۔","Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.":"باقاعدگی سے بیک اپ ڈاؤن لوڈ کریں اور محفوظ رکھیں (اس میں پاس ورڈ ہیش ہوتے ہیں)۔ براؤزر کا ڈیٹا صاف کرنے سے سب کچھ ختم ہو جاتا ہے۔",
+"Download backup":"بیک اپ ڈاؤن لوڈ کریں","Restore:":"بحال کریں:","Last backup is more than 7 days old.":"بیک اپ لیے 7 دن سے زیادہ ہو گئے۔",
+"New exam":"نیا امتحان","Exam name":"امتحان کا نام","Subjects (comma separated)":"مضامین (کوما سے الگ کریں)","Max marks per subject":"ہر مضمون کے زیادہ سے زیادہ نمبر","Exam":"امتحان","Subjects":"مضامین","Marks":"نمبر","Results":"نتائج","Save marks":"نمبر محفوظ کریں","Total":"کل","Grade":"گریڈ","Position":"پوزیشن","Card":"رزلٹ کارڈ",
+"Add teacher":"استاد شامل کریں","Edit teacher":"استاد میں ترمیم","Subject":"مضمون","Monthly salary":"ماہانہ تنخواہ","Salary":"تنخواہ","Advance":"پیشگی","Balance":"بقایا","Pay salary":"تنخواہ دیں","Slip":"پرچی","Salary slip":"تنخواہ کی پرچی","Salary amount":"تنخواہ کی رقم","Advance amount":"پیشگی کی رقم",
+"Income (fees)":"آمدنی (فیس)","Teacher salaries":"اساتذہ کی تنخواہیں","Expenses":"اخراجات","Net":"بچت","Add expense":"خرچ شامل کریں","Title":"تفصیل",
+"Wrong username or password":"غلط صارف نام یا پاس ورڈ","Not allowed for your role":"آپ کے کردار کو اجازت نہیں","Name required":"نام ضروری ہے","Invalid amount":"غلط رقم","Saved":"محفوظ ہو گیا","Restore will REPLACE all current data. Continue?":"بحالی موجودہ تمام ڈیٹا بدل دے گی۔ جاری رکھیں؟","Invalid backup file":"غلط بیک اپ فائل","Delete this payment entry?":"یہ ادائیگی حذف کریں؟","Remove this student from active list?":"اس طالب علم کو فہرست سے ہٹائیں؟","Correct amount":"درست رقم","Username, password and role required":"صارف نام، پاس ورڈ اور کردار ضروری ہیں","Title and amount required":"تفصیل اور رقم ضروری ہیں","Name and subjects required":"نام اور مضامین ضروری ہیں","Delete this exam?":"یہ امتحان حذف کریں؟","Delete this teacher?":"یہ استاد ہٹائیں؟","Delete this expense?":"یہ خرچ حذف کریں؟"};
+const PAT=[[/^Amount received from (.*)$/,'$1 سے وصول شدہ رقم'],[/^OLD dues received from (.*)$/,'$1 سے پرانا بقایا وصول'],[/^Saved: (.*)$/,'محفوظ: $1'],[/^(.*) - fee history$/,'$1 - فیس کا ریکارڈ'],[/^(.*) - Results$/,'$1 - نتائج']];
+const t=s=>LANG=='ur'?(UR[s]||PAT.reduce((a,[r,v])=>a==s&&r.test(s)?s.replace(r,v):a,s)):s;
+function tr(n){if(LANG!='ur'||!n)return;const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),a=[];let x;while(x=w.nextNode())a.push(x);
+ a.forEach(x=>{const k=x.nodeValue.trim();if(k.length==1&&x.parentNode.tagName!='BUTTON')return;const v=t(k);if(v!=k)x.nodeValue=x.nodeValue.replace(k,v)});
+ if(n.querySelectorAll)n.querySelectorAll('[placeholder]').forEach(e=>{const v=t(e.placeholder);if(v!=e.placeholder)e.placeholder=v})}
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>tr(n.nodeType==1?n:n.parentNode)))).observe(document.body,{childList:true,subtree:true});
+const _al=alert,_pr=prompt,_cf=confirm;window.alert=m=>_al(t(m));window.prompt=(m,d)=>_pr(t(m),d);window.confirm=m=>_cf(t(m));
+function apply(){document.documentElement.lang=LANG;document.documentElement.dir=LANG=='ur'?'rtl':'ltr';$('#lg').textContent=LANG=='ur'?'English':'اردو';document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));brand()}
+function setLang(){LANG=LANG=='ur'?'en':'ur';localStorage.lang=LANG;apply();closeM();boot()}
+// ---- new API routes ----
+const api0=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ ['teachers','tpay','exams','exp'].forEach(k=>D[k]=D[k]||[]);D.marks=D.marks||{};
+ if(!['students/import','teachers','teachers/delete','tpay','exp','exp/delete','summary','exams','exams/delete','marks'].includes(path)){
+  if(path=='attendance'&&!o)return(await api0(p,o)).map(s=>({...s,phone:(D.students.find(x=>x.id==s.id)||{}).phone}));return api0(p,o)}
+ if(!T)throw 0;
+ const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active),sm=a=>a.reduce((s,x)=>s+x.amount,0);
+ if(path==='students/import'){ok('admin');let n=0,sk=0;for(const r of b.rows){if(!r.name)continue;if(D.students.some(s=>s.active&&s.name==r.name&&s.father==(r.father||'')&&s.class==(r.class||''))){sk++;continue}D.students.push({id:D.seq++,name:r.name,father:r.father||'',phone:r.phone||'',class:r.class||'',fee:+r.fee||0,disc:+r.disc||0,old:+r.old||0,admitted:today(),active:1});n++}save();return{added:n,skipped:sk}}
+ if(path==='teachers'&&!o){ok('fees');const m=q.get('month');return D.teachers.filter(x=>x.active).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const f=ty=>sm(D.tpay.filter(y=>y.teacher_id==x.id&&y.month==m&&y.type==ty));return{...x,adv:f('advance'),paid:f('salary')}})}
+ if(path==='teachers'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,phone:b.phone||'',subject:b.subject||'',salary:+b.salary||0};
+  if(b.id)Object.assign(D.teachers.find(x=>x.id==b.id),v);else D.teachers.push({id:D.seq++,...v,active:1});save();return{ok:1}}
+ if(path==='teachers/delete'){ok('admin');D.teachers.find(x=>x.id==b.id).active=0;save();return{ok:1}}
+ if(path==='tpay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');D.tpay.push({id:D.seq++,teacher_id:+b.teacher_id,month:b.month,type:b.type,amount:+b.amount,date:today()});save();return{ok:1}}
+ if(path==='exp'&&!o){ok('fees');return D.exp.filter(x=>x.date.startsWith(q.get('month'))).sort((a,b)=>b.id-a.id)}
+ if(path==='exp'){ok('fees');if(!b.title||!(+b.amount>0))fail('Title and amount required');D.exp.push({id:D.seq++,date:today(),title:b.title,amount:+b.amount});save();return{ok:1}}
+ if(path==='exp/delete'){ok('admin');D.exp=D.exp.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='summary'){ok('fees');const m=q.get('month');return{fees:sm(D.payments.filter(x=>x.date.startsWith(m))),exp:sm(D.exp.filter(x=>x.date.startsWith(m))),sal:sm(D.tpay.filter(x=>x.date.startsWith(m)))}}
+ if(path==='exams'&&!o){ok('att');return D.exams}
+ if(path==='exams'){ok('att');if(!b.name||!b.subjects)fail('Name and subjects required');D.exams.push({id:D.seq++,name:b.name,class:b.class||'',subjects:b.subjects.split(/[,،]/).map(s=>s.trim()).filter(Boolean),max:+b.max||100});save();return{ok:1}}
+ if(path==='exams/delete'){ok('admin');D.exams=D.exams.filter(e=>e.id!=b.id);delete D.marks[b.id];save();return{ok:1}}
+ if(path==='marks'&&!o){ok('att');const e=D.exams.find(e=>e.id==q.get('id')),mk=D.marks[e.id]||{};return{exam:e,rows:act.filter(s=>!e.class||s.class==e.class).sort((a,b)=>a.name.localeCompare(b.name)).map(s=>({id:s.id,name:s.name,class:s.class,phone:s.phone,m:mk[s.id]||[]}))}}
+ if(path==='marks'){ok('att');D.marks[b.id]=D.marks[b.id]||{};for(const r of b.rows)D.marks[b.id][r.id]=r.m;save();return{ok:1}}
+}
+// ---- send box (receipts, results, reminders, slips) ----
+const waNum=p=>{let w=String(p||'').replace(/\D/g,'');return w.startsWith('0')?'92'+w.slice(1):w.length==10?'92'+w:w};
+function sendBox(tx,ph){const w=waNum(ph);modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function rcpt(s,m,a,r,rem){sendBox(`${t('Fee Receipt')} #${r.receipt}\n${t('Date')}: ${r.date}\n${t('Student')}: ${s.name} (${s.class})\n${t('Father')}: ${s.father}\n${m=='old'?t('Old dues'):t('Month')+': '+m}\n${t('Received')}: ${a}\n${t('Remaining')}: ${rem}`,s.phone)}
+function remind(i){const s=FL[i],m=$('#m').value;sendBox(`${t('Fee reminder')}: ${s.name} (${s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${s.fee-(s.disc||0)-s.paid}`,s.phone)}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')} ${s.status=='A'&&s.phone?`<button class="o" onclick="absMsg(${s.id})">Msg</button>`:''}</td></tr>`).join('')}
+function absMsg(id){const s=AL.find(x=>x.id==id);sendBox(`${t('Absent')}: ${s.name} (${s.class}) - ${$('#d').value}`,s.phone)}
+// ---- views ----
+V.fees=async function(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:t('Paid')}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}${d>0?`<button class="o" onclick="remind(${i})">Remind</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>${t('Due this month')}: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | ${t('Old dues')}: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`};
+V.exams=async function(){const E=await api('exams');
+ app.innerHTML=`<div class="card"><h4>New exam</h4><div class="row"><input id="exn" placeholder="Exam name"><input id="exc" placeholder="Class"><input id="exs" placeholder="Subjects (comma separated)"><input id="exm" type="number" placeholder="Max marks per subject"><button onclick="addE()">Save</button></div></div><div class="card"><table><tr><th>Exam</th><th>Class</th><th>Subjects</th><th></th></tr>`+
+ E.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.class)}</td><td>${esc(e.subjects.join(', '))}</td><td><button onclick="marks(${e.id})">Marks</button> <button class="o" onclick="resu(${e.id})">Results</button>${ROLE=='admin'?` <button class="r sm" onclick="delE(${e.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div><div id="mk"></div>`};
+async function addE(){await api('exams',{name:exn.value,class:exc.value,subjects:exs.value,max:exm.value});boot()}
+async function delE(id){if(await ask('Delete this exam?')){await api('exams/delete',{id});boot()}}
+async function marks(id){const r=await api('marks?id='+id);window.MK=r;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(r.exam.name)}</h4><table><tr><th>Name</th>${r.exam.subjects.map(s=>`<th>${esc(s)}</th>`).join('')}</tr>`+r.rows.map((s,i)=>`<tr><td>${esc(s.name)}</td>${r.exam.subjects.map((x,j)=>`<td><input type="number" style="width:64px" value="${s.m[j]??''}" onchange="MK.rows[${i}].m[${j}]=this.value===''?null:+this.value"></td>`).join('')}</tr>`).join('')+`</table><div class="row"><button onclick="saveM()">Save marks</button></div></div>`;$('#mk').scrollIntoView()}
+async function saveM(){await api('marks',{id:MK.exam.id,rows:MK.rows.map(s=>({id:s.id,m:Array.from(s.m,x=>x??null)}))});alert('Saved')}
+const grade=p=>p>=80?'A+':p>=70?'A':p>=60?'B':p>=50?'C':p>=40?'D':'F';
+async function resu(id){const r=await api('marks?id='+id),e=r.exam,tot=e.max*e.subjects.length;
+ const R=r.rows.map(s=>({...s,t:Array.from(s.m).reduce((a,x)=>a+(+x||0),0)})).sort((a,b)=>b.t-a.t);window.RS=R;window.RE=e;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(e.name)} - Results</h4><table><tr><th>#</th><th>Name</th><th>Total</th><th>%</th><th>Grade</th><th></th></tr>`+R.map((s,i)=>{const p=Math.round(s.t*1000/tot)/10;return`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${s.t}/${tot}</td><td>${p}</td><td>${grade(p)}</td><td><button class="o" onclick="card(${i})">Card</button></td></tr>`}).join('')+`</table></div>`;$('#mk').scrollIntoView()}
+function card(i){const s=RS[i],e=RE,tot=e.max*e.subjects.length,p=Math.round(s.t*1000/tot)/10;
+ sendBox(`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${e.max}`).join('\n')+`\n${t('Total')}: ${s.t}/${tot} (${p}%)\n${t('Grade')}: ${grade(p)}\n${t('Position')}: ${i+1}`,s.phone)}
+let teid=null;
+V.teachers=async function(){const m=window.tm||month(),L=await api('teachers?month='+m);window.TL=L;const adm=ROLE=='admin';
+ app.innerHTML=(adm?`<div class="card"><h4 id="tth">Add teacher</h4><div class="row"><input id="thn" placeholder="Name"><input id="thp" placeholder="Phone"><input id="ths" placeholder="Subject"><input id="thl" type="number" placeholder="Monthly salary"><button onclick="saveT()">Save</button></div></div>`:'')+
+ `<div class="card"><div class="row"><input type="month" value="${m}" onchange="tm=this.value;boot()"></div><table class="tt"><tr><th>Name</th><th>Salary</th><th>Advance</th><th>Salary paid</th><th>Balance</th></tr>`+L.map((x,i)=>{const b=x.salary-x.adv-x.paid;return`<tr><td>${esc(x.name)}<br><small>${esc(x.subject)}</small></td><td>${x.salary}</td><td>${x.adv}</td><td>${x.paid}</td><td class="${b>0?'due':'ok'}">${b}</td></tr><tr><td colspan="5" class="acts" style="white-space:nowrap;padding-bottom:12px"><button class="sm" onclick="tpay(${i},'salary')">Pay salary</button> <button class="o sm" onclick="tpay(${i},'advance')">Advance</button> <button class="o sm" onclick="slip(${i})">Slip</button>${adm?` <button class="o sm" onclick="editT(${i})">Edit</button> <button class="r sm" onclick="delT(${x.id})">Remove</button>`:''}</td></tr>`}).join('')+`</table></div>`};
+async function saveT(){await api('teachers',{id:teid,name:thn.value,phone:thp.value,subject:ths.value,salary:thl.value});teid=null;boot()}
+function editT(i){const x=TL[i];teid=x.id;thn.value=x.name;thp.value=x.phone;ths.value=x.subject;thl.value=x.salary;$('#tth').textContent=t('Edit teacher');scrollTo(0,0)}
+async function delT(id){if(await ask('Delete this teacher?')){await api('teachers/delete',{id});boot()}}
+async function tpay(i,ty){const x=TL[i],m=window.tm||month(),a=await askVal(x.name+' - '+t(ty=='salary'?'Salary amount':'Advance amount'),ty=='salary'?Math.max(0,x.salary-x.adv-x.paid):'');if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}
+function slip(i){const x=TL[i];sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}`,x.phone)}
+V.acct=async function(){const m=window.am||month(),[S,X]=await Promise.all([api('summary?month='+m),api('exp?month='+m)]),net=S.fees-S.sal-S.exp;
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="am=this.value;boot()"></div><table><tr><td>Income (fees)</td><td>${S.fees}</td></tr><tr><td>Teacher salaries</td><td>${S.sal}</td></tr><tr><td>Expenses</td><td>${S.exp}</td></tr><tr><th>Net</th><th class="${net<0?'due':'ok'}">${net}</th></tr></table></div>
+ <div class="card"><h4>Add expense</h4><div class="row"><input id="xt" placeholder="Title"><input id="xa" type="number" placeholder="Amount"><button onclick="addX()">Save</button></div><table><tr><th>Date</th><th>Title</th><th>Amount</th><th></th></tr>`+X.map(x=>`<tr><td>${x.date}</td><td>${esc(x.title)}</td><td>${x.amount}</td><td>${ROLE=='admin'?`<button class="r sm" onclick="delX(${x.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div>`};
+async function addX(){await api('exp',{title:xt.value,amount:xa.value});boot()}
+async function delX(id){if(await ask('Delete this expense?')){await api('exp/delete',{id});boot()}}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{exams:['Exams',['admin','teacher']],teachers:['Teachers',['admin','accountant']],acct:['Accounts',['admin','accountant']],admin:a})}
+// ---- Excel/CSV import ----
+Object.assign(UR,{"Import from Excel":"ایکسل سے درآمد کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","students found":"طلبہ ملے","No students found in file":"فائل میں کوئی طالب علم نہیں ملا","Import all":"سب درآمد کریں","added":"شامل ہوئے","skipped (duplicate)":"چھوڑے (پہلے سے موجود)","Could not read file":"فائل نہیں پڑھی جا سکی"});
+async function inflate(u){const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzip(buf){const v=new DataView(buf),u=new Uint8Array(buf),out={};let e=u.length-22;while(e>=0&&v.getUint32(e,true)!=0x06054b50)e--;
+ const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);
+ for(let i=0;i<n;i++){const m=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true),name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));
+  const st=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true),d=u.subarray(st,st+cs);out[name]=m==0?d:await inflate(d);p+=46+nl+xl+cl}return out}
+async function readXlsx(buf){const z=await unzip(buf),td=new TextDecoder(),dp=new DOMParser(),X=n=>z[n]?dp.parseFromString(td.decode(z[n]),'text/xml'):null;
+ const ss=X('xl/sharedStrings.xml'),S=ss?[...ss.getElementsByTagName('si')].map(s=>[...s.getElementsByTagName('t')].map(q=>q.textContent).join('')):[];
+ const sn=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0],rows=[];
+ for(const r of X(sn).getElementsByTagName('row')){const row=[];for(const c of r.getElementsByTagName('c')){const col=c.getAttribute('r').replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('t')[0];
+  row[col]=ty=='s'&&v?S[+v.textContent]:ty=='inlineStr'&&is?is.textContent:v?v.textContent:''}rows.push(Array.from(row,x=>x??''))}return rows}
+function readCsv(tx){return tx.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim()).map(l=>{const o=[];let c='',q=false;for(const ch of l){if(ch=='"')q=!q;else if((ch==','||ch==';'||ch=='\t')&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o})}
+function mapRows(R){const hi=R.findIndex(r=>r.some(x=>/name|naam|نام/i.test(x))),idx={};
+ if(hi>=0)R[hi].forEach((h,i)=>{h=String(h).toLowerCase();const k=/father|walid|والد|ولدیت/.test(h)?'father':/disc|رعایت/.test(h)?'disc':/old|baqaya|بقایا|arrear/.test(h)?'old':/phone|mobile|contact|cell|فون|موبائل/.test(h)?'phone':/class|جماعت|کلاس|درجہ|grade/.test(h)?'class':/fee|فیس/.test(h)?'fee':/name|naam|نام/.test(h)?'name':null;if(k&&!(k in idx))idx[k]=i});
+ else['name','father','phone','class','fee','disc','old'].forEach((k,i)=>idx[k]=i);
+ return R.slice(hi+1).map(r=>{const o={};for(const k in idx)o[k]=String(r[idx[k]]??'').trim();if(/^\d{10}$/.test(o.phone))o.phone='0'+o.phone;return o}).filter(o=>o.name)}
+const api1=api;api=async function(p,o){if(p!=='students/import')return api1(p,o);if(ROLE!='admin'){alert('Not allowed for your role');throw 0}
+ const key=s=>[s.name,s.father||'',s.class||''].join('|').toLowerCase(),ex=new Set(D.students.filter(s=>s.active).map(key));let n=0,sk=0;
+ for(const r of o.rows){if(!r.name||ex.has(key(r))){sk++;continue}ex.add(key(r));D.students.push({id:D.seq++,name:r.name,father:r.father||'',phone:r.phone||'',class:r.class||'',fee:+r.fee||0,disc:+r.disc||0,old:+r.old||0,admitted:today(),active:1});n++}
+ save();return{added:n,skipped:sk}};
+const vs=V.students;V.students=async function(){await vs();if(ROLE=='admin')app.firstElementChild.insertAdjacentHTML('afterend',`<div class="card"><h4>Import from Excel</h4><div class="row"><input type="file" id="xf" accept=".xlsx,.csv,.txt" onchange="impF(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div></div>`)};
+async function impF(el){const f=el.files[0];if(!f)return;let R;try{R=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):readCsv(await f.text())}catch(e){return alert('Could not read file')}
+ window.IMP=mapRows(R);$('#imp').innerHTML=IMP.length?`<p><b>${IMP.length}</b> ${t('students found')}</p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${esc(r.fee)}</td></tr>`).join('')}</table><div class="row"><button onclick="doImp()">Import all</button></div>`:`<p class="due">${t('No students found in file')}</p>`}
+async function doImp(){const r=await api('students/import',{rows:IMP});alert(r.added+' '+t('added')+', '+r.skipped+' '+t('skipped (duplicate)'));boot()}
+function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFFName,Father,Phone,Class,Fee,Discount,Old dues\nAli,Ahmed,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
+// ===== Excel / CSV import =====
+Object.assign(UR,{"Import from Excel":"ایکسل سے طلبہ شامل کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","Columns: Name, Father, Phone, Class, Fee, Discount, Old dues (first row = headings). Save Excel as .xlsx or CSV.":"کالم: نام، والد، فون، جماعت، فیس، رعایت، پرانا بقایا (پہلی لائن = عنوان)۔ ایکسل کو .xlsx یا CSV میں محفوظ کریں۔","Students found in file":"فائل میں طلبہ ملے","Import":"شامل کریں","Cancel":"منسوخ کریں","Added":"شامل ہوئے","Skipped (already exist)":"چھوڑے گئے (پہلے سے موجود)","Could not read this file":"یہ فائل پڑھی نہیں جا سکی","No students found in file":"فائل میں کوئی طالب علم نہیں ملا"});
+const SYN={father:['father','walid','والد','ولدیت'],phone:['phone','mobile','contact','فون','موبائل','رابطہ'],class:['class','grade','jamaat','جماعت','کلاس','درجہ'],disc:['discount','رعایت','ماہانہ رعایت'],old:['old','arrears','balance','pichla','purana','پرانا','بقایا'],fee:['fee','فیس','ماہانہ فیس'],name:['name','student','naam','نام','طالب']};
+async function readXlsx(buf){const u=new Uint8Array(buf),dv=new DataView(buf),td=new TextDecoder();let e=u.length-22;while(e>=0&&dv.getUint32(e,true)!=0x06054b50)e--;
+ const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const F={};
+ for(let i=0;i<n;i++){const nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true);F[td.decode(u.subarray(p+46,p+46+nl))]={m:dv.getUint16(p+10,true),cs:dv.getUint32(p+20,true),lo:dv.getUint32(p+42,true)};p+=46+nl+xl+cl}
+ const get=async nm=>{const f=F[nm];if(!f)return null;const st=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),d=u.subarray(st,st+f.cs);
+  return f.m==0?td.decode(d):await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()};
+ const X=s=>new DOMParser().parseFromString(s,'application/xml'),ss=await get('xl/sharedStrings.xml');
+ const S=ss?[...X(ss).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')):[];
+ const sh=Object.keys(F).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0];const rows=[];
+ for(const r of X(await get(sh)).getElementsByTagName('row'))for(const c of r.getElementsByTagName('c')){
+  const L=c.getAttribute('r').replace(/\d/g,''),ci=[...L].reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ri=+c.getAttribute('r').replace(/\D/g,'')-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0];
+  const val=ty=='s'?S[+v.textContent]:ty=='inlineStr'?[...c.getElementsByTagName('t')].map(t=>t.textContent).join(''):v?v.textContent:'';
+  (rows[ri]=rows[ri]||[])[ci]=val}
+ return rows.filter(Boolean)}
+function parseCsv(s){s=s.replace(/^\ufeff/,'');const R=[];let r=[],c='',q=false;for(let i=0;i<s.length;i++){const ch=s[i];
+ if(q){if(ch=='"'){if(s[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','||ch==';'||ch=='\t'){r.push(c);c=''}
+ else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&s[i+1]=='\n')i++;r.push(c);R.push(r);r=[];c=''}else c+=ch}
+ if(c||r.length){r.push(c);R.push(r)}return R}
+async function impFile(el){const f=el.files[0];if(!f)return;let rows;
+ try{rows=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):parseCsv(await f.text())}catch(e){alert('Could not read this file');return}
+ rows=rows.filter(r=>r.some(c=>String(c??'').trim()));const map={};
+ (rows[0]||[]).forEach((h,i)=>{h=String(h??'').trim().toLowerCase();const k=Object.keys(SYN).find(k=>SYN[k].some(w=>h.includes(w)));if(k&&!(k in map))map[k]=i});
+ let data=rows;if('name' in map)data=rows.slice(1);else['name','father','phone','class','fee','disc','old'].forEach((k,i)=>map[k]=i);
+ const g=(r,k)=>k in map?String(r[map[k]]??'').trim():'',num=v=>+String(v).replace(/[,\s]/g,'')||0;
+ window.IMP=data.map(r=>{let ph=g(r,'phone').replace(/\D/g,'');if(/^3\d{9}$/.test(ph))ph='0'+ph;return{name:g(r,'name'),father:g(r,'father'),phone:ph,class:g(r,'class'),fee:num(g(r,'fee')),disc:num(g(r,'disc')),old:num(g(r,'old'))}}).filter(r=>r.name);
+ if(!IMP.length){alert('No students found in file');return}
+ $('#imp').innerHTML=`<p><b>${t('Students found in file')}: ${IMP.length}</b></p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${r.fee}</td></tr>`).join('')}</table><div class="row" style="margin-top:8px"><button onclick="doImp()">Import</button><button class="o" onclick="boot()">Cancel</button></div>`}
+async function doImp(){const r=await api('students/import',{rows:IMP});alert(t('Added')+': '+r.added+' | '+t('Skipped (already exist)')+': '+r.skipped);boot()}
+function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeffName,Father,Phone,Class,Fee,Discount,Old dues\nAli Khan,Ahmed Khan,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
+{const vs=V.students;V.students=async function(){await vs();if(ROLE!='admin'||document.getElementById('xf'))return;const d=document.createElement('div');d.className='card';
+ d.innerHTML=`<h4>Import from Excel</h4><p><small>Columns: Name, Father, Phone, Class, Fee, Discount, Old dues (first row = headings). Save Excel as .xlsx or CSV.</small></p><div class="row"><input type="file" id="imf" accept=".xlsx,.csv,.txt" onchange="impFile(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div>`;app.firstChild.after(d)}}
+// ===== Phase 2 completion: defaulters, notices, timetable, teacher attendance =====
+Object.assign(UR,{"Notices":"اعلانات","Timetable":"نظام الاوقات","Add notice":"اعلان شامل کریں","Details":"تفصیلات","Share":"شیئر کریں","No notices yet":"ابھی کوئی اعلان نہیں","Delete this notice?":"یہ اعلان حذف کریں؟","Title required":"عنوان ضروری ہے","Class and subject required":"جماعت اور مضمون ضروری ہیں",
+"Defaulters list":"بقایا فیس کی فہرست","Total due":"کل بقایا","No defaulters":"کوئی بقایا دار نہیں","Period":"گھنٹہ","Teacher":"استاد","Add to timetable":"نظام الاوقات میں شامل کریں","No timetable yet for this class":"اس جماعت کا نظام الاوقات ابھی نہیں بنا","Type class name":"جماعت کا نام لکھیں",
+"Sat":"ہفتہ","Sun":"اتوار","Mon":"پیر","Tue":"منگل","Wed":"بدھ","Thu":"جمعرات","Fri":"جمعہ","Teacher attendance":"اساتذہ کی حاضری","Present days":"حاضر دن","Absent days":"غیر حاضر دن","Leave days":"رخصت کے دن","Suggested deduction":"تجویز کردہ کٹوتی"});
+let TTC='',TAD=null;
+const DAYS=['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
+const apiP2=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ D.notices=D.notices||[];D.tt=D.tt||[];D.tatt=D.tatt||{};
+ if(['notices','notices/delete','tt','tt/delete','tatt'].includes(path)){if(!T)throw 0;
+  const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role');
+  if(path==='notices'&&!o)return[...D.notices].sort((a,b)=>b.id-a.id);
+  if(path==='notices'){ok('admin');if(!b.title)fail('Title required');D.notices.push({id:D.seq++,date:today(),title:b.title,body:b.body||''});save();return{ok:1}}
+  if(path==='notices/delete'){ok('admin');D.notices=D.notices.filter(x=>x.id!=b.id);save();return{ok:1}}
+  if(path==='tt'&&!o)return D.tt.filter(x=>x.class==q.get('class'));
+  if(path==='tt'){ok('admin');if(!b.class||!b.subject)fail('Class and subject required');D.tt=D.tt.filter(x=>!(x.class==b.class&&x.day==b.day&&x.period==b.period));D.tt.push({id:D.seq++,class:b.class,day:b.day,period:+b.period,subject:b.subject,teacher:b.teacher||''});save();return{ok:1}}
+  if(path==='tt/delete'){ok('admin');D.tt=D.tt.filter(x=>x.id!=b.id);save();return{ok:1}}
+  if(path==='tatt'&&!o){ok('admin');const d=D.tatt[q.get('date')]||{};return D.teachers.filter(x=>x.active).map(x=>({id:x.id,name:x.name,status:d[x.id]||null}))}
+  if(path==='tatt'){ok('admin');D.tatt[b.date]=D.tatt[b.date]||{};for(const m of b.marks)D.tatt[b.date][m.id]=m.status;save();return{ok:1}}
+ }
+ const r=await apiP2(p,o);
+ if(path==='teachers'&&!o){const m=q.get('month');return r.map(x=>{const c={P:0,A:0,L:0};for(const d in D.tatt)if(d.startsWith(m)){const s=D.tatt[d][x.id];if(s)c[s]++}return{...x,pa:c.P,ab:c.A,lv:c.L}})}
+ return r}
+function sendBox(tx,ph){const any=ph==='any',w=any?'':waNum(ph),nm=brandName();if(nm&&!tx.startsWith(nm))tx=nm+'\n'+tx;modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${(w||any)?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+// defaulters
+function defs(){const m=$('#m').value,te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ const R=FL.map(s=>({s,d:Math.max(0,te(s)-s.paid),o:od(s)})).filter(x=>x.d+x.o>0).sort((a,b)=>b.d+b.o-(a.d+a.o));
+ modal(`<h4>Defaulters list</h4>`+(R.length?`<div id="dfl"><table><tr><th>Name</th><th>Class</th><th>Due</th><th>Old due</th><th></th></tr>${R.map(x=>{const w=waNum(x.s.phone),tx=`${t('Fee reminder')}: ${x.s.name} (${x.s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${x.d}${x.o?'\n'+t('Old dues')+': '+x.o:''}`;
+  return`<tr><td>${esc(x.s.name)}</td><td>${esc(x.s.class)}</td><td>${x.d}</td><td>${x.o||'-'}</td><td>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}</td></tr>`}).join('')}</table><p><b>${t('Total due')}: ${R.reduce((a,x)=>a+x.d+x.o,0)}</b></p></div>`:`<p>No defaulters</p>`)+`<div class="row">${R.length?`<button onclick="printEl('dfl')">Print</button>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+{const vf=V.fees;V.fees=async function(){await vf();app.querySelector('.row').insertAdjacentHTML('beforeend','<button class="o" onclick="defs()">Defaulters list</button>')}}
+// notices
+V.notices=async function(){const N=await api('notices'),adm=ROLE=='admin';window.NL=N;
+ app.innerHTML=(adm?`<div class="card"><h4>Add notice</h4><div class="row"><input id="nt" placeholder="Title"><input id="nb" placeholder="Details" style="flex:1;min-width:200px"><button onclick="addN()">Save</button></div></div>`:'')+
+ (N.length?N.map((n,i)=>`<div class="card"><b>${esc(n.title)}</b> <small>${n.date}</small><p style="white-space:pre-wrap">${esc(n.body)}</p><div class="row"><button class="o" onclick="shareN(${i})">Share</button>${adm?`<button class="r sm" onclick="delN(${n.id})">Delete</button>`:''}</div></div>`).join(''):`<div class="card">No notices yet</div>`)};
+async function addN(){await api('notices',{title:nt.value,body:nb.value});boot()}
+async function delN(id){if(await ask('Delete this notice?')){await api('notices/delete',{id});boot()}}
+function shareN(i){const n=NL[i];sendBox(`${n.title}\n${n.date}\n\n${n.body}`,'any')}
+// timetable
+V.timetable=async function(){const adm=ROLE=='admin',cl=TTC,S=await api('students'),cls=[...new Set(S.map(s=>s.class).filter(Boolean))],E=cl?await api('tt?class='+encodeURIComponent(cl)):[];
+ let grid='';if(cl){if(E.length){const days=DAYS.filter(d=>E.some(e=>e.day==d)),ps=[...new Set(E.map(e=>e.period))].sort((a,b)=>a-b);
+  grid=`<div class="card"><div id="ttg"><b>${esc(cl)}</b><table><tr><th>Period</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr>${ps.map(pn=>`<tr><td>${pn}</td>${days.map(d=>{const e=E.find(x=>x.day==d&&x.period==pn);return`<td>${e?`${esc(e.subject)}<br><small>${esc(e.teacher)}</small>${adm?` <button class="r" onclick="delTT(${e.id})">X</button>`:''}`:''}</td>`}).join('')}</tr>`).join('')}</table></div><div class="row"><button class="o" onclick="printEl('ttg')">Print</button></div></div>`}
+  else grid=`<div class="card">No timetable yet for this class</div>`}
+ app.innerHTML=`<div class="card"><div class="row"><input id="ttc" list="cls" placeholder="Type class name" value="${esc(cl)}" onchange="TTC=this.value.trim();boot()"><datalist id="cls">${cls.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>`+
+ (adm&&cl?`<div class="row"><select id="ttd">${DAYS.map(d=>`<option value="${d}">${d}</option>`).join('')}</select><input id="ttp" type="number" placeholder="Period" style="width:90px"><input id="tts" placeholder="Subject"><input id="ttt" placeholder="Teacher"><button onclick="addTT()">Add to timetable</button></div>`:'')+`</div>`+grid};
+async function addTT(){await api('tt',{class:TTC,day:ttd.value,period:ttp.value,subject:tts.value,teacher:ttt.value});boot()}
+async function delTT(id){await api('tt/delete',{id});boot()}
+// teacher attendance + slip
+{const vt=V.teachers;V.teachers=async function(){await vt();if(ROLE!='admin')return;app.querySelector('input[type=month]').parentNode.insertAdjacentHTML('beforeend','<button class="o" onclick="tat()">Teacher attendance</button>');app.insertAdjacentHTML('beforeend','<div id="tat"></div>')}}
+async function tat(){window.TT=await api('tatt?date='+(TAD||today()));drawTA();$('#tat').scrollIntoView()}
+function drawTA(){const d=TAD||today();$('#tat').innerHTML=`<div class="card"><h4>Teacher attendance</h4><div class="row"><input type="date" value="${d}" onchange="TAD=this.value;tat()"><button onclick="saveTA()">Save</button></div><table>`+TT.map(x=>`<tr><td>${esc(x.name)}</td><td>${['P','A','L'].map(s=>`<button class="${x.status==s?'on':'o'}" onclick="markT(${x.id},'${s}')">${s}</button>`).join(' ')}</td></tr>`).join('')+`</table></div>`}
+function markT(id,s){TT.find(x=>x.id==id).status=s;drawTA()}
+async function saveTA(){await api('tatt',{date:TAD||today(),marks:TT.filter(x=>x.status).map(x=>({id:x.id,status:x.status}))});alert('Saved');boot()}
+function slip(i){const x=TL[i],ded=Math.round(x.salary/30*x.ab);sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}\n${t('Present days')}: ${x.pa}\n${t('Absent days')}: ${x.ab}\n${t('Leave days')}: ${x.lv}`+(ded?`\n${t('Suggested deduction')}: ${ded}`:''),x.phone)}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{timetable:['Timetable',['admin','teacher','accountant']],notices:['Notices',['admin','teacher','accountant']],admin:a})}
+// ===== Phase 3: certificates, hifz, donations, library, parent report =====
+Object.assign(UR,{"Certificates":"سرٹیفکیٹ","Hifz":"حفظ","Donations":"عطیات","Library":"لائبریری","Report":"رپورٹ","Parent report":"والدین کے لیے رپورٹ","Fee due":"فیس بقایا","Latest exam":"تازہ امتحان","Last sabaq":"آخری سبق","Paras completed":"مکمل پارے","Sabaq":"سبق","Sabqi":"سبقی","Manzil":"منزل","Note":"نوٹ","School name":"ادارے کا نام","Preview":"پیش نظارہ","Leaving certificate":"اسکول چھوڑنے کا سرٹیفکیٹ","Character certificate":"کردار کا سرٹیفکیٹ","ID card":"طالب علم کارڈ","No students yet":"ابھی کوئی طالب علم نہیں","Donor":"عطیہ دہندہ","Type":"قسم","Donation receipt":"عطیہ کی رسید","General":"عمومی","Zakat":"زکوٰۃ","Sadaqah":"صدقہ","Fitra":"فطرہ","Receipt":"رسید","Book title":"کتاب کا نام","Add book":"کتاب شامل کریں","Author":"مصنف","Copies":"نسخے","Available":"دستیاب","Issue":"جاری کریں","Return":"واپسی","Books on loan":"جاری شدہ کتابیں","Date out":"تاریخ اجرا","No copies available":"کوئی نسخہ دستیاب نہیں"});
+let HSID=null;
+const apiP3=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ if(!['settings','hifz','hifz/delete','para','don','don/delete','books','books/delete','loan','return','loans','report'].includes(path))return apiP3(p,o);
+ D.settings=D.settings||{};D.hifz=D.hifz||[];D.para=D.para||{};D.don=D.don||[];D.books=D.books||[];D.loans=D.loans||[];if(!T)throw 0;
+ const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),sm=a=>a.reduce((z,x)=>z+x.amount,0),byDate=(a,b)=>b.date.localeCompare(a.date)||b.id-a.id;
+ if(path==='settings'&&!o)return{school:D.settings.school||'',logo:D.settings.logo||''};
+ if(path==='settings'){ok('admin');D.settings.school=(b.school||'').trim();if(b.logo!==undefined)D.settings.logo=b.logo;save();return{ok:1}}
+ if(path==='hifz'&&!o){ok('att');const id=+q.get('student');return{entries:D.hifz.filter(x=>x.student_id==id).sort(byDate).slice(0,30),paras:D.para[id]||[]}}
+ if(path==='hifz'){ok('att');D.hifz.push({id:D.seq++,student_id:+b.student_id,date:b.date||today(),sabaq:b.sabaq||'',sabqi:b.sabqi||'',manzil:b.manzil||'',note:b.note||''});save();return{ok:1}}
+ if(path==='hifz/delete'){ok('admin');D.hifz=D.hifz.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='para'){ok('att');const a=D.para[b.student_id]=D.para[b.student_id]||[],i=a.indexOf(+b.para);if(i>=0)a.splice(i,1);else a.push(+b.para);save();return{ok:1}}
+ if(path==='don'&&!o){ok('fees');return D.don.filter(x=>x.date.startsWith(q.get('month'))).sort((a,b)=>b.id-a.id)}
+ if(path==='don'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');const id=D.seq++;D.don.push({id,date:today(),donor:b.donor||'',phone:b.phone||'',type:b.type||'General',amount:+b.amount});save();return{id,date:today()}}
+ if(path==='don/delete'){ok('admin');D.don=D.don.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='books'&&!o){ok('att');return D.books.map(k=>({...k,out:D.loans.filter(l=>l.book_id==k.id&&!l.back).length}))}
+ if(path==='books'){ok('admin');if(!b.title)fail('Title required');D.books.push({id:D.seq++,title:b.title,author:b.author||'',copies:+b.copies||1});save();return{ok:1}}
+ if(path==='books/delete'){ok('admin');D.books=D.books.filter(k=>k.id!=b.id);save();return{ok:1}}
+ if(path==='loan'){ok('att');const k=D.books.find(k=>k.id==b.book_id);if(k.copies-D.loans.filter(l=>l.book_id==k.id&&!l.back).length<1)fail('No copies available');D.loans.push({id:D.seq++,book_id:k.id,student_id:+b.student_id,out:today(),back:null});save();return{ok:1}}
+ if(path==='return'){ok('att');D.loans.find(l=>l.id==b.id).back=today();save();return{ok:1}}
+ if(path==='loans'){ok('att');return D.loans.filter(l=>!l.back).map(l=>({id:l.id,out:l.out,book:(D.books.find(k=>k.id==l.book_id)||{}).title,student:(D.students.find(s=>s.id==l.student_id)||{}).name}))}
+ if(path==='report'){ok('fees');const s=D.students.find(x=>x.id==q.get('id')),m=q.get('month'),c={P:0,A:0,L:0},AT=D.att||{},PAY=D.payments||[],MKS=D.marks||{};
+  for(const d in AT)if(d.startsWith(m)){const x=AT[d][s.id];if(x)c[x]++}
+  const paid=sm(PAY.filter(x=>x.student_id==s.id&&x.month==m)),op=sm(PAY.filter(x=>x.student_id==s.id&&x.month=='old')),tot=a=>Array.from(a).reduce((z,v)=>z+(+v||0),0);let ex=null;
+  for(const e of[...(D.exams||[])].sort((a,b)=>b.id-a.id)){const mk=MKS[e.id]||{};if(mk[s.id]){const all=Object.values(mk).map(tot).sort((a,b)=>b-a),me=tot(mk[s.id]);ex={name:e.name,pct:Math.round(me*1000/(e.max*e.subjects.length))/10,pos:all.indexOf(me)+1};break}}
+  const hs=D.hifz.filter(x=>x.student_id==s.id).sort(byDate)[0];
+  return{s,c,due:Math.max(0,s.fee-(s.disc||0)-paid),old:Math.max(0,(s.old||0)-op),ex,paras:(D.para[s.id]||[]).length,sabaq:hs?hs.sabaq:''}}
+}
+const schoolName=async()=>(await api('settings')).school||'';
+// parent report (button in students list)
+function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant';
+ $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>').join('')}
+async function rep(id){const m=month(),r=await api('report?id='+id+'&month='+m),sch=await schoolName(),s=r.s;
+ sendBox(`${sch?sch+'\n':''}${t('Parent report')}\n${s.name} (${s.class}) - ${m}\n${t('Attendance')}: ${t('Present')} ${r.c.P} / ${t('Absent')} ${r.c.A} / ${t('Leave')} ${r.c.L}\n${t('Fee due')}: ${r.due}`+(r.old?` (${t('Old dues')}: ${r.old})`:'')+(r.ex?`\n${t('Latest exam')}: ${r.ex.name} ${r.ex.pct}% (${t('Position')} ${r.ex.pos})`:'')+(r.paras||r.sabaq?`\n${t('Hifz')}: ${t('Paras completed')} ${r.paras}/30${r.sabaq?', '+t('Last sabaq')+': '+r.sabaq:''}`:''),s.phone)}
+// certificates + ID card
+V.cert=async function(){const S=await api('students'),st=await api('settings');window.CS=S;
+ app.innerHTML=`<div class="card"><div class="row"><input id="sch" placeholder="School name" value="${esc(st.school)}"><button onclick="saveSch()">Save</button></div><div class="row"><select id="cs">${S.map(s=>`<option value="${s.id}">${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select><select id="ct"><option value="leaving">Leaving certificate</option><option value="character">Character certificate</option><option value="id">ID card</option></select><button onclick="mkCert()">Preview</button></div></div><div id="cv"></div>`};
+async function saveSch(){await api('settings',{school:sch.value});alert('Saved')}
+async function mkCert(){const s=CS.find(x=>x.id==cs.value);if(!s)return;const nm=(await schoolName())||'School',ty=ct.value,ur=LANG=='ur',dir=ur?' dir="rtl"':'';let h;
+ if(ty=='id')h=`<div style="width:300px;border:2px solid #1F3B33;border-radius:10px;padding:10px;text-align:center;font-family:sans-serif"${dir}><div style="background:#1F3B33;color:#fff;padding:6px;border-radius:6px">${logoImg(30)}${esc(nm)}</div>${s.photo?`<img src="${s.photo}" style="width:90px;height:90px;border-radius:8px;object-fit:cover;margin:8px">`:'<div style="height:90px"></div>'}<h3 style="margin:4px">${esc(s.name)}</h3><div>${t('Father')}: ${esc(s.father)}</div><div>${t('Class')}: ${esc(s.class)}</div><div>ID: ${String(s.id).padStart(4,'0')}</div><div>${esc(s.phone)}</div></div>`;
+ else{const lv=ty=='leaving',txt=ur?(lv?`تصدیق کی جاتی ہے کہ ${s.name} ولد/بنت ${s.father} اس ادارے میں جماعت ${s.class} کا طالب علم رہا/رہی ہے۔ اس کا اخلاق و کردار تسلی بخش رہا۔ یہ سرٹیفکیٹ درخواست پر جاری کیا جاتا ہے۔`:`تصدیق کی جاتی ہے کہ ${s.name} ولد/بنت ${s.father} جماعت ${s.class} کا طالب علم ہے اور اس کا اخلاق و کردار نہایت اچھا ہے۔`):(lv?`This is to certify that ${s.name}, child of ${s.father}, was a student of this institution in class ${s.class}. Conduct and character were satisfactory. This certificate is issued on request.`:`This is to certify that ${s.name}, child of ${s.father}, studying in class ${s.class}, bears a good moral character and conduct.`);
+  h=`<div style="border:6px double #1F3B33;padding:24px;text-align:center;font-family:serif"${dir}>${logoImg(70)}<h2>${esc(nm)}</h2><h3>${lv?t('Leaving certificate'):t('Character certificate')}</h3><p style="font-size:18px;line-height:2">${esc(txt)}</p><p>${t('Date')}: ${today()}</p><br><p>__________<br>${ur?'پرنسپل':'Principal'}</p></div>`}
+ $('#cv').innerHTML=`<div class="card"><div id="cvp">${h}</div><div class="row" style="margin-top:8px"><button onclick="printEl('cvp')">Print</button></div></div>`}
+// hifz / nazira
+V.hifz=async function(){const S=await api('students');if(!S.length){app.innerHTML='<div class="card">No students yet</div>';return}
+ const sid=S.some(s=>s.id==HSID)?HSID:S[0].id;HSID=sid;const H=await api('hifz?student='+sid),adm=ROLE=='admin';
+ app.innerHTML=`<div class="card"><select id="hs" onchange="HSID=+this.value;boot()">${S.map(s=>`<option value="${s.id}" ${s.id==sid?'selected':''}>${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select></div>
+ <div class="card"><h4>Paras completed</h4><p><b>${H.paras.length}/30</b></p><div class="row">${Array.from({length:30},(_,i)=>i+1).map(n=>`<button class="${H.paras.includes(n)?'on':'o'}" style="min-width:44px" onclick="togPara(${n})">${n}</button>`).join('')}</div></div>
+ <div class="card"><div class="row"><input type="date" id="hd" value="${today()}"><input id="hsb" placeholder="Sabaq"><input id="hsq" placeholder="Sabqi"><input id="hmn" placeholder="Manzil"><input id="hnt" placeholder="Note"><button onclick="addH()">Save</button></div><table><tr><th>Date</th><th>Sabaq</th><th>Sabqi</th><th>Manzil</th><th>Note</th>${adm?'<th></th>':''}</tr>${H.entries.map(e=>`<tr><td>${e.date}</td><td>${esc(e.sabaq)}</td><td>${esc(e.sabqi)}</td><td>${esc(e.manzil)}</td><td>${esc(e.note)}</td>${adm?`<td><button class="r sm" onclick="delH(${e.id})">Delete</button></td>`:''}</tr>`).join('')}</table></div>`};
+async function togPara(n){await api('para',{student_id:HSID,para:n});boot()}
+async function addH(){await api('hifz',{student_id:HSID,date:hd.value,sabaq:hsb.value,sabqi:hsq.value,manzil:hmn.value,note:hnt.value});boot()}
+async function delH(id){if(!await ask('Delete this entry?'))return;await api('hifz/delete',{id});boot()}
+// donations
+V.don=async function(){const m=window.dm||month(),L=await api('don?month='+m),tot={};L.forEach(x=>tot[x.type]=(tot[x.type]||0)+x.amount);window.DL=L;
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="dm=this.value;boot()"></div><div class="row"><input id="dn" placeholder="Donor"><input id="dp" placeholder="Phone"><select id="dty">${['General','Zakat','Sadaqah','Fitra'].map(x=>`<option value="${x}">${x}</option>`).join('')}</select><input id="da" type="number" placeholder="Amount"><button onclick="addD()">Save</button></div></div>
+ <div class="card"><table><tr><th>Date</th><th>Donor</th><th>Type</th><th>Amount</th><th></th></tr>${L.map((x,i)=>`<tr><td>${x.date}</td><td>${esc(x.donor)}</td><td>${x.type}</td><td>${x.amount}</td><td><button class="o" onclick="rcD(${i})">Receipt</button>${ROLE=='admin'?` <button class="r sm" onclick="delD(${x.id})">Delete</button>`:''}</td></tr>`).join('')}</table><p>${Object.entries(tot).map(([k,v])=>`<b>${t(k)}: ${v}</b>`).join(' | ')}</p></div>`};
+async function donRc(x){const sch=await schoolName();sendBox(`${sch?sch+'\n':''}${t('Donation receipt')} #${x.id}\n${t('Date')}: ${x.date}\n${t('Donor')}: ${x.donor}\n${t('Type')}: ${t(x.type)}\n${t('Amount')}: ${x.amount}`,x.phone)}
+function rcD(i){donRc(DL[i])}
+async function addD(){const x={donor:dn.value,phone:dp.value,type:dty.value,amount:da.value},r=await api('don',x);await donRc({...x,id:r.id,date:r.date,amount:+x.amount});boot()}
+async function delD(id){if(await ask('Delete this donation?')){await api('don/delete',{id});boot()}}
+// library
+V.lib=async function(){const B=await api('books'),Ln=await api('loans'),adm=ROLE=='admin';window.BK=B;
+ app.innerHTML=(adm?`<div class="card"><h4>Add book</h4><div class="row"><input id="bt" placeholder="Book title"><input id="ba" placeholder="Author"><input id="bc" type="number" placeholder="Copies"><button onclick="addB()">Save</button></div></div>`:'')+
+ `<div class="card"><table><tr><th>Book title</th><th>Author</th><th>Available</th><th></th></tr>${B.map((k,i)=>`<tr><td>${esc(k.title)}</td><td>${esc(k.author)}</td><td>${k.copies-k.out}/${k.copies}</td><td><button onclick="issue(${i})">Issue</button>${adm?` <button class="r sm" onclick="delB(${k.id})">Delete</button>`:''}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Books on loan</h4><table><tr><th>Book title</th><th>Student</th><th>Date out</th><th></th></tr>${Ln.map(l=>`<tr><td>${esc(l.book)}</td><td>${esc(l.student)}</td><td>${l.out}</td><td><button class="o" onclick="retB(${l.id})">Return</button></td></tr>`).join('')}</table></div>`};
+async function addB(){await api('books',{title:bt.value,author:ba.value,copies:bc.value});boot()}
+async function delB(id){if(await ask('Delete this book?')){await api('books/delete',{id});boot()}}
+async function issue(i){const S=await api('students'),k=BK[i];modal(`<h4>${esc(k.title)}</h4><select id="isu">${S.map(s=>`<option value="${s.id}">${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select><div class="row" style="margin-top:8px"><button onclick="doIssue(${k.id})">Issue</button><button class="o" onclick="closeM()">Close</button></div>`)}
+async function doIssue(id){await api('loan',{book_id:id,student_id:isu.value});closeM();boot()}
+async function retB(id){await api('return',{id});boot()}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{cert:['Certificates',['admin']],hifz:['Hifz',['admin','teacher']],don:['Donations',['admin','accountant']],lib:['Library',['admin','teacher']],admin:a})}
+UR["Print is not supported here. Open this file in Chrome."]="یہاں پرنٹ نہیں ہو سکتا۔ فائل کو Chrome میں کھولیں۔";
+Object.assign(UR,{"Salary paid":"ادا شدہ تنخواہ","Storage is full! Download a backup now and remove old photos.":"اسٹوریج بھر گیا ہے! ابھی بیک اپ ڈاؤن لوڈ کریں اور پرانی تصویریں ہٹائیں۔","Delete this donation?":"یہ عطیہ حذف کریں؟","Delete this book?":"یہ کتاب حذف کریں؟","Delete this entry?":"یہ اندراج حذف کریں؟"});
+// ===== School name & logo (editable) =====
+Object.assign(UR,{"School name & logo":"ادارے کا نام اور لوگو","Logo:":"لوگو:","Remove logo":"لوگو ہٹائیں"});
+function brandName(){return(D.settings&&D.settings.school)||''}
+function logoImg(h){return(D.settings&&D.settings.logo)?`<img src="${D.settings.logo}" style="height:${h}px;max-width:100%;vertical-align:middle;margin-inline-end:6px">`:''}
+function brandHdr(){const n=brandName();return(n||logoImg(1))?`<div style="text-align:center;margin-bottom:8px">${logoImg(50)}<h3 style="margin:2px;display:inline-block;vertical-align:middle">${esc(n)}</h3></div>`:''}
+function brand(){const n=brandName(),b=document.getElementById('brand');if(!b)return;b.innerHTML=logoImg(30)+(n?esc(n):t('School Portal'));document.title=n||t('School Portal');const sm=document.querySelector('header small');if(sm)sm.style.display=T?'none':''}
+{const b0=boot;boot=function(){b0();brand();if(!T){const n=brandName();app.insertAdjacentHTML('afterbegin',`<div style="text-align:center;margin:14px 0">${logoImg(90)}<h2 style="margin:6px 0">${esc(n||t('School Portal'))}</h2></div>`)}}}
+function rszLogo(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,220/Math.max(i.width,i.height));cv.width=Math.round(i.width*k);cv.height=Math.round(i.height*k);cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);let u=cv.toDataURL('image/png');if(u.length>150000)u=cv.toDataURL('image/jpeg',.8);r(u)};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+async function pickLogo(el){const u=await rszLogo(el.files[0]);if(!u)return;window.NEWLOGO=u;document.getElementById('blp').innerHTML=`<img src="${u}" style="height:60px">`}
+async function saveBrand(){await api('settings',{school:document.getElementById('bnm').value,logo:window.NEWLOGO});window.NEWLOGO=undefined;alert('Saved');boot()}
+async function rmLogo(){await api('settings',{school:document.getElementById('bnm').value,logo:''});window.NEWLOGO=undefined;boot()}
+{const va=V.admin;V.admin=async function(){await va();const st=D.settings||{},c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h4>School name & logo</h4><div class="row"><input id="bnm" placeholder="School name" value="${esc(st.school||'')}"><label>Logo: <input id="blg" type="file" accept="image/*" onchange="pickLogo(this)"></label></div><div id="blp">${st.logo?`<img src="${st.logo}" style="height:60px">`:''}</div><div class="row" style="margin-top:8px"><button onclick="saveBrand()">Save</button><button class="o" onclick="rmLogo()">Remove logo</button></div>`;app.firstChild.before(c)}}
+// ===== Edit in a popup (works even when the page can't scroll) =====
+document.head.insertAdjacentHTML('beforeend','<style>#ef input:not([type=file]){width:100%}#ef{display:grid;gap:6px}</style>');
+function editS(id){const s=L.find(x=>x.id==id);if(!s)return;modal(`<h4>Edit student</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(s.name)}"><input id="e_f" placeholder="Father name" value="${esc(s.father)}"><input id="e_p" placeholder="Phone" value="${esc(s.phone)}"><input id="e_c" placeholder="Class" value="${esc(s.class)}"><input id="e_fe" type="number" placeholder="Monthly fee" value="${s.fee}"><input id="e_di" type="number" placeholder="Discount per month" value="${s.disc||0}"><input id="e_ol" type="number" placeholder="Old dues (purana baqaya)" value="${s.old||0}"><label>Photo: <input id="e_pf" type="file" accept="image/*"></label></div><div class="row" style="margin-top:8px"><button onclick="saveE(${s.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
+async function saveE(id){const pic=await rsz(document.getElementById('e_pf').files[0]),g=k=>document.getElementById(k).value;await api('students',{id,name:g('e_n'),father:g('e_f'),phone:g('e_p'),class:g('e_c'),fee:g('e_fe'),disc:g('e_di'),old:g('e_ol'),photo:pic});closeM();boot()}
+function editT(i){const x=TL[i];modal(`<h4>Edit teacher</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(x.name)}"><input id="e_p" placeholder="Phone" value="${esc(x.phone)}"><input id="e_s" placeholder="Subject" value="${esc(x.subject)}"><input id="e_l" type="number" placeholder="Monthly salary" value="${x.salary}"></div><div class="row" style="margin-top:8px"><button onclick="saveTE(${x.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
+async function saveTE(id){const g=k=>document.getElementById(k).value;await api('teachers',{id,name:g('e_n'),phone:g('e_p'),subject:g('e_s'),salary:g('e_l')});closeM();boot()}
+// ===== Automatic backup =====
+Object.assign(UR,{"Automatic backup":"خودکار بیک اپ","Every day":"ہر روز","Every 3 days":"ہر 3 دن بعد","Every week":"ہر ہفتے","Off":"بند","Share backup":"بیک اپ شیئر کریں","When this app is used, a backup file is downloaded automatically when it is due. Your browser may ask once to allow multiple downloads. A copy of the last 7 days is also kept inside the browser.":"جب یہ ایپ استعمال ہو اور بیک اپ کا وقت ہو چکا ہو تو بیک اپ فائل خود بخود ڈاؤن لوڈ ہو جاتی ہے۔ براؤزر ایک بار متعدد ڈاؤن لوڈ کی اجازت مانگ سکتا ہے۔ پچھلے 7 دن کی کاپی براؤزر کے اندر بھی رہتی ہے۔","Sharing is not supported here. Use Download backup instead.":"یہاں شیئر نہیں ہو سکتا۔ \"بیک اپ ڈاؤن لوڈ کریں\" استعمال کریں۔","Backup downloaded automatically":"بیک اپ خود بخود ڈاؤن لوڈ ہو گیا","Restore":"بحال کریں"});
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('sp_snaps',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbDo=(mode,fn)=>idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction('s',mode),rq=fn(tx.objectStore('s'));tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)}));
+const snapKeys=()=>idbDo('readonly',s=>s.getAllKeys()).then(k=>(k||[]).filter(x=>String(x).startsWith('snap-')).sort());
+let lastSnapAt=0;
+async function autoSnap(){try{if(!T||ROLE!='admin'||!D.students||!D.students.length||Date.now()-lastSnapAt<6e5)return;lastSnapAt=Date.now();
+ await idbDo('readwrite',s=>s.put(JSON.stringify(D),'snap-'+today()));const ks=await snapKeys();for(const k of ks.slice(0,Math.max(0,ks.length-7)))await idbDo('readwrite',s=>s.delete(k))}catch(e){}}
+{const b1=boot;boot=function(){b1();autoSnap()}}
+function toast(m){const d=document.createElement('div');d.textContent=t(m);d.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1F3B33;color:#fff;padding:10px 16px;border-radius:10px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),4000)}
+const ABMS={daily:864e5,'3days':3*864e5,weekly:7*864e5};
+document.addEventListener('click',()=>{try{if(!T||ROLE!='admin'||!D.students||!D.students.length)return;const m=ABMS[(D.settings&&D.settings.autoBackup)||'daily'];if(m&&Date.now()-(D.lastBackup||0)>m){dl();toast('Backup downloaded automatically')}}catch(e){}},true);
+function setAB(v){D.settings=D.settings||{};D.settings.autoBackup=v;save()}
+async function snapRestore(k){if(!await ask('Restore will REPLACE all current data. Continue?'))return;const j=await idbDo('readonly',s=>s.get(k));if(!j)return;D=JSON.parse(j);save();logout()}
+async function shareBk(){const f=new File([JSON.stringify(D)],'school-backup-'+today()+'.json',{type:'text/plain'});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'School backup'});D.lastBackup=Date.now();save();boot()}catch(e){}}else alert('Sharing is not supported here. Use Download backup instead.')}
+{const vb=V.admin;V.admin=async function(){await vb();const ab=(D.settings&&D.settings.autoBackup)||'daily',ks=(await snapKeys()).reverse(),c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h4>Automatic backup</h4><div class="row"><select id="abs" onchange="setAB(this.value)">${[['daily','Every day'],['3days','Every 3 days'],['weekly','Every week'],['off','Off']].map(([v,l])=>`<option value="${v}" ${v==ab?'selected':''}>${l}</option>`).join('')}</select><button class="o" onclick="shareBk()">Share backup</button></div><p><small>When this app is used, a backup file is downloaded automatically when it is due. Your browser may ask once to allow multiple downloads. A copy of the last 7 days is also kept inside the browser.</small></p>`+(ks.length?`<table>${ks.map(k=>`<tr><td>${k.slice(5)}</td><td><button class="o" onclick="snapRestore('${k}')">Restore</button></td></tr>`).join('')}</table>`:'');
+ app.firstChild.after(c)}}
+// ===== Class-wise students =====
+Object.assign(UR,{"All":"تمام","Print list":"فہرست پرنٹ کریں","Students in class":"اس جماعت کے طلبہ"});
+let CF='';
+const natCmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+function filt(){if(!document.getElementById('cc'))return;const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant',cls=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ if(CF&&!cls.includes(CF))CF='';
+ $('#cc').innerHTML=`<button class="${CF?'o':'on'}" onclick="CF='';filt()">${t('All')} (${L.length})</button>`+cls.map(c=>`<button class="${CF===c?'on':'o'}" data-c="${esc(c)}" onclick="CF=this.dataset.c;filt()">${esc(c)||'-'} (${L.filter(s=>(s.class||'')===c).length})</button>`).join('')+(CF?`<button class="o" onclick="printList()">Print list</button>`:'');
+ const F=L.filter(s=>(!CF||(s.class||'')===CF)&&(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).sort((a,b)=>natCmp(a.class||'',b.class||'')||a.name.localeCompare(b.name));
+ const cols=5+(rp?1:0);let last=null,h='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>';
+ for(const s of F){if(!CF&&(s.class||'')!==last){last=s.class||'';h+=`<tr><td colspan="${cols}" style="background:#F5F1E7"><b>${t('Class')} ${esc(last)||'-'}</b> (${F.filter(x=>(x.class||'')===last).length})</td></tr>`}
+  h+=`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>'}
+ $('#tb').innerHTML=h}
+function printList(){const F=L.filter(s=>(s.class||'')===CF).sort((a,b)=>a.name.localeCompare(b.name)),d=document.createElement('div');d.id='plist';d.style.display='none';
+ d.innerHTML=`<h3>${t('Class')} ${esc(CF)} (${F.length})</h3><table style="width:100%;border-collapse:collapse"><tr><th align="start">#</th><th align="start">${t('Name')}</th><th align="start">${t('Father')}</th><th align="start">${t('Phone')}</th></tr>${F.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td></tr>`).join('')}</table>`;
+ document.body.appendChild(d);printEl('plist');d.remove()}
+{const vs=V.students;V.students=async function(){await vs();const q=document.getElementById('q');if(q&&!document.getElementById('cc')){q.insertAdjacentHTML('afterend','<div id="cc" class="row" style="margin:8px 0"></div>');filt()}}}
+// fees: class filter
+{const vf=V.fees;V.fees=async function(){await vf();const cl=[...new Set(FL.map(s=>s.class||''))].sort(natCmp);
+ app.querySelector('.row').insertAdjacentHTML('beforeend',`<select id="fc" onchange="fcf()"><option value="">All classes</option>${cl.map(c=>`<option value="${esc(c)}">${esc(c)||'-'}</option>`).join('')}</select>`);
+ if(window.FCV){document.getElementById('fc').value=FCV;fcf()}}}
+function fcf(){window.FCV=document.getElementById('fc').value;[...app.querySelectorAll('table tr')].slice(1).forEach((r,i)=>{r.style.display=(!FCV||(FL[i].class||'')===FCV)?'':'none'});
+ let p=document.getElementById('fct');if(!FCV){if(p)p.remove();return}
+ if(!p){app.querySelector('.card').insertAdjacentHTML('beforeend','<p id="fct"></p>');p=document.getElementById('fct')}
+ const S=FL.filter(s=>(s.class||'')===FCV);p.innerHTML=`<b>${t('Class')} ${esc(FCV)}: ${t('Due this month')}: ${S.reduce((a,s)=>a+Math.max(0,s.fee-(s.disc||0)-s.paid),0)}</b>`}
+// ===== Own dialogs (work even where browser pop-ups are blocked) + compact student actions =====
+Object.assign(UR,{"OK":"ٹھیک ہے","Remove":"ہٹائیں"});
+document.head.insertAdjacentHTML('beforeend','<style>.sm{padding:5px 9px;font-size:13px}.acts button{padding:5px 6px;font-size:12px}.acts{word-spacing:-2px}.tt td,.tt th{padding:6px 3px;font-size:14px}</style>');
+function dlgBox(x){const d=document.createElement('div');d.className='ask';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:100';d.innerHTML='<div class="card" style="max-width:420px;width:100%;margin:0">'+x+'</div>';document.body.appendChild(d);return d}
+function ask(m){return new Promise(res=>{const d=dlgBox(`<p>${esc(t(m))}</p><div class="row"><button class="ok">${t('OK')}</button><button class="o no">${t('Cancel')}</button></div>`);d.querySelector('.ok').onclick=()=>{d.remove();res(true)};d.querySelector('.no').onclick=()=>{d.remove();res(false)}})}
+function askVal(m,v){return new Promise(res=>{const d=dlgBox(`<p>${esc(t(m))}</p><input class="av" type="text" inputmode="decimal" value="${esc(v??'')}" style="width:100%"><div class="row" style="margin-top:8px"><button class="ok">${t('OK')}</button><button class="o no">${t('Cancel')}</button></div>`),i=d.querySelector('.av');
+ const go=k=>{d.remove();res(k?i.value:null)};d.querySelector('.ok').onclick=()=>go(1);d.querySelector('.no').onclick=()=>go(0);i.onkeydown=e=>{if(e.key=='Enter')go(1)};i.focus();i.select()})}
+function filt(){if(!document.getElementById('cc'))return;const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant',cls=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ if(CF&&!cls.includes(CF))CF='';
+ $('#cc').innerHTML=`<button class="${CF?'o':'on'}" onclick="CF='';filt()">${t('All')} (${L.length})</button>`+cls.map(c=>`<button class="${CF===c?'on':'o'}" data-c="${esc(c)}" onclick="CF=this.dataset.c;filt()">${esc(c)||'-'} (${L.filter(s=>(s.class||'')===c).length})</button>`).join('')+(CF?`<button class="o" onclick="printList()">Print list</button>`:'');
+ const F=L.filter(s=>(!CF||(s.class||'')===CF)&&(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).sort((a,b)=>natCmp(a.class||'',b.class||'')||a.name.localeCompare(b.name));
+ const cols=3;let last=null,h='<tr><th>Name</th><th>Class</th><th>Fee</th></tr>';
+ for(const s of F){if(!CF&&(s.class||'')!==last){last=s.class||'';h+=`<tr><td colspan="${cols}" style="background:#F5F1E7"><b>${t('Class')} ${esc(last)||'-'}</b> (${F.filter(x=>(x.class||'')===last).length})</td></tr>`}
+  h+=`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}<b>${esc(s.name)}</b><br><small>${esc(s.father)}${s.father&&s.phone?' • ':''}${esc(s.phone)}</small>`+(rp?`<div style="margin-top:6px;white-space:nowrap"><button class="o sm" onclick="rep(${s.id})">Report</button>${adm?` <button class="o sm" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Remove</button>`:''}</div>`:'')+`</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td></tr>`}
+ $('#tb').innerHTML=h}
+window.alert=m=>toast(m);
+Object.assign(UR,{"Delete":"حذف"});
+// ===== Server mode: all data lives on the server =====
+Object.assign(UR,{"Audit log":"آڈٹ لاگ","Time":"وقت","User":"صارف","Change password":"پاس ورڈ بدلیں","Old password":"پرانا پاس ورڈ","New password":"نیا پاس ورڈ","Delete this user?":"یہ صارف حذف کریں؟","The server saves a copy every day (last 14 days are kept).":"سرور ہر روز ایک کاپی محفوظ کرتا ہے (آخری 14 دن کی رہتی ہیں)۔","Please login again":"دوبارہ لاگ اِن کریں","Wrong password":"پاس ورڈ غلط ہے","Password must be at least 6 characters":"پاس ورڈ کم از کم 6 حروف کا ہو","Too many attempts. Try again in a few minutes.":"بہت زیادہ کوششیں۔ چند منٹ بعد دوبارہ کوشش کریں۔","You cannot delete yourself":"آپ خود کو حذف نہیں کر سکتے","At least one admin is required":"کم از کم ایک ایڈمن ضروری ہے"});
+let SET={};
+api=async function(p,o){const r=await fetch('/api/'+p,{method:o?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(T||'')},body:o?JSON.stringify(o):undefined});
+ let j={};try{j=await r.json()}catch(e){}
+ if(r.status===401&&p!=='login'){if(T){alert('Please login again');logout()}throw 0}
+ if(!r.ok){alert(j.error||'Error');throw 0}return j};
+async function initSet(){try{SET=T?await api('settings'):await(await fetch('/api/public')).json()}catch(e){SET={}}D.settings=SET;brand()}
+async function login(){const j=await api('login',{username:$('#u').value,password:$('#p').value});T=j.token;ROLE=j.role;NAME=j.name;localStorage.t=T;localStorage.r=ROLE;localStorage.n=NAME;localStorage.u=$('#u').value.trim().toLowerCase();await initSet();boot()}
+function logout(){const t0=T;if(t0)fetch('/api/logout',{method:'POST',headers:{Authorization:'Bearer '+t0}}).catch(()=>{});['t','r','n','u'].forEach(k=>localStorage.removeItem(k));T=null;initSet().then(()=>boot())}
+{const s=document.querySelector('header small');if(s)s.remove()}
+{const b2=boot;boot=function(){b2();if(T)document.getElementById('who').insertAdjacentHTML('afterbegin','<button class="o" onclick="chpw()">Password</button> ')}}
+function chpw(){modal(`<h4>Change password</h4><div id="ef"><input id="pw0" type="password" placeholder="Old password"><input id="pw1" type="password" placeholder="New password"></div><div class="row" style="margin-top:8px"><button onclick="doPw()">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
+async function doPw(){await api('password',{old:document.getElementById('pw0').value,neu:document.getElementById('pw1').value});closeM();alert('Saved')}
+async function dl(){const r=await fetch('/api/backup',{headers:{Authorization:'Bearer '+T}});if(!r.ok){alert('Error');return}const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download='school-backup-'+today()+'.json';a.click()}
+async function rs(e){const f=e.files[0];if(!f||!await ask('Restore will REPLACE all current data. Continue?'))return;let x;try{x=JSON.parse(await f.text())}catch(err){alert('Invalid backup file');return}await api('restore',{data:x});alert('Saved');boot()}
+async function saveBrand(){await api('settings',{school:document.getElementById('bnm').value,logo:window.NEWLOGO});window.NEWLOGO=undefined;await initSet();alert('Saved');boot()}
+async function rmLogo(){await api('settings',{school:document.getElementById('bnm').value,logo:''});window.NEWLOGO=undefined;await initSet();boot()}
+async function delU(u){if(!await ask('Delete this user?'))return;await api('users/delete',{username:u});boot()}
+V.admin=async function(){const U=await api('users'),B=await api('backups'),st=SET;
+ app.innerHTML=`<div class="card"><h4>School name & logo</h4><div class="row"><input id="bnm" placeholder="School name" value="${esc(st.school||'')}"><label>Logo: <input id="blg" type="file" accept="image/*" onchange="pickLogo(this)"></label></div><div id="blp">${st.logo?`<img src="${st.logo}" style="height:60px">`:''}</div><div class="row" style="margin-top:8px"><button onclick="saveBrand()">Save</button><button class="o" onclick="rmLogo()">Remove logo</button></div></div>
+ <div class="card"><h4>Users (same username = reset password)</h4><div class="row"><input id="un" placeholder="Username" autocapitalize="none" autocorrect="off"><input id="nm" placeholder="Full name"><input id="pw" placeholder="Password" autocapitalize="none" autocorrect="off"><select id="rl"><option>teacher</option><option>accountant</option><option>admin</option></select><button onclick="addU()">Save user</button></div><table>${U.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${u.role}</td><td>${u.username==localStorage.u?'':`<button class="r sm" onclick="delU('${esc(u.username)}')">Delete</button>`}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Backup</h4><p><small>The server saves a copy every day (last 14 days are kept).</small></p><div class="row"><button onclick="dl()">Download backup</button><label>Restore: <input type="file" accept=".json,.txt,application/json,text/plain" onchange="rs(this)"></label></div><table>${B.slice(0,14).map(x=>`<tr><td>${esc(x.name)}</td><td>${x.kb} KB</td></tr>`).join('')}</table></div>`};
+V.audit=async function(){const L=await api('audit');app.innerHTML=`<div class="card"><table><tr><th>Time</th><th>User</th><th>Action</th></tr>${L.map(x=>`<tr><td><small>${esc(x.t.replace('T',' ').slice(0,16))}</small></td><td>${esc(x.u)}</td><td>${esc(x.a)}<br><small>${esc(x.d)}</small></td></tr>`).join('')}</table></div>`};
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{admin:a,audit:['Audit log',['admin']]})}
+// ===== Dashboard + fee vouchers =====
+Object.assign(UR,{"Dashboard":"ڈیش بورڈ","Vouchers":"فیس واؤچر","Only unpaid":"صرف بقایا والے","Print vouchers":"واؤچر پرنٹ کریں","Fee voucher":"فیس واؤچر","Voucher no.":"واؤچر نمبر","Discount":"رعایت","Total payable":"کل قابل ادا","Receiver sign":"وصول کنندہ کے دستخط","Present today":"آج حاضر","Fees due this month":"اس ماہ کی فیس بقایا","Received this month":"اس ماہ وصول","Spent (expenses + salaries)":"اخراجات + تنخواہیں","Salary payable":"قابل ادا تنخواہ","Last 6 months":"پچھلے 6 ماہ","Spent":"خرچ","Top defaulters":"سب سے زیادہ بقایا","Donations this month (kept separate)":"اس ماہ کے عطیات (الگ رکھے گئے)","vouchers":"واؤچر","No vouchers":"کوئی واؤچر نہیں"});
+const tile=(l,v,c)=>`<div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;${c?'color:'+c:''}">${v}</div><small>${l}</small></div>`;
+V.dash=async function(){const S=await api('dashboard'),net=S.in-S.out,mx=Math.max(1,...S.months.flatMap(x=>[x.in,x.out]));window.DT=S;
+ app.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${tile('Students',S.students)}${tile('Present today',S.p+' / '+S.students)}${tile('Fees due this month',S.due,'#B0453A')}${tile('Old dues',S.oldDue,'#B0453A')}${tile('Received this month',S.in)}${tile('Spent (expenses + salaries)',S.out)}${tile('Net',net,net<0?'#B0453A':'#4C7A5C')}${tile('Salary payable',S.payable)}</div>
+ <div class="card"><h4>Last 6 months</h4><div style="display:flex;gap:6px;align-items:flex-end">${S.months.map(x=>`<div style="flex:1;text-align:center"><div style="display:flex;gap:2px;align-items:flex-end;height:110px;justify-content:center"><div style="width:42%;background:#1F3B33;height:${Math.round(x.in*110/mx)}px"></div><div style="width:42%;background:#B4884A;height:${Math.round(x.out*110/mx)}px"></div></div><small>${x.m.slice(2)}</small></div>`).join('')}</div><small><span style="color:#1F3B33">■</span> <span>Received</span> &nbsp; <span style="color:#B4884A">■</span> <span>Spent</span></small></div>
+ <div class="card"><h4>Top defaulters</h4><table>${S.top.map((x,i)=>`<tr><td>${esc(x.name)}<br><small>${esc(x.class)}</small></td><td>${x.due}</td><td><button class="o sm" onclick="remD(${i})">Remind</button></td></tr>`).join('')||'<tr><td>-</td></tr>'}</table><p><small>Donations this month (kept separate)</small>: <b>${S.don}</b></p></div>`};
+function remD(i){const x=DT.top[i];sendBox(`${t('Fee reminder')}: ${x.name} (${x.class})\n${t('Month')}: ${DT.month}\n${t('Due')}: ${x.due}`,x.phone)}
+function vcalc(s){const fee=s.fee-(s.disc||0),due=Math.max(0,fee-s.paid),old=Math.max(0,(s.old||0)-s.oldpaid);return{due,old,tot:due+old}}
+function vsel(){const c=document.getElementById('vc').value,u=document.getElementById('vu').checked;return VL.filter(s=>(!c||(s.class||'')===c)&&(!u||vcalc(s).tot>0))}
+V.vouch=async function(){const m=window.vm||month(),L=await api('fees?month='+m);window.VL=L;const cl=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="vm=this.value;boot()"><select id="vc" onchange="vfilt()"><option value="">All classes</option>${cl.map(c=>`<option value="${esc(c)}">${esc(c)||'-'}</option>`).join('')}</select><label><input type="checkbox" id="vu" onchange="vfilt()" checked> Only unpaid</label></div><div class="row"><button onclick="vprint()">Print vouchers</button><b id="vn"></b></div><table id="vl"></table></div>`;vfilt()};
+function vfilt(){const S=vsel(),m=window.vm||month();document.getElementById('vn').textContent=S.length+' '+t('vouchers');
+ document.getElementById('vl').innerHTML=S.map(s=>{const c=vcalc(s),i=VL.indexOf(s);return`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${c.tot}</td><td><button class="o sm" onclick="vsend(${i})">WhatsApp</button></td></tr>`}).join('')}
+function vsend(i){const s=VL[i],c=vcalc(s),m=window.vm||month();sendBox(`${t('Fee voucher')} ${m}\n${t('Student')}: ${s.name} (${s.class})\n${t('Monthly fee')}: ${s.fee}`+(s.disc?`\n${t('Discount')}: -${s.disc}`:'')+(s.paid?`\n${t('Paid')}: -${s.paid}`:'')+(c.old?`\n${t('Old dues')}: ${c.old}`:'')+`\n${t('Total payable')}: ${c.tot}`,s.phone)}
+function vhtml(s,m){const c=vcalc(s),r=(a,b,x)=>`<tr><td>${a}</td><td${x||''}>${b}</td></tr>`;
+ return`<div style="border:1px solid #000;padding:8px;break-inside:avoid;page-break-inside:avoid;font-size:13px"><div style="text-align:center;border-bottom:1px solid #000;padding-bottom:4px">${logoImg(26)}<b>${esc(brandName()||'')}</b><br>${t('Fee voucher')} - ${m}</div><table style="width:100%;font-size:13px">${r(t('Voucher no.'),'V-'+m.replace('-','')+'-'+String(s.id).padStart(4,'0'))}${r(t('Student'),esc(s.name)+' ('+esc(s.class)+')')}${r(t('Father'),esc(s.father))}${r(t('Monthly fee'),s.fee)}${s.disc?r(t('Discount'),'-'+s.disc):''}${s.paid?r(t('Paid'),'-'+s.paid):''}${c.old?r(t('Old dues'),c.old):''}${r('<b>'+t('Total payable')+'</b>','<b>'+c.tot+'</b>')}</table><div style="margin-top:14px">${t('Receiver sign')}: ________ ${c.tot==0?' &nbsp; <b>'+t('Paid')+'</b>':''}</div></div>`}
+function vprint(){const S=vsel();if(!S.length){alert('No vouchers');return}const m=window.vm||month(),d=document.createElement('div');d.id='vprint';d.style.display='none';
+ d.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+S.map(s=>vhtml(s,m)).join('')+'</div>';document.body.appendChild(d);printEl('vprint');d.remove()}
+{const old={...TABS};for(const k in TABS)delete TABS[k];const add={dash:['Dashboard',['admin','accountant']],vouch:['Vouchers',['admin','accountant']]};
+ for(const k in old){if(k=='students')TABS.dash=add.dash;TABS[k]=old[k];if(k=='fees')TABS.vouch=add.vouch}}
+async function login(){const j=await api('login',{username:$('#u').value,password:$('#p').value});T=j.token;ROLE=j.role;NAME=j.name;localStorage.t=T;localStorage.r=ROLE;localStorage.n=NAME;localStorage.u=$('#u').value.trim().toLowerCase();tab=(ROLE=='admin'||ROLE=='accountant')?'dash':'students';await initSet();boot()}
+apply();
+initSet().then(()=>{if(T&&(ROLE=='admin'||ROLE=='accountant'))tab='dash';boot()});

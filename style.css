@@ -1,0 +1,9 @@
+:root{--g:#1F3B33;--b:#B4884A}*{box-sizing:border-box}body{margin:0;font:15px "Noto Naskh Arabic","Noto Nastaliq Urdu",system-ui,sans-serif;background:#F5F1E7;color:#24211B}
+header{background:var(--g);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+nav{display:flex;gap:6px;padding:8px;overflow-x:auto}nav button{white-space:nowrap}
+button{background:var(--g);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.o{background:#fff;color:var(--g);border:1px solid var(--g)}button.on{background:var(--b)}button.r{background:#B0453A}
+input,select{padding:8px;border:1px solid #D9CFB8;border-radius:8px;font:inherit;max-width:100%}
+main{padding:10px;max-width:900px;margin:auto}.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;overflow-x:auto}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee;text-align:start}
+.due{color:#B0453A;font-weight:600}.ok{color:#4C7A5C;font-weight:600}

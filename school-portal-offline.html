@@ -1,0 +1,988 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>School Portal</title>
+<style>:root{--g:#1F3B33;--b:#B4884A}*{box-sizing:border-box}body{margin:0;font:15px "Noto Naskh Arabic","Noto Nastaliq Urdu",system-ui,sans-serif;background:#F5F1E7;color:#24211B}
+header{background:var(--g);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+nav{display:flex;gap:6px;padding:8px;overflow-x:auto}nav button{white-space:nowrap}
+button{background:var(--g);color:#fff;border:0;border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+button.o{background:#fff;color:var(--g);border:1px solid var(--g)}button.on{background:var(--b)}button.r{background:#B0453A}
+input,select{padding:8px;border:1px solid #D9CFB8;border-radius:8px;font:inherit;max-width:100%}
+main{padding:10px;max-width:900px;margin:auto}.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;overflow-x:auto}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee;text-align:start}
+.due{color:#B0453A;font-weight:600}.ok{color:#4C7A5C;font-weight:600}
+@media(max-width:600px){td,th{padding:5px 3px;font-size:13px}button.sm{padding:5px 7px;font-size:12px}td button{margin:1px 0}}
+</style></head><body>
+<header><b id="brand"></b> <small data-k="first login: admin / admin123">first login: admin / admin123</small><span><button class="o" id="lg" onclick="setLang()"></button> <span id="who"></span></span></header><nav id="nav"></nav><div id="bk"></div><main id="app"></main>
+<script>let T=localStorage.t,ROLE=localStorage.r,NAME=localStorage.n,tab='students';
+const $=s=>document.querySelector(s),app=$('#app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),month=()=>today().slice(0,7);
+
+// ---- Local engine (data is saved inside this browser, no server) ----
+let D=JSON.parse(localStorage.sp_db||'null')||{users:[],students:[],payments:[],att:{},rseq:0,seq:1};
+const save=()=>{try{localStorage.sp_db=JSON.stringify(D)}catch(e){alert('Storage is full! Download a backup now and remove old photos.')}};
+const nu=s=>String(s||'').trim().toLowerCase();D.users.forEach(u=>u.username=nu(u.username));
+const PERM={fees:['admin','accountant'],att:['admin','teacher'],admin:['admin']};
+async function H(p,s){try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+p)))].map(x=>x.toString(16).padStart(2,'0')).join('')}catch{let h=5381;for(const c of s+p)h=(h*33^c.charCodeAt(0))>>>0;return''+h}}
+async function setUser(username,password,role,name){username=nu(username);password=String(password).trim();const salt=Math.random().toString(36).slice(2),hash=await H(password,salt),u=D.users.find(x=>x.username==username);
+ if(u)Object.assign(u,{salt,hash,role,name:name||username});else D.users.push({username,salt,hash,role,name:name||username});save()}
+async function api(p,o){
+ const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{},fail=m=>{alert(m);throw 0};
+ if(!D.users.length)await setUser('admin','admin123','admin','Admin');
+ if(path==='login'){const u=D.users.find(x=>x.username==nu(b.username));if(!u||await H(String(b.password||'').trim(),u.salt)!==u.hash)fail('Wrong username or password');return{token:'local',role:u.role,name:u.name}}
+ if(!T)throw 0;
+ const ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active);
+ const srt=a=>a.sort((x,y)=>(x.class+x.name).localeCompare(y.class+y.name));
+ if(path==='students'&&!o)return srt([...act]);
+ if(path==='students'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,father:b.father||'',phone:b.phone||'',class:b.class||'',fee:+b.fee||0,disc:+b.disc||0,old:+b.old||0};if(b.photo)v.photo=b.photo;
+  if(b.id)Object.assign(D.students.find(s=>s.id==b.id),v);else D.students.push({id:D.seq++,...v,admitted:today(),active:1});save();return{ok:1}}
+ if(path==='students/delete'){ok('admin');D.students.find(s=>s.id==b.id).active=0;save();return{ok:1}}
+ if(path==='fees'){ok('fees');return srt(act.map(s=>({...s,paid:D.payments.filter(x=>x.student_id==s.id&&x.month==q.get('month')).reduce((a,x)=>a+x.amount,0),oldpaid:D.payments.filter(x=>x.student_id==s.id&&x.month=='old').reduce((a,x)=>a+x.amount,0)})))}
+ if(path==='pay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');const id=++D.rseq;D.payments.push({id,student_id:+b.student_id,month:b.month,amount:+b.amount,date:today(),by:NAME});save();return{receipt:id,date:today()}}
+ if(path==='attendance'&&!o){ok('att');const d=D.att[q.get('date')]||{};return srt(act.map(s=>({id:s.id,name:s.name,class:s.class,status:d[s.id]||null})))}
+ if(path==='attendance'){ok('att');D.att[b.date]=D.att[b.date]||{};for(const m of b.marks||[])D.att[b.date][m.id]=m.status;save();return{ok:1}}
+ if(path==='att-report'){ok('att');const m=q.get('month');return srt(act.map(s=>{const r={name:s.name,class:s.class,p:0,a:0,l:0};
+  for(const d in D.att)if(d.startsWith(m)){const x=D.att[d][s.id];if(x)r[x.toLowerCase()]++}return r}))}
+ if(path==='history'){ok('fees');return D.payments.filter(x=>x.student_id==q.get('id')).sort((a,b)=>b.id-a.id)}
+ if(path==='pay/delete'){ok('admin');D.payments=D.payments.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='pay/edit'){ok('admin');if(!(+b.amount>0))fail('Invalid amount');D.payments.find(x=>x.id==b.id).amount=+b.amount;save();return{ok:1}}
+ if(path==='users'&&!o){ok('admin');return D.users.map(({username,name,role})=>({username,name,role}))}
+ if(path==='users'){ok('admin');if(!b.username||!b.password||!['admin','teacher','accountant'].includes(b.role))fail('Username, password and role required');await setUser(b.username,b.password,b.role,b.name);return{ok:1}}
+}
+function logout(){['t','r','n'].forEach(k=>localStorage.removeItem(k));T=null;boot()}
+const TABS={students:['Students',['admin','teacher','accountant']],fees:['Fees',['admin','accountant']],att:['Attendance',['admin','teacher']],admin:['Users & Backup',['admin']]};
+function boot(){ $('#who').innerHTML=T?esc(NAME)+' ('+ROLE+') <button class="o" onclick="logout()">Logout</button>':'';
+ if(!T){$('#nav').innerHTML='';$('#bk').innerHTML='';app.innerHTML=`<div class="card"><h3>Login</h3><div class="row"><input id="u" placeholder="Username" autocapitalize="none" autocorrect="off" spellcheck="false"><input id="p" type="password" placeholder="Password" autocapitalize="none" autocorrect="off"><button onclick="login()">Login</button></div><label><input type="checkbox" onchange="document.getElementById('p').type=this.checked?'text':'password'"> Show password</label></div>`;return}
+ $('#nav').innerHTML=Object.entries(TABS).filter(([k,v])=>v[1].includes(ROLE)).map(([k,v])=>`<button class="${k==tab?'on':'o'}" onclick="tab='${k}';boot()">${v[0]}</button>`).join('');
+ if(!TABS[tab][1].includes(ROLE))tab='students';$('#bk').innerHTML=(ROLE=='admin'&&D.students.length&&Date.now()-(D.lastBackup||0)>7*864e5)?'<div class="card" style="background:#F6E5E1;margin:8px">Last backup is more than 7 days old. <button onclick="dl();boot()">Download backup</button></div>':'';V[tab]()}
+async function login(){const j=await api('login',{username:$('#u').value,password:$('#p').value});T=j.token;ROLE=j.role;NAME=j.name;
+ localStorage.t=T;localStorage.r=ROLE;localStorage.n=NAME;boot()}
+const V={
+async students(){const L=await api('students'),adm=ROLE=='admin';window.L=L;
+ app.innerHTML=(adm?`<div class="card"><h4 id="ft">Add student</h4><div class="row"><input id="n" placeholder="Name"><input id="f" placeholder="Father name"><input id="ph" placeholder="Phone"><input id="c" placeholder="Class"><input id="fe" type="number" placeholder="Monthly fee"><input id="di" type="number" placeholder="Discount per month"><input id="ol" type="number" placeholder="Old dues (purana baqaya)"><label>Photo: <input id="pf" type="file" accept="image/*"></label><button onclick="saveS()">Save</button></div></div>`:'')+
+ `<div class="card"><input id="q" placeholder="Search..." oninput="filt()"><table id="tb"></table></div>`;filt()},
+async fees(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:'Paid'}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>Due this month: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | Old dues: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`},
+async att(){const d=window.ad||today();const L=await api('attendance?date='+d);window.AL=L;const cl=[...new Set(L.map(s=>s.class))];
+ app.innerHTML=`<div class="card"><div class="row"><input type="date" id="d" value="${d}" onchange="ad=this.value;boot()"><select id="cf" onchange="attRows()"><option value="">All classes</option>${cl.map(c=>`<option>${esc(c)}</option>`)}</select><button onclick="saveA()">Save attendance</button><button class="o" onclick="attRep()">Monthly report</button></div><table id="at"></table></div><div id="rep"></div>`;attRows()},
+async admin(){const U=await api('users');
+ app.innerHTML=`<div class="card"><h4>Users (same username = reset password)</h4><div class="row"><input id="un" placeholder="Username" autocapitalize="none" autocorrect="off"><input id="nm" placeholder="Full name"><input id="pw" placeholder="Password" autocapitalize="none" autocorrect="off"><select id="rl"><option>teacher</option><option>accountant</option><option>admin</option></select><button onclick="addU()">Save user</button></div>
+ <table>${U.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${u.role}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Backup</h4><p><b>Data is stored only in this browser on this device.</b> Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.</p><div class="row"><button onclick="dl()">Download backup</button><label>Restore: <input type="file" accept=".json,.txt,application/json,text/plain" onchange="rs(this)"></label></div></div>`}};
+function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin';
+ $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(adm?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(adm?`<td><button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button></td>`:'')+'</tr>').join('')}
+let eid=null;
+function editS(id){const s=L.find(x=>x.id==id);eid=id;n.value=s.name;f.value=s.father;ph.value=s.phone;c.value=s.class;fe.value=s.fee;di.value=s.disc||0;ol.value=s.old||0;$('#ft').textContent='Edit student';scrollTo(0,0)}
+function rsz(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,160/Math.max(i.width,i.height));cv.width=i.width*k;cv.height=i.height*k;cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);r(cv.toDataURL('image/jpeg',.7))};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+async function saveS(){const pic=await rsz(pf.files[0]);await api('students',{id:eid,name:n.value,father:f.value,phone:ph.value,class:c.value,fee:fe.value,disc:di.value,old:ol.value,photo:pic});eid=null;boot()}
+async function delS(id){if(await ask('Remove this student from active list?')){await api('students/delete',{id});boot()}}
+async function pay(i,old){const s=FL[i],m=old?'old':$('#m').value,due=old?Math.max(0,(s.old||0)-s.oldpaid):Math.max(0,s.fee-(s.disc||0)-s.paid);
+ const a=await askVal((old?'OLD dues received from ':'Amount received from ')+s.name,due);if(!a||!(+a>0))return;
+ const r=await api('pay',{student_id:s.id,month:m,amount:a});rcpt(s,m,+a,r,Math.max(0,due-a));boot()}
+function rcpt(s,m,a,r,rem){const t=`Fee Receipt #${r.receipt}\nDate: ${r.date}\nStudent: ${s.name} (${s.class})\nFather: ${s.father}\n${m=='old'?'Old dues':'Month: '+m}\nReceived: ${a}\nRemaining: ${rem}`;
+ let wp=String(s.phone||'').replace(/\D/g,'');if(wp.startsWith('0'))wp='92'+wp.slice(1);else if(wp.length==10)wp='92'+wp;
+ modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(t)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${wp?`<a href="https://wa.me/${wp}?text=${encodeURIComponent(t)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function modal(x){closeM();const d=document.createElement('div');d.id='md';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:9';d.innerHTML='<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto">'+x+'</div>';document.body.appendChild(d)}
+function closeM(){const d=$('#md');if(d)d.remove()}
+function printEl(id){let s=document.getElementById('prs');if(!s){s=document.createElement('style');s.id='prs';s.textContent='#pr{display:none}@media print{body>*:not(#pr){display:none!important}#pr{display:block!important;font-family:sans-serif;padding:12px}#pr .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:-1;pointer-events:none}#pr .wm img{max-width:65%;max-height:60vh;opacity:.08}}';document.head.appendChild(s)}
+ let d=document.getElementById('pr');if(d)d.remove();d=document.createElement('div');d.id='pr';d.innerHTML=wmark()+(id=='cvp'||id=='vprint'?'':brandHdr())+document.getElementById(id).innerHTML;document.body.appendChild(d);
+ const done=()=>{d.remove();removeEventListener('afterprint',done)};addEventListener('afterprint',done);
+ try{window.print()}catch(e){alert('Print is not supported here. Open this file in Chrome.')}}
+async function hist(i){const s=FL[i],hx=await api('history?id='+s.id),adm=ROLE=='admin';
+ modal(`<h4>${esc(s.name)} - fee history</h4><table><tr><th>#</th><th>Date</th><th>For</th><th>Amount</th>${adm?'<th></th>':''}</tr>`+(hx.map(x=>`<tr><td>${x.id}</td><td>${x.date}</td><td>${x.month=='old'?'Old dues':x.month}</td><td>${x.amount}</td>${adm?`<td><button class="o" onclick="pedit(${x.id},${x.amount})">Edit</button> <button class="r sm" onclick="pdel(${x.id})">Delete</button></td>`:''}</tr>`).join('')||'<tr><td colspan=5>No payments yet</td></tr>')+`</table><div class="row"><button class="o" onclick="closeM()">Close</button></div>`)}
+async function pedit(id,a){const v=await askVal('Correct amount',a);if(!v)return;await api('pay/edit',{id,amount:v});closeM();boot()}
+async function pdel(id){if(await ask('Delete this payment entry?')){await api('pay/delete',{id});closeM();boot()}}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')}</td></tr>`).join('')}
+function mark(id,x){AL.find(s=>s.id==id).status=x;attRows()}
+async function saveA(){await api('attendance',{date:$('#d').value,marks:AL.filter(s=>s.status).map(s=>({id:s.id,status:s.status}))});alert('Saved')}
+async function attRep(){const R=await api('att-report?month='+$('#d').value.slice(0,7));$('#rep').innerHTML=`<div class="card"><h4>Monthly report</h4><table><tr><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Leave</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.class)}</td><td>${r.p||0}</td><td>${r.a||0}</td><td>${r.l||0}</td></tr>`).join('')}</table></div>`}
+async function addU(){await api('users',{username:un.value,name:nm.value,password:pw.value,role:rl.value});alert('Saved: '+un.value.trim().toLowerCase());boot()}
+function dl(){D.lastBackup=Date.now();save();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='school-backup-'+today()+'.json';a.click()}
+async function rs(e){const f=e.files[0];if(!f||!await ask('Restore will REPLACE all current data. Continue?'))return;f.text().then(t=>{try{const x=JSON.parse(t);if(!x.users||!x.students)throw 0;D=x;save();logout()}catch{alert('Invalid backup file')}})}
+// ===== Phase 2 + language =====
+let LANG=localStorage.lang||'en';
+const UR={"School Portal":"اسکول پورٹل","first login: admin / admin123":"پہلا لاگ اِن: admin / admin123","Login":"لاگ اِن","Username":"صارف نام","Password":"پاس ورڈ","Logout":"لاگ آؤٹ","Show password":"پاس ورڈ دکھائیں",
+"Students":"طلبہ","Fees":"فیس","Attendance":"حاضری","Exams":"امتحانات","Teachers":"اساتذہ","Accounts":"حسابات","Users & Backup":"صارفین اور بیک اپ",
+"Add student":"طالب علم شامل کریں","Edit student":"طالب علم میں ترمیم","Name":"نام","Father name":"والد کا نام","Phone":"فون","Class":"جماعت","Monthly fee":"ماہانہ فیس","Discount per month":"ماہانہ رعایت","Old dues (purana baqaya)":"پرانا بقایا","Photo:":"تصویر:","Save":"محفوظ کریں","Search...":"تلاش...","Father":"والد","Fee":"فیس","Edit":"ترمیم",
+"Paid":"وصول","Due":"بقایا","Old due":"پرانا بقایا","Old dues":"پرانا بقایا","Receive":"وصول کریں","Old":"پرانا","History":"ریکارڈ","Remind":"یاد دہانی","Due this month":"اس ماہ کا بقایا",
+"Print":"پرنٹ","WhatsApp":"واٹس ایپ","Close":"بند کریں","Fee Receipt":"فیس کی رسید","Date":"تاریخ","Student":"طالب علم","Month":"ماہ","Received":"وصول شدہ","Remaining":"باقی","Fee reminder":"فیس کی یاد دہانی","For":"کس کے لیے","Amount":"رقم","No payments yet":"ابھی کوئی ادائیگی نہیں",
+"All classes":"تمام جماعتیں","Save attendance":"حاضری محفوظ کریں","Monthly report":"ماہانہ رپورٹ","Present":"حاضر","Absent":"غیر حاضر","Leave":"رخصت","P":"ح","A":"غ","L":"ر","Msg":"پیغام",
+"Users (same username = reset password)":"صارفین (وہی صارف نام = پاس ورڈ نیا)","Full name":"پورا نام","Save user":"صارف محفوظ کریں","Backup":"بیک اپ",
+"Data is stored only in this browser on this device.":"یہ ڈیٹا صرف اسی ڈیوائس کے براؤزر میں محفوظ ہے۔","Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.":"باقاعدگی سے بیک اپ ڈاؤن لوڈ کریں اور محفوظ رکھیں (اس میں پاس ورڈ ہیش ہوتے ہیں)۔ براؤزر کا ڈیٹا صاف کرنے سے سب کچھ ختم ہو جاتا ہے۔",
+"Download backup":"بیک اپ ڈاؤن لوڈ کریں","Restore:":"بحال کریں:","Last backup is more than 7 days old.":"بیک اپ لیے 7 دن سے زیادہ ہو گئے۔",
+"New exam":"نیا امتحان","Exam name":"امتحان کا نام","Subjects (comma separated)":"مضامین (کوما سے الگ کریں)","Max marks per subject":"ہر مضمون کے زیادہ سے زیادہ نمبر","Exam":"امتحان","Subjects":"مضامین","Marks":"نمبر","Results":"نتائج","Save marks":"نمبر محفوظ کریں","Total":"کل","Grade":"گریڈ","Position":"پوزیشن","Card":"رزلٹ کارڈ",
+"Add teacher":"استاد شامل کریں","Edit teacher":"استاد میں ترمیم","Subject":"مضمون","Monthly salary":"ماہانہ تنخواہ","Salary":"تنخواہ","Advance":"پیشگی","Balance":"بقایا","Pay salary":"تنخواہ دیں","Slip":"پرچی","Salary slip":"تنخواہ کی پرچی","Salary amount":"تنخواہ کی رقم","Advance amount":"پیشگی کی رقم",
+"Income (fees)":"آمدنی (فیس)","Teacher salaries":"اساتذہ کی تنخواہیں","Expenses":"اخراجات","Net":"بچت","Add expense":"خرچ شامل کریں","Title":"تفصیل",
+"Wrong username or password":"غلط صارف نام یا پاس ورڈ","Not allowed for your role":"آپ کے کردار کو اجازت نہیں","Name required":"نام ضروری ہے","Invalid amount":"غلط رقم","Saved":"محفوظ ہو گیا","Restore will REPLACE all current data. Continue?":"بحالی موجودہ تمام ڈیٹا بدل دے گی۔ جاری رکھیں؟","Invalid backup file":"غلط بیک اپ فائل","Delete this payment entry?":"یہ ادائیگی حذف کریں؟","Remove this student from active list?":"اس طالب علم کو فہرست سے ہٹائیں؟","Correct amount":"درست رقم","Username, password and role required":"صارف نام، پاس ورڈ اور کردار ضروری ہیں","Title and amount required":"تفصیل اور رقم ضروری ہیں","Name and subjects required":"نام اور مضامین ضروری ہیں","Delete this exam?":"یہ امتحان حذف کریں؟","Delete this teacher?":"یہ استاد ہٹائیں؟","Delete this expense?":"یہ خرچ حذف کریں؟"};
+const PAT=[[/^Amount received from (.*)$/,'$1 سے وصول شدہ رقم'],[/^OLD dues received from (.*)$/,'$1 سے پرانا بقایا وصول'],[/^Saved: (.*)$/,'محفوظ: $1'],[/^(.*) - fee history$/,'$1 - فیس کا ریکارڈ'],[/^(.*) - Results$/,'$1 - نتائج']];
+const t=s=>LANG=='ur'?(UR[s]||PAT.reduce((a,[r,v])=>a==s&&r.test(s)?s.replace(r,v):a,s)):s;
+function tr(n){if(LANG!='ur'||!n)return;const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT),a=[];let x;while(x=w.nextNode())a.push(x);
+ a.forEach(x=>{const k=x.nodeValue.trim();if(k.length==1&&x.parentNode.tagName!='BUTTON')return;const v=t(k);if(v!=k)x.nodeValue=x.nodeValue.replace(k,v)});
+ if(n.querySelectorAll)n.querySelectorAll('[placeholder]').forEach(e=>{const v=t(e.placeholder);if(v!=e.placeholder)e.placeholder=v})}
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>tr(n.nodeType==1?n:n.parentNode)))).observe(document.body,{childList:true,subtree:true});
+const _al=alert,_pr=prompt,_cf=confirm;window.alert=m=>_al(t(m));window.prompt=(m,d)=>_pr(t(m),d);window.confirm=m=>_cf(t(m));
+function apply(){document.documentElement.lang=LANG;document.documentElement.dir=LANG=='ur'?'rtl':'ltr';$('#lg').textContent=LANG=='ur'?'English':'اردو';document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));brand()}
+function setLang(){LANG=LANG=='ur'?'en':'ur';localStorage.lang=LANG;apply();closeM();boot()}
+// ---- new API routes ----
+const api0=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ ['teachers','tpay','exams','exp'].forEach(k=>D[k]=D[k]||[]);D.marks=D.marks||{};
+ if(!['students/import','teachers','teachers/delete','tpay','exp','exp/delete','summary','exams','exams/delete','marks'].includes(path)){
+  if(path=='attendance'&&!o)return(await api0(p,o)).map(s=>({...s,phone:(D.students.find(x=>x.id==s.id)||{}).phone}));return api0(p,o)}
+ if(!T)throw 0;
+ const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),act=D.students.filter(s=>s.active),sm=a=>a.reduce((s,x)=>s+x.amount,0);
+ if(path==='students/import'){ok('admin');let n=0,sk=0;for(const r of b.rows){if(!r.name)continue;if(D.students.some(s=>s.active&&s.name==r.name&&s.father==(r.father||'')&&s.class==(r.class||''))){sk++;continue}D.students.push({id:D.seq++,name:r.name,father:r.father||'',phone:r.phone||'',class:r.class||'',fee:+r.fee||0,disc:+r.disc||0,old:+r.old||0,admitted:today(),active:1});n++}save();return{added:n,skipped:sk}}
+ if(path==='teachers'&&!o){ok('fees');const m=q.get('month');return D.teachers.filter(x=>x.active).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>{const f=ty=>sm(D.tpay.filter(y=>y.teacher_id==x.id&&y.month==m&&y.type==ty));return{...x,adv:f('advance'),paid:f('salary')}})}
+ if(path==='teachers'){ok('admin');if(!b.name)fail('Name required');const v={name:b.name,phone:b.phone||'',subject:b.subject||'',salary:+b.salary||0};
+  if(b.id)Object.assign(D.teachers.find(x=>x.id==b.id),v);else D.teachers.push({id:D.seq++,...v,active:1});save();return{ok:1}}
+ if(path==='teachers/delete'){ok('admin');D.teachers.find(x=>x.id==b.id).active=0;save();return{ok:1}}
+ if(path==='tpay'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');D.tpay.push({id:D.seq++,teacher_id:+b.teacher_id,month:b.month,type:b.type,amount:+b.amount,date:today()});save();return{ok:1}}
+ if(path==='exp'&&!o){ok('fees');return D.exp.filter(x=>x.date.startsWith(q.get('month'))).sort((a,b)=>b.id-a.id)}
+ if(path==='exp'){ok('fees');if(!b.title||!(+b.amount>0))fail('Title and amount required');D.exp.push({id:D.seq++,date:today(),title:b.title,amount:+b.amount});save();return{ok:1}}
+ if(path==='exp/delete'){ok('admin');D.exp=D.exp.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='summary'){ok('fees');const m=q.get('month');return{fees:sm(D.payments.filter(x=>x.date.startsWith(m))),exp:sm(D.exp.filter(x=>x.date.startsWith(m))),sal:sm(D.tpay.filter(x=>x.date.startsWith(m)))}}
+ if(path==='exams'&&!o){ok('att');return D.exams}
+ if(path==='exams'){ok('att');if(!b.name||!b.subjects)fail('Name and subjects required');D.exams.push({id:D.seq++,name:b.name,class:b.class||'',subjects:b.subjects.split(/[,،]/).map(s=>s.trim()).filter(Boolean),max:+b.max||100});save();return{ok:1}}
+ if(path==='exams/delete'){ok('admin');D.exams=D.exams.filter(e=>e.id!=b.id);delete D.marks[b.id];save();return{ok:1}}
+ if(path==='marks'&&!o){ok('att');const e=D.exams.find(e=>e.id==q.get('id')),mk=D.marks[e.id]||{};return{exam:e,rows:act.filter(s=>!e.class||s.class==e.class).sort((a,b)=>a.name.localeCompare(b.name)).map(s=>({id:s.id,name:s.name,class:s.class,phone:s.phone,m:mk[s.id]||[]}))}}
+ if(path==='marks'){ok('att');D.marks[b.id]=D.marks[b.id]||{};for(const r of b.rows)D.marks[b.id][r.id]=r.m;save();return{ok:1}}
+}
+// ---- send box (receipts, results, reminders, slips) ----
+const waNum=p=>{let w=String(p||'').replace(/\D/g,'');return w.startsWith('0')?'92'+w.slice(1):w.length==10?'92'+w:w};
+function sendBox(tx,ph){const w=waNum(ph);modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+function rcpt(s,m,a,r,rem){sendBox(`${t('Fee Receipt')} #${r.receipt}\n${t('Date')}: ${r.date}\n${t('Student')}: ${s.name} (${s.class})\n${t('Father')}: ${s.father}\n${m=='old'?t('Old dues'):t('Month')+': '+m}\n${t('Received')}: ${a}\n${t('Remaining')}: ${rem}`,s.phone)}
+function remind(i){const s=FL[i],m=$('#m').value;sendBox(`${t('Fee reminder')}: ${s.name} (${s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${s.fee-(s.disc||0)-s.paid}`,s.phone)}
+function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')} ${s.status=='A'&&s.phone?`<button class="o" onclick="absMsg(${s.id})">Msg</button>`:''}</td></tr>`).join('')}
+function absMsg(id){const s=AL.find(x=>x.id==id);sendBox(`${t('Absent')}: ${s.name} (${s.class}) - ${$('#d').value}`,s.phone)}
+// ---- views ----
+V.fees=async function(){const m=window.fm||month();const L=await api('fees?month='+m);window.FL=L;
+ const te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" id="m" value="${m}" onchange="fm=this.value;boot()"></div><table><tr><th>Name</th><th>Class</th><th>Fee</th><th>Paid</th><th>Due</th><th>Old due</th><th></th></tr>`+
+ L.map((s,i)=>{const d=te(s)-s.paid;return`<tr><td>${esc(s.name)}</td><td>${esc(s.class)}</td><td>${te(s)}</td><td>${s.paid}</td><td class="${d>0?'due':'ok'}">${d>0?d:t('Paid')}</td><td class="${od(s)?'due':''}">${od(s)||'-'}</td><td><button onclick="pay(${i})">Receive</button> ${od(s)?`<button class="o" onclick="pay(${i},1)">Old</button> `:''}${d>0?`<button class="o" onclick="remind(${i})">Remind</button> `:''}<button class="o" onclick="hist(${i})">History</button></td></tr>`}).join('')+
+ `</table><p><b>${t('Due this month')}: ${L.reduce((a,s)=>a+Math.max(0,te(s)-s.paid),0)} | ${t('Old dues')}: ${L.reduce((a,s)=>a+od(s),0)}</b></p></div>`};
+V.exams=async function(){const E=await api('exams');
+ app.innerHTML=`<div class="card"><h4>New exam</h4><div class="row"><input id="exn" placeholder="Exam name"><input id="exc" placeholder="Class"><input id="exs" placeholder="Subjects (comma separated)"><input id="exm" type="number" placeholder="Max marks per subject"><button onclick="addE()">Save</button></div></div><div class="card"><table><tr><th>Exam</th><th>Class</th><th>Subjects</th><th></th></tr>`+
+ E.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.class)}</td><td>${esc(e.subjects.join(', '))}</td><td><button onclick="marks(${e.id})">Marks</button> <button class="o" onclick="resu(${e.id})">Results</button>${ROLE=='admin'?` <button class="r sm" onclick="delE(${e.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div><div id="mk"></div>`};
+async function addE(){await api('exams',{name:exn.value,class:exc.value,subjects:exs.value,max:exm.value});boot()}
+async function delE(id){if(await ask('Delete this exam?')){await api('exams/delete',{id});boot()}}
+async function marks(id){const r=await api('marks?id='+id);window.MK=r;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(r.exam.name)}</h4><table><tr><th>Name</th>${r.exam.subjects.map(s=>`<th>${esc(s)}</th>`).join('')}</tr>`+r.rows.map((s,i)=>`<tr><td>${esc(s.name)}</td>${r.exam.subjects.map((x,j)=>`<td><input type="number" style="width:64px" value="${s.m[j]??''}" onchange="MK.rows[${i}].m[${j}]=this.value===''?null:+this.value"></td>`).join('')}</tr>`).join('')+`</table><div class="row"><button onclick="saveM()">Save marks</button></div></div>`;$('#mk').scrollIntoView()}
+async function saveM(){await api('marks',{id:MK.exam.id,rows:MK.rows.map(s=>({id:s.id,m:Array.from(s.m,x=>x??null)}))});alert('Saved')}
+const grade=p=>p>=80?'A+':p>=70?'A':p>=60?'B':p>=50?'C':p>=40?'D':'F';
+async function resu(id){const r=await api('marks?id='+id),e=r.exam,tot=totOf(e);
+ const R=r.rows.map(s=>({...s,t:Array.from(s.m).reduce((a,x)=>a+(+x||0),0)})).sort((a,b)=>b.t-a.t);window.RS=R;window.RE=e;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(e.name)} - Results</h4><table><tr><th>#</th><th>Name</th><th>Total</th><th>%</th><th>Grade</th><th></th></tr>`+R.map((s,i)=>{const p=Math.round(s.t*1000/tot)/10;return`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${s.t}/${tot}</td><td>${p}</td><td>${grade(p)}</td><td><button class="o" onclick="card(${i})">Card</button></td></tr>`}).join('')+`</table></div>`;$('#mk').scrollIntoView()}
+function card(i){const s=RS[i],e=RE,tot=totOf(e),p=Math.round(s.t*1000/tot)/10;
+ sendBox(`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${maxOf(e,j)}`).join('\n')+`\n${t('Total')}: ${s.t}/${tot} (${p}%)\n${t('Grade')}: ${grade(p)}\n${t('Position')}: ${i+1}`,s.phone)}
+let teid=null;
+V.teachers=async function(){const m=window.tm||month(),L=await api('teachers?month='+m);window.TL=L;const adm=ROLE=='admin';
+ app.innerHTML=(adm?`<div class="card"><h4 id="tth">Add teacher</h4><div class="row"><input id="thn" placeholder="Name"><input id="thp" placeholder="Phone"><input id="ths" placeholder="Subject"><input id="thl" type="number" placeholder="Monthly salary"><button onclick="saveT()">Save</button></div></div>`:'')+
+ `<div class="card"><div class="row"><input type="month" value="${m}" onchange="tm=this.value;boot()"></div><table class="tt"><tr><th>Name</th><th>Salary</th><th>Advance</th><th>Salary paid</th><th>Balance</th></tr>`+L.map((x,i)=>{const b=x.salary-x.adv-x.paid;return`<tr><td>${esc(x.name)}<br><small>${esc(x.subject)}</small></td><td>${x.salary}</td><td>${x.adv}</td><td>${x.paid}</td><td class="${b>0?'due':'ok'}">${b}</td></tr><tr><td colspan="5" class="acts" style="white-space:nowrap;padding-bottom:12px"><button class="sm" onclick="tpay(${i},'salary')">Pay salary</button> <button class="o sm" onclick="tpay(${i},'advance')">Advance</button> <button class="o sm" onclick="slip(${i})">Slip</button>${adm?` <button class="o sm" onclick="editT(${i})">Edit</button> <button class="r sm" onclick="delT(${x.id})">Remove</button>`:''}</td></tr>`}).join('')+`</table></div>`};
+async function saveT(){await api('teachers',{id:teid,name:thn.value,phone:thp.value,subject:ths.value,salary:thl.value});teid=null;boot()}
+function editT(i){const x=TL[i];teid=x.id;thn.value=x.name;thp.value=x.phone;ths.value=x.subject;thl.value=x.salary;$('#tth').textContent=t('Edit teacher');scrollTo(0,0)}
+async function delT(id){if(await ask('Delete this teacher?')){await api('teachers/delete',{id});boot()}}
+async function tpay(i,ty){const x=TL[i],m=window.tm||month(),a=await askVal(x.name+' - '+t(ty=='salary'?'Salary amount':'Advance amount'),ty=='salary'?Math.max(0,x.salary-x.adv-x.paid):'');if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}
+function slip(i){const x=TL[i];sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}`,x.phone)}
+V.acct=async function(){const m=window.am||month(),[S,X]=await Promise.all([api('summary?month='+m),api('exp?month='+m)]),net=S.fees-S.sal-S.exp;
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="am=this.value;boot()"></div><table><tr><td>Income (fees)</td><td>${S.fees}</td></tr><tr><td>Teacher salaries</td><td>${S.sal}</td></tr><tr><td>Expenses</td><td>${S.exp}</td></tr><tr><th>Net</th><th class="${net<0?'due':'ok'}">${net}</th></tr></table></div>
+ <div class="card"><h4>Add expense</h4><div class="row"><input id="xt" placeholder="Title"><input id="xa" type="number" placeholder="Amount"><button onclick="addX()">Save</button></div><table><tr><th>Date</th><th>Title</th><th>Amount</th><th></th></tr>`+X.map(x=>`<tr><td>${x.date}</td><td>${esc(x.title)}</td><td>${x.amount}</td><td>${ROLE=='admin'?`<button class="r sm" onclick="delX(${x.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div>`};
+async function addX(){await api('exp',{title:xt.value,amount:xa.value});boot()}
+async function delX(id){if(await ask('Delete this expense?')){await api('exp/delete',{id});boot()}}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{exams:['Exams',['admin','teacher']],teachers:['Teachers',['admin','accountant']],acct:['Accounts',['admin','accountant']],admin:a})}
+// ---- Excel/CSV import ----
+Object.assign(UR,{"Import from Excel":"ایکسل سے درآمد کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","students found":"طلبہ ملے","No students found in file":"فائل میں کوئی طالب علم نہیں ملا","Import all":"سب درآمد کریں","added":"شامل ہوئے","skipped (duplicate)":"چھوڑے (پہلے سے موجود)","Could not read file":"فائل نہیں پڑھی جا سکی"});
+async function inflate(u){const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u);w.close();return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+async function unzip(buf){const v=new DataView(buf),u=new Uint8Array(buf),out={};let e=u.length-22;while(e>=0&&v.getUint32(e,true)!=0x06054b50)e--;
+ const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);
+ for(let i=0;i<n;i++){const m=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true),name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));
+  const st=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true),d=u.subarray(st,st+cs);out[name]=m==0?d:await inflate(d);p+=46+nl+xl+cl}return out}
+async function readXlsx(buf){const z=await unzip(buf),td=new TextDecoder(),dp=new DOMParser(),X=n=>z[n]?dp.parseFromString(td.decode(z[n]),'text/xml'):null;
+ const ss=X('xl/sharedStrings.xml'),S=ss?[...ss.getElementsByTagName('si')].map(s=>[...s.getElementsByTagName('t')].map(q=>q.textContent).join('')):[];
+ const sn=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0],rows=[];
+ for(const r of X(sn).getElementsByTagName('row')){const row=[];for(const c of r.getElementsByTagName('c')){const col=c.getAttribute('r').replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('t')[0];
+  row[col]=ty=='s'&&v?S[+v.textContent]:ty=='inlineStr'&&is?is.textContent:v?v.textContent:''}rows.push(Array.from(row,x=>x??''))}return rows}
+function readCsv(tx){return tx.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim()).map(l=>{const o=[];let c='',q=false;for(const ch of l){if(ch=='"')q=!q;else if((ch==','||ch==';'||ch=='\t')&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o})}
+function mapRows(R){const hi=R.findIndex(r=>r.some(x=>/name|naam|نام/i.test(x))),idx={};
+ if(hi>=0)R[hi].forEach((h,i)=>{h=String(h).toLowerCase();const k=/father|walid|والد|ولدیت/.test(h)?'father':/disc|رعایت/.test(h)?'disc':/old|baqaya|بقایا|arrear/.test(h)?'old':/phone|mobile|contact|cell|فون|موبائل/.test(h)?'phone':/class|جماعت|کلاس|درجہ|grade/.test(h)?'class':/fee|فیس/.test(h)?'fee':/name|naam|نام/.test(h)?'name':null;if(k&&!(k in idx))idx[k]=i});
+ else['name','father','phone','class','fee','disc','old'].forEach((k,i)=>idx[k]=i);
+ return R.slice(hi+1).map(r=>{const o={};for(const k in idx)o[k]=String(r[idx[k]]??'').trim();if(/^\d{10}$/.test(o.phone))o.phone='0'+o.phone;return o}).filter(o=>o.name)}
+const api1=api;api=async function(p,o){if(p!=='students/import')return api1(p,o);if(ROLE!='admin'){alert('Not allowed for your role');throw 0}
+ const key=s=>[s.name,s.father||'',s.class||''].join('|').toLowerCase(),ex=new Set(D.students.filter(s=>s.active).map(key));let n=0,sk=0;
+ for(const r of o.rows){if(!r.name||ex.has(key(r))){sk++;continue}ex.add(key(r));D.students.push({id:D.seq++,name:r.name,father:r.father||'',phone:r.phone||'',class:r.class||'',fee:+r.fee||0,disc:+r.disc||0,old:+r.old||0,admitted:today(),active:1});n++}
+ save();return{added:n,skipped:sk}};
+const vs=V.students;V.students=async function(){await vs();if(ROLE=='admin')app.firstElementChild.insertAdjacentHTML('afterend',`<div class="card"><h4>Import from Excel</h4><div class="row"><input type="file" id="xf" accept=".xlsx,.csv,.txt" onchange="impF(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div></div>`)};
+async function impF(el){const f=el.files[0];if(!f)return;let R;try{R=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):readCsv(await f.text())}catch(e){return alert('Could not read file')}
+ window.IMP=mapRows(R);$('#imp').innerHTML=IMP.length?`<p><b>${IMP.length}</b> ${t('students found')}</p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${esc(r.fee)}</td></tr>`).join('')}</table><div class="row"><button onclick="doImp()">Import all</button></div>`:`<p class="due">${t('No students found in file')}</p>`}
+async function doImp(){const r=await api('students/import',{rows:IMP});alert(r.added+' '+t('added')+', '+r.skipped+' '+t('skipped (duplicate)'));boot()}
+function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFFName,Father,Phone,Class,Fee,Discount,Old dues\nAli,Ahmed,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
+// ===== Excel / CSV import =====
+Object.assign(UR,{"Import from Excel":"ایکسل سے طلبہ شامل کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","Columns: Name, Father, Phone, Class, Fee, Discount, Old dues (first row = headings). Save Excel as .xlsx or CSV.":"کالم: نام، والد، فون، جماعت، فیس، رعایت، پرانا بقایا (پہلی لائن = عنوان)۔ ایکسل کو .xlsx یا CSV میں محفوظ کریں۔","Students found in file":"فائل میں طلبہ ملے","Import":"شامل کریں","Cancel":"منسوخ کریں","Added":"شامل ہوئے","Skipped (already exist)":"چھوڑے گئے (پہلے سے موجود)","Could not read this file":"یہ فائل پڑھی نہیں جا سکی","No students found in file":"فائل میں کوئی طالب علم نہیں ملا"});
+const SYN={father:['father','walid','والد','ولدیت'],phone:['phone','mobile','contact','فون','موبائل','رابطہ'],class:['class','grade','jamaat','جماعت','کلاس','درجہ'],disc:['discount','رعایت','ماہانہ رعایت'],old:['old','arrears','balance','pichla','purana','پرانا','بقایا'],fee:['fee','فیس','ماہانہ فیس'],name:['name','student','naam','نام','طالب']};
+async function readXlsx(buf){const u=new Uint8Array(buf),dv=new DataView(buf),td=new TextDecoder();let e=u.length-22;while(e>=0&&dv.getUint32(e,true)!=0x06054b50)e--;
+ const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const F={};
+ for(let i=0;i<n;i++){const nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true);F[td.decode(u.subarray(p+46,p+46+nl))]={m:dv.getUint16(p+10,true),cs:dv.getUint32(p+20,true),lo:dv.getUint32(p+42,true)};p+=46+nl+xl+cl}
+ const get=async nm=>{const f=F[nm];if(!f)return null;const st=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),d=u.subarray(st,st+f.cs);
+  return f.m==0?td.decode(d):await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()};
+ const X=s=>new DOMParser().parseFromString(s,'application/xml'),ss=await get('xl/sharedStrings.xml');
+ const S=ss?[...X(ss).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')):[];
+ const sh=Object.keys(F).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0];const rows=[];
+ for(const r of X(await get(sh)).getElementsByTagName('row'))for(const c of r.getElementsByTagName('c')){
+  const L=c.getAttribute('r').replace(/\d/g,''),ci=[...L].reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ri=+c.getAttribute('r').replace(/\D/g,'')-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0];
+  const val=ty=='s'?S[+v.textContent]:ty=='inlineStr'?[...c.getElementsByTagName('t')].map(t=>t.textContent).join(''):v?v.textContent:'';
+  (rows[ri]=rows[ri]||[])[ci]=val}
+ return rows.filter(Boolean)}
+function parseCsv(s){s=s.replace(/^\ufeff/,'');const R=[];let r=[],c='',q=false;for(let i=0;i<s.length;i++){const ch=s[i];
+ if(q){if(ch=='"'){if(s[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}else if(ch=='"')q=true;else if(ch==','||ch==';'||ch=='\t'){r.push(c);c=''}
+ else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&s[i+1]=='\n')i++;r.push(c);R.push(r);r=[];c=''}else c+=ch}
+ if(c||r.length){r.push(c);R.push(r)}return R}
+async function impFile(el){const f=el.files[0];if(!f)return;let rows;
+ try{rows=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):parseCsv(await f.text())}catch(e){alert('Could not read this file');return}
+ rows=rows.filter(r=>r.some(c=>String(c??'').trim()));const map={};
+ (rows[0]||[]).forEach((h,i)=>{h=String(h??'').trim().toLowerCase();const k=Object.keys(SYN).find(k=>SYN[k].some(w=>h.includes(w)));if(k&&!(k in map))map[k]=i});
+ let data=rows;if('name' in map)data=rows.slice(1);else['name','father','phone','class','fee','disc','old'].forEach((k,i)=>map[k]=i);
+ const g=(r,k)=>k in map?String(r[map[k]]??'').trim():'',num=v=>+String(v).replace(/[,\s]/g,'')||0;
+ window.IMP=data.map(r=>{let ph=g(r,'phone').replace(/\D/g,'');if(/^3\d{9}$/.test(ph))ph='0'+ph;return{name:g(r,'name'),father:g(r,'father'),phone:ph,class:g(r,'class'),fee:num(g(r,'fee')),disc:num(g(r,'disc')),old:num(g(r,'old'))}}).filter(r=>r.name);
+ if(!IMP.length){alert('No students found in file');return}
+ $('#imp').innerHTML=`<p><b>${t('Students found in file')}: ${IMP.length}</b></p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${r.fee}</td></tr>`).join('')}</table><div class="row" style="margin-top:8px"><button onclick="doImp()">Import</button><button class="o" onclick="boot()">Cancel</button></div>`}
+async function doImp(){const r=await api('students/import',{rows:IMP});alert(t('Added')+': '+r.added+' | '+t('Skipped (already exist)')+': '+r.skipped);boot()}
+function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeffName,Father,Phone,Class,Fee,Discount,Old dues\nAli Khan,Ahmed Khan,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
+{const vs=V.students;V.students=async function(){await vs();if(ROLE!='admin'||document.getElementById('xf'))return;const d=document.createElement('div');d.className='card';
+ d.innerHTML=`<h4>Import from Excel</h4><p><small>Columns: Name, Father, Phone, Class, Fee, Discount, Old dues (first row = headings). Save Excel as .xlsx or CSV.</small></p><div class="row"><input type="file" id="imf" accept=".xlsx,.csv,.txt" onchange="impFile(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div>`;app.firstChild.after(d)}}
+// ===== Phase 2 completion: defaulters, notices, timetable, teacher attendance =====
+Object.assign(UR,{"Notices":"اعلانات","Timetable":"نظام الاوقات","Add notice":"اعلان شامل کریں","Details":"تفصیلات","Share":"شیئر کریں","No notices yet":"ابھی کوئی اعلان نہیں","Delete this notice?":"یہ اعلان حذف کریں؟","Title required":"عنوان ضروری ہے","Class and subject required":"جماعت اور مضمون ضروری ہیں",
+"Defaulters list":"بقایا فیس کی فہرست","Total due":"کل بقایا","No defaulters":"کوئی بقایا دار نہیں","Period":"گھنٹہ","Teacher":"استاد","Add to timetable":"نظام الاوقات میں شامل کریں","No timetable yet for this class":"اس جماعت کا نظام الاوقات ابھی نہیں بنا","Type class name":"جماعت کا نام لکھیں",
+"Sat":"ہفتہ","Sun":"اتوار","Mon":"پیر","Tue":"منگل","Wed":"بدھ","Thu":"جمعرات","Fri":"جمعہ","Teacher attendance":"اساتذہ کی حاضری","Present days":"حاضر دن","Absent days":"غیر حاضر دن","Leave days":"رخصت کے دن","Suggested deduction":"تجویز کردہ کٹوتی"});
+let TTC='',TAD=null;
+const DAYS=['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
+const apiP2=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ D.notices=D.notices||[];D.tt=D.tt||[];D.tatt=D.tatt||{};
+ if(['notices','notices/delete','tt','tatt'].includes(path)){if(!T)throw 0;
+  const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role');
+  if(path==='notices'&&!o)return[...D.notices].sort((a,b)=>b.id-a.id);
+  if(path==='notices'){ok('admin');if(!b.title)fail('Title required');D.notices.push({id:D.seq++,date:today(),title:b.title,body:b.body||''});save();return{ok:1}}
+  if(path==='notices/delete'){ok('admin');D.notices=D.notices.filter(x=>x.id!=b.id);save();return{ok:1}}
+  if(path==='tt'&&!o)return D.tt.filter(x=>x.class==q.get('class'));
+  if(path==='tt'){ok('admin');if(!b.class||!b.subject)fail('Class and subject required');D.tt=D.tt.filter(x=>!(x.class==b.class&&x.day==b.day&&x.period==b.period));D.tt.push({id:D.seq++,class:b.class,day:b.day,period:+b.period,subject:b.subject,teacher:b.teacher||''});save();return{ok:1}}
+  if(path==='tatt'&&!o){ok('admin');const d=D.tatt[q.get('date')]||{};return D.teachers.filter(x=>x.active).map(x=>({id:x.id,name:x.name,status:d[x.id]||null}))}
+  if(path==='tatt'){ok('admin');D.tatt[b.date]=D.tatt[b.date]||{};for(const m of b.marks)D.tatt[b.date][m.id]=m.status;save();return{ok:1}}
+ }
+ const r=await apiP2(p,o);
+ if(path==='teachers'&&!o){const m=q.get('month');return r.map(x=>{const c={P:0,A:0,L:0};for(const d in D.tatt)if(d.startsWith(m)){const s=D.tatt[d][x.id];if(s)c[s]++}return{...x,pa:c.P,ab:c.A,lv:c.L}})}
+ return r}
+function sendBox(tx,ph){const any=ph==='any',w=any?'':waNum(ph),nm=brandName();if(nm&&!tx.startsWith(nm))tx=nm+'\n'+tx;modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${(w||any)?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+// defaulters
+function defs(){const m=$('#m').value,te=s=>s.fee-(s.disc||0),od=s=>Math.max(0,(s.old||0)-s.oldpaid);
+ const R=FL.map(s=>({s,d:Math.max(0,te(s)-s.paid),o:od(s)})).filter(x=>x.d+x.o>0).sort((a,b)=>b.d+b.o-(a.d+a.o));
+ modal(`<h4>Defaulters list</h4>`+(R.length?`<div id="dfl"><table><tr><th>Name</th><th>Class</th><th>Due</th><th>Old due</th><th></th></tr>${R.map(x=>{const w=waNum(x.s.phone),tx=`${t('Fee reminder')}: ${x.s.name} (${x.s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${x.d}${x.o?'\n'+t('Old dues')+': '+x.o:''}`;
+  return`<tr><td>${esc(x.s.name)}</td><td>${esc(x.s.class)}</td><td>${x.d}</td><td>${x.o||'-'}</td><td>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}</td></tr>`}).join('')}</table><p><b>${t('Total due')}: ${R.reduce((a,x)=>a+x.d+x.o,0)}</b></p></div>`:`<p>No defaulters</p>`)+`<div class="row">${R.length?`<button onclick="printEl('dfl')">Print</button>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
+{const vf=V.fees;V.fees=async function(){await vf();app.querySelector('.row').insertAdjacentHTML('beforeend','<button class="o" onclick="defs()">Defaulters list</button>')}}
+// notices
+V.notices=async function(){const N=await api('notices'),adm=ROLE=='admin';window.NL=N;
+ app.innerHTML=(adm?`<div class="card"><h4>Add notice</h4><div class="row"><input id="nt" placeholder="Title"><input id="nb" placeholder="Details" style="flex:1;min-width:200px"><button onclick="addN()">Save</button></div></div>`:'')+
+ (N.length?N.map((n,i)=>`<div class="card"><b>${esc(n.title)}</b> <small>${n.date}</small><p style="white-space:pre-wrap">${esc(n.body)}</p><div class="row"><button class="o" onclick="shareN(${i})">Share</button>${adm?`<button class="r sm" onclick="delN(${n.id})">Delete</button>`:''}</div></div>`).join(''):`<div class="card">No notices yet</div>`)};
+async function addN(){await api('notices',{title:nt.value,body:nb.value});boot()}
+async function delN(id){if(await ask('Delete this notice?')){await api('notices/delete',{id});boot()}}
+function shareN(i){const n=NL[i];sendBox(`${n.title}\n${n.date}\n\n${n.body}`,'any')}
+// teacher attendance + slip
+{const vt=V.teachers;V.teachers=async function(){await vt();if(ROLE!='admin')return;app.querySelector('input[type=month]').parentNode.insertAdjacentHTML('beforeend','<button class="o" onclick="tat()">Teacher attendance</button>');app.insertAdjacentHTML('beforeend','<div id="tat"></div>')}}
+async function tat(){window.TT=await api('tatt?date='+(TAD||today()));drawTA();$('#tat').scrollIntoView()}
+function drawTA(){const d=TAD||today();$('#tat').innerHTML=`<div class="card"><h4>Teacher attendance</h4><div class="row"><input type="date" value="${d}" onchange="TAD=this.value;tat()"><button onclick="saveTA()">Save</button></div><table>`+TT.map(x=>`<tr><td>${esc(x.name)}</td><td>${['P','A','L'].map(s=>`<button class="${x.status==s?'on':'o'}" onclick="markT(${x.id},'${s}')">${s}</button>`).join(' ')}</td></tr>`).join('')+`</table></div>`}
+function markT(id,s){TT.find(x=>x.id==id).status=s;drawTA()}
+async function saveTA(){await api('tatt',{date:TAD||today(),marks:TT.filter(x=>x.status).map(x=>({id:x.id,status:x.status}))});alert('Saved');boot()}
+function slip(i){const x=TL[i],ded=Math.round(x.salary/30*x.ab);sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}\n${t('Present days')}: ${x.pa}\n${t('Absent days')}: ${x.ab}\n${t('Leave days')}: ${x.lv}`,x.phone)}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{timetable:['Timetable',['admin','teacher','accountant']],notices:['Notices',['admin','teacher','accountant']],admin:a})}
+// ===== Phase 3: certificates, hifz, donations, library, parent report =====
+Object.assign(UR,{"Certificates":"سرٹیفکیٹ","Hifz":"حفظ","Donations":"عطیات","Library":"لائبریری","Report":"رپورٹ","Parent report":"والدین کے لیے رپورٹ","Fee due":"فیس بقایا","Latest exam":"تازہ امتحان","Last sabaq":"آخری سبق","Paras completed":"مکمل پارے","Sabaq":"سبق","Sabqi":"سبقی","Manzil":"منزل","Note":"نوٹ","School name":"ادارے کا نام","Preview":"پیش نظارہ","Leaving certificate":"اسکول چھوڑنے کا سرٹیفکیٹ","Character certificate":"کردار کا سرٹیفکیٹ","ID card":"طالب علم کارڈ","No students yet":"ابھی کوئی طالب علم نہیں","Donor":"عطیہ دہندہ","Type":"قسم","Donation receipt":"عطیہ کی رسید","General":"عمومی","Zakat":"زکوٰۃ","Sadaqah":"صدقہ","Fitra":"فطرہ","Receipt":"رسید","Book title":"کتاب کا نام","Add book":"کتاب شامل کریں","Author":"مصنف","Copies":"نسخے","Available":"دستیاب","Issue":"جاری کریں","Return":"واپسی","Books on loan":"جاری شدہ کتابیں","Date out":"تاریخ اجرا","No copies available":"کوئی نسخہ دستیاب نہیں"});
+let HSID=null;
+const apiP3=api;
+api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};
+ if(!['settings','hifz','hifz/delete','para','don','don/delete','books','books/delete','loan','return','loans','report'].includes(path))return apiP3(p,o);
+ D.settings=D.settings||{};D.hifz=D.hifz||[];D.para=D.para||{};D.don=D.don||[];D.books=D.books||[];D.loans=D.loans||[];if(!T)throw 0;
+ const fail=m=>{alert(m);throw 0},ok=k=>PERM[k].includes(ROLE)||fail('Not allowed for your role'),sm=a=>a.reduce((z,x)=>z+x.amount,0),byDate=(a,b)=>b.date.localeCompare(a.date)||b.id-a.id;
+ if(path==='settings'&&!o)return{school:D.settings.school||'',logo:D.settings.logo||''};
+ if(path==='settings'){ok('admin');D.settings.school=(b.school||'').trim();if(b.logo!==undefined)D.settings.logo=b.logo;save();return{ok:1}}
+ if(path==='hifz'&&!o){ok('att');const id=+q.get('student');return{entries:D.hifz.filter(x=>x.student_id==id).sort(byDate).slice(0,30),paras:D.para[id]||[]}}
+ if(path==='hifz'){ok('att');D.hifz.push({id:D.seq++,student_id:+b.student_id,date:b.date||today(),sabaq:b.sabaq||'',sabqi:b.sabqi||'',manzil:b.manzil||'',note:b.note||''});save();return{ok:1}}
+ if(path==='hifz/delete'){ok('admin');D.hifz=D.hifz.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='para'){ok('att');const a=D.para[b.student_id]=D.para[b.student_id]||[],i=a.indexOf(+b.para);if(i>=0)a.splice(i,1);else a.push(+b.para);save();return{ok:1}}
+ if(path==='don'&&!o){ok('fees');return D.don.filter(x=>x.date.startsWith(q.get('month'))).sort((a,b)=>b.id-a.id)}
+ if(path==='don'){ok('fees');if(!(+b.amount>0))fail('Invalid amount');const id=D.seq++;D.don.push({id,date:today(),donor:b.donor||'',phone:b.phone||'',type:b.type||'General',amount:+b.amount});save();return{id,date:today()}}
+ if(path==='don/delete'){ok('admin');D.don=D.don.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(path==='books'&&!o){ok('att');return D.books.map(k=>({...k,out:D.loans.filter(l=>l.book_id==k.id&&!l.back).length}))}
+ if(path==='books'){ok('admin');if(!b.title)fail('Title required');D.books.push({id:D.seq++,title:b.title,author:b.author||'',copies:+b.copies||1});save();return{ok:1}}
+ if(path==='books/delete'){ok('admin');D.books=D.books.filter(k=>k.id!=b.id);save();return{ok:1}}
+ if(path==='loan'){ok('att');const k=D.books.find(k=>k.id==b.book_id);if(k.copies-D.loans.filter(l=>l.book_id==k.id&&!l.back).length<1)fail('No copies available');D.loans.push({id:D.seq++,book_id:k.id,student_id:+b.student_id,out:today(),back:null});save();return{ok:1}}
+ if(path==='return'){ok('att');D.loans.find(l=>l.id==b.id).back=today();save();return{ok:1}}
+ if(path==='loans'){ok('att');return D.loans.filter(l=>!l.back).map(l=>({id:l.id,out:l.out,book:(D.books.find(k=>k.id==l.book_id)||{}).title,student:(D.students.find(s=>s.id==l.student_id)||{}).name}))}
+ if(path==='report'){ok('fees');const s=D.students.find(x=>x.id==q.get('id')),m=q.get('month'),c={P:0,A:0,L:0},AT=D.att||{},PAY=D.payments||[],MKS=D.marks||{};
+  for(const d in AT)if(d.startsWith(m)){const x=AT[d][s.id];if(x)c[x]++}
+  const paid=sm(PAY.filter(x=>x.student_id==s.id&&x.month==m)),op=sm(PAY.filter(x=>x.student_id==s.id&&x.month=='old')),tot=a=>Array.from(a).reduce((z,v)=>z+(+v||0),0);let ex=null;
+  for(const e of[...(D.exams||[])].sort((a,b)=>b.id-a.id)){const mk=MKS[e.id]||{};if(mk[s.id]){const all=Object.values(mk).map(tot).sort((a,b)=>b-a),me=tot(mk[s.id]);ex={name:e.name,pct:Math.round(me*1000/(totOf(e)))/10,pos:all.indexOf(me)+1};break}}
+  const hs=D.hifz.filter(x=>x.student_id==s.id).sort(byDate)[0];
+  return{s,c,due:Math.max(0,s.fee-(s.disc||0)-paid),old:Math.max(0,(s.old||0)-op),ex,paras:(D.para[s.id]||[]).length,sabaq:hs?hs.sabaq:''}}
+}
+const schoolName=async()=>(await api('settings')).school||'';
+// parent report (button in students list)
+function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant';
+ $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>').join('')}
+async function rep(id){const m=month(),r=await api('report?id='+id+'&month='+m),sch=await schoolName(),s=r.s;
+ sendBox(`${sch?sch+'\n':''}${t('Parent report')}\n${s.name} (${s.class}) - ${m}\n${t('Attendance')}: ${t('Present')} ${r.c.P} / ${t('Absent')} ${r.c.A} / ${t('Leave')} ${r.c.L}\n${t('Fee due')}: ${r.due}`+(r.old?` (${t('Old dues')}: ${r.old})`:'')+(r.ex?`\n${t('Latest exam')}: ${r.ex.name} ${r.ex.pct}% (${t('Position')} ${r.ex.pos})`:'')+(r.paras||r.sabaq?`\n${t('Hifz')}: ${t('Paras completed')} ${r.paras}/30${r.sabaq?', '+t('Last sabaq')+': '+r.sabaq:''}`:''),s.phone)}
+// certificates + ID card
+V.cert=async function(){const S=await api('students'),st=await api('settings');window.CS=S;
+ app.innerHTML=`<div class="card"><div class="row"><input id="sch" placeholder="School name" value="${esc(st.school)}"><button onclick="saveSch()">Save</button></div><div class="row"><select id="cs">${S.map(s=>`<option value="${s.id}">${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select><select id="ct"><option value="leaving">Leaving certificate</option><option value="character">Character certificate</option><option value="id">ID card</option></select><button onclick="mkCert()">Preview</button></div></div><div id="cv"></div>`};
+async function saveSch(){await api('settings',{school:sch.value});alert('Saved')}
+async function mkCert(){const s=CS.find(x=>x.id==cs.value);if(!s)return;const nm=(await schoolName())||'School',ty=ct.value,ur=LANG=='ur',dir=ur?' dir="rtl"':'';let h;
+ if(ty=='id')h=`<div style="width:300px;border:2px solid #1F3B33;border-radius:10px;padding:10px;text-align:center;font-family:sans-serif"${dir}><div style="background:#1F3B33;color:#fff;padding:6px;border-radius:6px">${logoImg(30)}${esc(nm)}</div>${s.photo?`<img src="${s.photo}" style="width:90px;height:90px;border-radius:8px;object-fit:cover;margin:8px">`:'<div style="height:90px"></div>'}<h3 style="margin:4px">${esc(s.name)}</h3><div>${t('Father')}: ${esc(s.father)}</div><div>${t('Class')}: ${esc(s.class)}</div><div>ID: ${String(s.id).padStart(4,'0')}</div><div>${esc(s.phone)}</div></div>`;
+ else{const lv=ty=='leaving',txt=ur?(lv?`تصدیق کی جاتی ہے کہ ${s.name} ولد/بنت ${s.father} اس ادارے میں جماعت ${s.class} کا طالب علم رہا/رہی ہے۔ اس کا اخلاق و کردار تسلی بخش رہا۔ یہ سرٹیفکیٹ درخواست پر جاری کیا جاتا ہے۔`:`تصدیق کی جاتی ہے کہ ${s.name} ولد/بنت ${s.father} جماعت ${s.class} کا طالب علم ہے اور اس کا اخلاق و کردار نہایت اچھا ہے۔`):(lv?`This is to certify that ${s.name}, child of ${s.father}, was a student of this institution in class ${s.class}. Conduct and character were satisfactory. This certificate is issued on request.`:`This is to certify that ${s.name}, child of ${s.father}, studying in class ${s.class}, bears a good moral character and conduct.`);
+  h=`<div style="border:6px double #1F3B33;padding:24px;text-align:center;font-family:serif"${dir}>${logoImg(70)}<h2>${esc(nm)}</h2><h3>${lv?t('Leaving certificate'):t('Character certificate')}</h3><p style="font-size:18px;line-height:2">${esc(txt)}</p><p>${t('Date')}: ${today()}</p><br><p>__________<br>${ur?'پرنسپل':'Principal'}</p></div>`}
+ $('#cv').innerHTML=`<div class="card"><div id="cvp">${h}</div><div class="row" style="margin-top:8px"><button onclick="printEl('cvp')">Print</button></div></div>`}
+// hifz / nazira
+V.hifz=async function(){const S=await api('students');if(!S.length){app.innerHTML='<div class="card">No students yet</div>';return}
+ const sid=S.some(s=>s.id==HSID)?HSID:S[0].id;HSID=sid;const H=await api('hifz?student='+sid),adm=ROLE=='admin';
+ app.innerHTML=`<div class="card"><select id="hs" onchange="HSID=+this.value;boot()">${S.map(s=>`<option value="${s.id}" ${s.id==sid?'selected':''}>${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select></div>
+ <div class="card"><h4>Paras completed</h4><p><b>${H.paras.length}/30</b></p><div class="row">${Array.from({length:30},(_,i)=>i+1).map(n=>`<button class="${H.paras.includes(n)?'on':'o'}" style="min-width:44px" onclick="togPara(${n})">${n}</button>`).join('')}</div></div>
+ <div class="card"><div class="row"><input type="date" id="hd" value="${today()}"><input id="hsb" placeholder="Sabaq"><input id="hsq" placeholder="Sabqi"><input id="hmn" placeholder="Manzil"><input id="hnt" placeholder="Note"><button onclick="addH()">Save</button></div><table><tr><th>Date</th><th>Sabaq</th><th>Sabqi</th><th>Manzil</th><th>Note</th>${adm?'<th></th>':''}</tr>${H.entries.map(e=>`<tr><td>${e.date}</td><td>${esc(e.sabaq)}</td><td>${esc(e.sabqi)}</td><td>${esc(e.manzil)}</td><td>${esc(e.note)}</td>${adm?`<td><button class="r sm" onclick="delH(${e.id})">Delete</button></td>`:''}</tr>`).join('')}</table></div>`};
+async function togPara(n){await api('para',{student_id:HSID,para:n});boot()}
+async function addH(){await api('hifz',{student_id:HSID,date:hd.value,sabaq:hsb.value,sabqi:hsq.value,manzil:hmn.value,note:hnt.value});boot()}
+async function delH(id){if(!await ask('Delete this entry?'))return;await api('hifz/delete',{id});boot()}
+// donations
+V.don=async function(){const m=window.dm||month(),L=await api('don?month='+m),tot={};L.forEach(x=>tot[x.type]=(tot[x.type]||0)+x.amount);window.DL=L;
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="dm=this.value;boot()"></div><div class="row"><input id="dn" placeholder="Donor"><input id="dp" placeholder="Phone"><select id="dty">${['General','Zakat','Sadaqah','Fitra'].map(x=>`<option value="${x}">${x}</option>`).join('')}</select><input id="da" type="number" placeholder="Amount"><button onclick="addD()">Save</button></div></div>
+ <div class="card"><table><tr><th>Date</th><th>Donor</th><th>Type</th><th>Amount</th><th></th></tr>${L.map((x,i)=>`<tr><td>${x.date}</td><td>${esc(x.donor)}</td><td>${x.type}</td><td>${x.amount}</td><td><button class="o" onclick="rcD(${i})">Receipt</button>${ROLE=='admin'?` <button class="r sm" onclick="delD(${x.id})">Delete</button>`:''}</td></tr>`).join('')}</table><p>${Object.entries(tot).map(([k,v])=>`<b>${t(k)}: ${v}</b>`).join(' | ')}</p></div>`};
+async function donRc(x){const sch=await schoolName();sendBox(`${sch?sch+'\n':''}${t('Donation receipt')} #${x.id}\n${t('Date')}: ${x.date}\n${t('Donor')}: ${x.donor}\n${t('Type')}: ${t(x.type)}\n${t('Amount')}: ${x.amount}`,x.phone)}
+function rcD(i){donRc(DL[i])}
+async function addD(){const x={donor:dn.value,phone:dp.value,type:dty.value,amount:da.value},r=await api('don',x);await donRc({...x,id:r.id,date:r.date,amount:+x.amount});boot()}
+async function delD(id){if(await ask('Delete this donation?')){await api('don/delete',{id});boot()}}
+// library
+V.lib=async function(){const B=await api('books'),Ln=await api('loans'),adm=ROLE=='admin';window.BK=B;
+ app.innerHTML=(adm?`<div class="card"><h4>Add book</h4><div class="row"><input id="bt" placeholder="Book title"><input id="ba" placeholder="Author"><input id="bc" type="number" placeholder="Copies"><button onclick="addB()">Save</button></div></div>`:'')+
+ `<div class="card"><table><tr><th>Book title</th><th>Author</th><th>Available</th><th></th></tr>${B.map((k,i)=>`<tr><td>${esc(k.title)}</td><td>${esc(k.author)}</td><td>${k.copies-k.out}/${k.copies}</td><td><button onclick="issue(${i})">Issue</button>${adm?` <button class="r sm" onclick="delB(${k.id})">Delete</button>`:''}</td></tr>`).join('')}</table></div>
+ <div class="card"><h4>Books on loan</h4><table><tr><th>Book title</th><th>Student</th><th>Date out</th><th></th></tr>${Ln.map(l=>`<tr><td>${esc(l.book)}</td><td>${esc(l.student)}</td><td>${l.out}</td><td><button class="o" onclick="retB(${l.id})">Return</button></td></tr>`).join('')}</table></div>`};
+async function addB(){await api('books',{title:bt.value,author:ba.value,copies:bc.value});boot()}
+async function delB(id){if(await ask('Delete this book?')){await api('books/delete',{id});boot()}}
+async function issue(i){const S=await api('students'),k=BK[i];modal(`<h4>${esc(k.title)}</h4><select id="isu">${S.map(s=>`<option value="${s.id}">${esc(s.name)} (${esc(s.class)})</option>`).join('')}</select><div class="row" style="margin-top:8px"><button onclick="doIssue(${k.id})">Issue</button><button class="o" onclick="closeM()">Close</button></div>`)}
+async function doIssue(id){await api('loan',{book_id:id,student_id:isu.value});closeM();boot()}
+async function retB(id){await api('return',{id});boot()}
+{const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{cert:['Certificates',['admin']],hifz:['Hifz',['admin','teacher']],don:['Donations',['admin','accountant']],lib:['Library',['admin','teacher']],admin:a})}
+UR["Print is not supported here. Open this file in Chrome."]="یہاں پرنٹ نہیں ہو سکتا۔ فائل کو Chrome میں کھولیں۔";
+Object.assign(UR,{"Salary paid":"ادا شدہ تنخواہ","Storage is full! Download a backup now and remove old photos.":"اسٹوریج بھر گیا ہے! ابھی بیک اپ ڈاؤن لوڈ کریں اور پرانی تصویریں ہٹائیں۔","Delete this donation?":"یہ عطیہ حذف کریں؟","Delete this book?":"یہ کتاب حذف کریں؟","Delete this entry?":"یہ اندراج حذف کریں؟"});
+// ===== School name & logo (editable) =====
+Object.assign(UR,{"School name & logo":"ادارے کا نام اور لوگو","Logo:":"لوگو:","Remove logo":"لوگو ہٹائیں"});
+function brandName(){return(D.settings&&D.settings.school)||''}
+function logoImg(h){return(D.settings&&D.settings.logo)?`<img src="${D.settings.logo}" style="height:${h}px;max-width:100%;vertical-align:middle;margin-inline-end:6px">`:''}
+function wmark(){return(D.settings&&D.settings.logo)?`<div class="wm"><img src="${D.settings.logo}"></div>`:''}
+function brandHdr(){const n=brandName();return(n||logoImg(1))?`<div style="text-align:center;margin-bottom:8px">${logoImg(50)}<h3 style="margin:2px;display:inline-block;vertical-align:middle">${esc(n)}</h3></div>`:''}
+function brand(){const n=brandName(),b=document.getElementById('brand');if(!b)return;b.innerHTML=logoImg(30)+(n?esc(n):t('School Portal'));document.title=n||t('School Portal');const sm=document.querySelector('header small');if(sm)sm.style.display=T?'none':''}
+{const b0=boot;boot=function(){b0();brand();if(!T){const n=brandName();app.insertAdjacentHTML('afterbegin',`<div style="text-align:center;margin:14px 0">${logoImg(90)}<h2 style="margin:6px 0">${esc(n||t('School Portal'))}</h2></div>`)}}}
+function rszLogo(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,220/Math.max(i.width,i.height));cv.width=Math.round(i.width*k);cv.height=Math.round(i.height*k);cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);let u=cv.toDataURL('image/png');if(u.length>150000)u=cv.toDataURL('image/jpeg',.8);r(u)};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+async function pickLogo(el){const u=await rszLogo(el.files[0]);if(!u)return;window.NEWLOGO=u;document.getElementById('blp').innerHTML=`<img src="${u}" style="height:60px">`}
+async function saveBrand(){await api('settings',{school:document.getElementById('bnm').value,logo:window.NEWLOGO});window.NEWLOGO=undefined;alert('Saved');boot()}
+async function rmLogo(){await api('settings',{school:document.getElementById('bnm').value,logo:''});window.NEWLOGO=undefined;boot()}
+{const va=V.admin;V.admin=async function(){await va();const st=D.settings||{},c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h4>School name & logo</h4><div class="row"><input id="bnm" placeholder="School name" value="${esc(st.school||'')}"><label>Logo: <input id="blg" type="file" accept="image/*" onchange="pickLogo(this)"></label></div><div id="blp">${st.logo?`<img src="${st.logo}" style="height:60px">`:''}</div><div class="row" style="margin-top:8px"><button onclick="saveBrand()">Save</button><button class="o" onclick="rmLogo()">Remove logo</button></div>`;app.firstChild.before(c)}}
+// ===== Edit in a popup (works even when the page can't scroll) =====
+document.head.insertAdjacentHTML('beforeend','<style>#ef input:not([type=file]){width:100%}#ef{display:grid;gap:6px}</style>');
+function editS(id){const s=L.find(x=>x.id==id);if(!s)return;modal(`<h4>Edit student</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(s.name)}"><input id="e_f" placeholder="Father name" value="${esc(s.father)}"><input id="e_p" placeholder="Phone" value="${esc(s.phone)}"><input id="e_c" placeholder="Class" value="${esc(s.class)}"><input id="e_fe" type="number" placeholder="Monthly fee" value="${s.fee}"><input id="e_di" type="number" placeholder="Discount per month" value="${s.disc||0}"><input id="e_ol" type="number" placeholder="Old dues (purana baqaya)" value="${s.old||0}"><label>Photo: <input id="e_pf" type="file" accept="image/*"></label></div><div class="row" style="margin-top:8px"><button onclick="saveE(${s.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
+async function saveE(id){const pic=await rsz(document.getElementById('e_pf').files[0]),g=k=>document.getElementById(k).value;await api('students',{id,name:g('e_n'),father:g('e_f'),phone:g('e_p'),class:g('e_c'),fee:g('e_fe'),disc:g('e_di'),old:g('e_ol'),photo:pic});closeM();boot()}
+function editT(i){const x=TL[i];modal(`<h4>Edit teacher</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(x.name)}"><input id="e_p" placeholder="Phone" value="${esc(x.phone)}"><input id="e_s" placeholder="Subject" value="${esc(x.subject)}"><input id="e_l" type="number" placeholder="Monthly salary" value="${x.salary}"></div><div class="row" style="margin-top:8px"><button onclick="saveTE(${x.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
+async function saveTE(id){const g=k=>document.getElementById(k).value;await api('teachers',{id,name:g('e_n'),phone:g('e_p'),subject:g('e_s'),salary:g('e_l')});closeM();boot()}
+// ===== Automatic backup =====
+Object.assign(UR,{"Automatic backup":"خودکار بیک اپ","Every day":"ہر روز","Every 3 days":"ہر 3 دن بعد","Every week":"ہر ہفتے","Off":"بند","Share backup":"بیک اپ شیئر کریں","When this app is used, a backup file is downloaded automatically when it is due. Your browser may ask once to allow multiple downloads. A copy of the last 7 days is also kept inside the browser.":"جب یہ ایپ استعمال ہو اور بیک اپ کا وقت ہو چکا ہو تو بیک اپ فائل خود بخود ڈاؤن لوڈ ہو جاتی ہے۔ براؤزر ایک بار متعدد ڈاؤن لوڈ کی اجازت مانگ سکتا ہے۔ پچھلے 7 دن کی کاپی براؤزر کے اندر بھی رہتی ہے۔","Sharing is not supported here. Use Download backup instead.":"یہاں شیئر نہیں ہو سکتا۔ \"بیک اپ ڈاؤن لوڈ کریں\" استعمال کریں۔","Backup downloaded automatically":"بیک اپ خود بخود ڈاؤن لوڈ ہو گیا","Restore":"بحال کریں"});
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('sp_snaps',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbDo=(mode,fn)=>idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction('s',mode),rq=fn(tx.objectStore('s'));tx.oncomplete=()=>res(rq&&rq.result);tx.onerror=()=>rej(tx.error)}));
+const snapKeys=()=>idbDo('readonly',s=>s.getAllKeys()).then(k=>(k||[]).filter(x=>String(x).startsWith('snap-')).sort());
+let lastSnapAt=0;
+async function autoSnap(){try{if(!T||ROLE!='admin'||!D.students||!D.students.length||Date.now()-lastSnapAt<6e5)return;lastSnapAt=Date.now();
+ await idbDo('readwrite',s=>s.put(JSON.stringify(D),'snap-'+today()));const ks=await snapKeys();for(const k of ks.slice(0,Math.max(0,ks.length-7)))await idbDo('readwrite',s=>s.delete(k))}catch(e){}}
+{const b1=boot;boot=function(){b1();autoSnap()}}
+function toast(m){const d=document.createElement('div');d.textContent=t(m);d.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1F3B33;color:#fff;padding:10px 16px;border-radius:10px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),4000)}
+const ABMS={daily:864e5,'3days':3*864e5,weekly:7*864e5};
+document.addEventListener('click',()=>{try{if(!T||ROLE!='admin'||!D.students||!D.students.length)return;const m=ABMS[(D.settings&&D.settings.autoBackup)||'daily'];if(m&&Date.now()-(D.lastBackup||0)>m){dl();toast('Backup downloaded automatically')}}catch(e){}},true);
+function setAB(v){D.settings=D.settings||{};D.settings.autoBackup=v;save()}
+async function snapRestore(k){if(!await ask('Restore will REPLACE all current data. Continue?'))return;const j=await idbDo('readonly',s=>s.get(k));if(!j)return;D=JSON.parse(j);save();logout()}
+async function shareBk(){const f=new File([JSON.stringify(D)],'school-backup-'+today()+'.json',{type:'text/plain'});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'School backup'});D.lastBackup=Date.now();save();boot()}catch(e){}}else alert('Sharing is not supported here. Use Download backup instead.')}
+{const vb=V.admin;V.admin=async function(){await vb();const ab=(D.settings&&D.settings.autoBackup)||'daily',ks=(await snapKeys()).reverse(),c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h4>Automatic backup</h4><div class="row"><select id="abs" onchange="setAB(this.value)">${[['daily','Every day'],['3days','Every 3 days'],['weekly','Every week'],['off','Off']].map(([v,l])=>`<option value="${v}" ${v==ab?'selected':''}>${l}</option>`).join('')}</select><button class="o" onclick="shareBk()">Share backup</button></div><p><small>When this app is used, a backup file is downloaded automatically when it is due. Your browser may ask once to allow multiple downloads. A copy of the last 7 days is also kept inside the browser.</small></p>`+(ks.length?`<table>${ks.map(k=>`<tr><td>${k.slice(5)}</td><td><button class="o" onclick="snapRestore('${k}')">Restore</button></td></tr>`).join('')}</table>`:'');
+ app.firstChild.after(c)}}
+// ===== Class-wise students =====
+Object.assign(UR,{"All":"تمام","Print list":"فہرست پرنٹ کریں","Students in class":"اس جماعت کے طلبہ"});
+let CF='';
+const natCmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+function filt(){if(!document.getElementById('cc'))return;const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant',cls=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ if(CF&&!cls.includes(CF))CF='';
+ $('#cc').innerHTML=`<button class="${CF?'o':'on'}" onclick="CF='';filt()">${t('All')} (${L.length})</button>`+cls.map(c=>`<button class="${CF===c?'on':'o'}" data-c="${esc(c)}" onclick="CF=this.dataset.c;filt()">${esc(c)||'-'} (${L.filter(s=>(s.class||'')===c).length})</button>`).join('')+(CF?`<button class="o" onclick="printList()">Print list</button>`:'');
+ const F=L.filter(s=>(!CF||(s.class||'')===CF)&&(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).sort((a,b)=>natCmp(a.class||'',b.class||'')||a.name.localeCompare(b.name));
+ const cols=5+(rp?1:0);let last=null,h='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>';
+ for(const s of F){if(!CF&&(s.class||'')!==last){last=s.class||'';h+=`<tr><td colspan="${cols}" style="background:#F5F1E7"><b>${t('Class')} ${esc(last)||'-'}</b> (${F.filter(x=>(x.class||'')===last).length})</td></tr>`}
+  h+=`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>'}
+ $('#tb').innerHTML=h}
+function printList(){const F=L.filter(s=>(s.class||'')===CF).sort((a,b)=>a.name.localeCompare(b.name)),d=document.createElement('div');d.id='plist';d.style.display='none';
+ d.innerHTML=`<h3>${t('Class')} ${esc(CF)} (${F.length})</h3><table style="width:100%;border-collapse:collapse"><tr><th align="start">#</th><th align="start">${t('Name')}</th><th align="start">${t('Father')}</th><th align="start">${t('Phone')}</th></tr>${F.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td></tr>`).join('')}</table>`;
+ document.body.appendChild(d);printEl('plist');d.remove()}
+{const vs=V.students;V.students=async function(){await vs();const q=document.getElementById('q');if(q&&!document.getElementById('cc')){q.insertAdjacentHTML('afterend','<div id="cc" class="row" style="margin:8px 0"></div>');filt()}}}
+// fees: class filter
+{const vf=V.fees;V.fees=async function(){await vf();const cl=[...new Set(FL.map(s=>s.class||''))].sort(natCmp);
+ app.querySelector('.row').insertAdjacentHTML('beforeend',`<select id="fc" onchange="fcf()"><option value="">All classes</option>${cl.map(c=>`<option value="${esc(c)}">${esc(c)||'-'}</option>`).join('')}</select>`);
+ if(window.FCV){document.getElementById('fc').value=FCV;fcf()}}}
+function fcf(){window.FCV=document.getElementById('fc').value;[...app.querySelectorAll('table tr')].slice(1).forEach((r,i)=>{r.style.display=(!FCV||(FL[i].class||'')===FCV)?'':'none'});
+ let p=document.getElementById('fct');if(!FCV){if(p)p.remove();return}
+ if(!p){app.querySelector('.card').insertAdjacentHTML('beforeend','<p id="fct"></p>');p=document.getElementById('fct')}
+ const S=FL.filter(s=>(s.class||'')===FCV);p.innerHTML=`<b>${t('Class')} ${esc(FCV)}: ${t('Due this month')}: ${S.reduce((a,s)=>a+Math.max(0,s.fee-(s.disc||0)-s.paid),0)}</b>`}
+// ===== Own dialogs (work even where browser pop-ups are blocked) + compact student actions =====
+Object.assign(UR,{"OK":"ٹھیک ہے","Remove":"ہٹائیں"});
+document.head.insertAdjacentHTML('beforeend','<style>.sm{padding:5px 9px;font-size:13px}.acts button{padding:5px 6px;font-size:12px}.acts{word-spacing:-2px}.tt td,.tt th{padding:6px 3px;font-size:14px}</style>');
+function dlgBox(x){const d=document.createElement('div');d.className='ask';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:100';d.innerHTML='<div class="card" style="max-width:420px;width:100%;margin:0">'+x+'</div>';document.body.appendChild(d);return d}
+function ask(m){return new Promise(res=>{const d=dlgBox(`<p>${esc(t(m))}</p><div class="row"><button class="ok">${t('OK')}</button><button class="o no">${t('Cancel')}</button></div>`);d.querySelector('.ok').onclick=()=>{d.remove();res(true)};d.querySelector('.no').onclick=()=>{d.remove();res(false)}})}
+function askVal(m,v){return new Promise(res=>{const d=dlgBox(`<p>${esc(t(m))}</p><input class="av" type="text" inputmode="decimal" value="${esc(v??'')}" style="width:100%"><div class="row" style="margin-top:8px"><button class="ok">${t('OK')}</button><button class="o no">${t('Cancel')}</button></div>`),i=d.querySelector('.av');
+ const go=k=>{d.remove();res(k?i.value:null)};d.querySelector('.ok').onclick=()=>go(1);d.querySelector('.no').onclick=()=>go(0);i.onkeydown=e=>{if(e.key=='Enter')go(1)};i.focus();i.select()})}
+function filt(){if(!document.getElementById('cc'))return;const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant',cls=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ if(CF&&!cls.includes(CF))CF='';
+ $('#cc').innerHTML=`<button class="${CF?'o':'on'}" onclick="CF='';filt()">${t('All')} (${L.length})</button>`+cls.map(c=>`<button class="${CF===c?'on':'o'}" data-c="${esc(c)}" onclick="CF=this.dataset.c;filt()">${esc(c)||'-'} (${L.filter(s=>(s.class||'')===c).length})</button>`).join('')+(CF?`<button class="o" onclick="printList()">Print list</button>`:'');
+ const F=L.filter(s=>(!CF||(s.class||'')===CF)&&(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).sort((a,b)=>natCmp(a.class||'',b.class||'')||a.name.localeCompare(b.name));
+ const cols=3;let last=null,h='<tr><th>Name</th><th>Class</th><th>Fee</th></tr>';
+ for(const s of F){if(!CF&&(s.class||'')!==last){last=s.class||'';h+=`<tr><td colspan="${cols}" style="background:#F5F1E7"><b>${t('Class')} ${esc(last)||'-'}</b> (${F.filter(x=>(x.class||'')===last).length})</td></tr>`}
+  h+=`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}<b>${esc(s.name)}</b><br><small>${esc(s.father)}${s.father&&s.phone?' • ':''}${esc(s.phone)}</small>`+(rp?`<div style="margin-top:6px;white-space:nowrap"><button class="o sm" onclick="rep(${s.id})">Report</button>${adm?` <button class="o sm" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Remove</button>`:''}</div>`:'')+`</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td></tr>`}
+ $('#tb').innerHTML=h}
+window.alert=m=>toast(m);
+Object.assign(UR,{"Delete":"حذف"});
+// ===== (server-only translations kept) =====
+Object.assign(UR,{"Audit log":"آڈٹ لاگ","Time":"وقت","User":"صارف","Change password":"پاس ورڈ بدلیں","Old password":"پرانا پاس ورڈ","New password":"نیا پاس ورڈ","Delete this user?":"یہ صارف حذف کریں؟","The server saves a copy every day (last 14 days are kept).":"سرور ہر روز ایک کاپی محفوظ کرتا ہے (آخری 14 دن کی رہتی ہیں)۔","Please login again":"دوبارہ لاگ اِن کریں","Wrong password":"پاس ورڈ غلط ہے","Password must be at least 6 characters":"پاس ورڈ کم از کم 6 حروف کا ہو","Too many attempts. Try again in a few minutes.":"بہت زیادہ کوششیں۔ چند منٹ بعد دوبارہ کوشش کریں۔","You cannot delete yourself":"آپ خود کو حذف نہیں کر سکتے","At least one admin is required":"کم از کم ایک ایڈمن ضروری ہے"});
+
+// ===== Dashboard + fee vouchers =====
+Object.assign(UR,{"Dashboard":"ڈیش بورڈ","Vouchers":"فیس واؤچر","Only unpaid":"صرف بقایا والے","Print vouchers":"واؤچر پرنٹ کریں","Fee voucher":"فیس واؤچر","Voucher no.":"واؤچر نمبر","Discount":"رعایت","Total payable":"کل قابل ادا","Receiver sign":"وصول کنندہ کے دستخط","Present today":"آج حاضر","Fees due this month":"اس ماہ کی فیس بقایا","Received this month":"اس ماہ وصول","Spent (expenses + salaries)":"اخراجات + تنخواہیں","Salary payable":"قابل ادا تنخواہ","Last 6 months":"پچھلے 6 ماہ","Spent":"خرچ","Top defaulters":"سب سے زیادہ بقایا","Donations this month (kept separate)":"اس ماہ کے عطیات (الگ رکھے گئے)","vouchers":"واؤچر","No vouchers":"کوئی واؤچر نہیں"});
+const tile=(l,v,c)=>`<div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;${c?'color:'+c:''}">${v}</div><small>${l}</small></div>`;
+V.dash=async function(){const S=await api('dashboard'),net=S.in-S.out,mx=Math.max(1,...S.months.flatMap(x=>[x.in,x.out]));window.DT=S;
+ app.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${tile('Students',S.students)}${tile('Present today',S.p+' / '+S.students)}${tile('Fees due this month',S.due,'#B0453A')}${tile('Old dues',S.oldDue,'#B0453A')}${tile('Received this month',S.in)}${tile('Spent (expenses + salaries)',S.out)}${tile('Net',net,net<0?'#B0453A':'#4C7A5C')}${tile('Salary payable',S.payable)}</div>
+ <div class="card"><h4>Last 6 months</h4><div style="display:flex;gap:6px;align-items:flex-end">${S.months.map(x=>`<div style="flex:1;text-align:center"><div style="display:flex;gap:2px;align-items:flex-end;height:110px;justify-content:center"><div style="width:42%;background:#1F3B33;height:${Math.round(x.in*110/mx)}px"></div><div style="width:42%;background:#B4884A;height:${Math.round(x.out*110/mx)}px"></div></div><small>${x.m.slice(2)}</small></div>`).join('')}</div><small><span style="color:#1F3B33">■</span> <span>Received</span> &nbsp; <span style="color:#B4884A">■</span> <span>Spent</span></small></div>
+ <div class="card"><h4>Top defaulters</h4><table>${S.top.map((x,i)=>`<tr><td>${esc(x.name)}<br><small>${esc(x.class)}</small></td><td>${x.due}</td><td><button class="o sm" onclick="remD(${i})">Remind</button></td></tr>`).join('')||'<tr><td>-</td></tr>'}</table><p><small>Donations this month (kept separate)</small>: <b>${S.don}</b></p></div>`};
+function remD(i){const x=DT.top[i];sendBox(`${t('Fee reminder')}: ${x.name} (${x.class})\n${t('Month')}: ${DT.month}\n${t('Due')}: ${x.due}`,x.phone)}
+function vcalc(s){const fee=s.fee-(s.disc||0),due=Math.max(0,fee-s.paid),old=Math.max(0,(s.old||0)-s.oldpaid);return{due,old,tot:due+old}}
+function vsel(){const c=document.getElementById('vc').value,u=document.getElementById('vu').checked;return VL.filter(s=>(!c||(s.class||'')===c)&&(!u||vcalc(s).tot>0))}
+V.vouch=async function(){const m=window.vm||month(),L=await api('fees?month='+m);window.VL=L;const cl=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
+ app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="vm=this.value;boot()"><select id="vc" onchange="vfilt()"><option value="">All classes</option>${cl.map(c=>`<option value="${esc(c)}">${esc(c)||'-'}</option>`).join('')}</select><label><input type="checkbox" id="vu" onchange="vfilt()" checked> Only unpaid</label></div><div class="row"><button onclick="vprint()">Print vouchers</button><b id="vn"></b></div><table id="vl"></table></div>`;vfilt()};
+function vfilt(){const S=vsel(),m=window.vm||month();document.getElementById('vn').textContent=S.length+' '+t('vouchers');
+ document.getElementById('vl').innerHTML=S.map(s=>{const c=vcalc(s),i=VL.indexOf(s);return`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${c.tot}</td><td><button class="o sm" onclick="vsend(${i})">WhatsApp</button></td></tr>`}).join('')}
+function vsend(i){const s=VL[i],c=vcalc(s),m=window.vm||month();sendBox(`${t('Fee voucher')} ${m}\n${t('Student')}: ${s.name} (${s.class})\n${t('Monthly fee')}: ${s.fee}`+(s.disc?`\n${t('Discount')}: -${s.disc}`:'')+(s.paid?`\n${t('Paid')}: -${s.paid}`:'')+(c.old?`\n${t('Old dues')}: ${c.old}`:'')+`\n${t('Total payable')}: ${c.tot}`,s.phone)}
+function vhtml(s,m){const c=vcalc(s),r=(a,b,x)=>`<tr><td>${a}</td><td${x||''}>${b}</td></tr>`;
+ return`<div style="border:1px solid #000;padding:8px;break-inside:avoid;page-break-inside:avoid;font-size:13px"><div style="text-align:center;border-bottom:1px solid #000;padding-bottom:4px">${logoImg(26)}<b>${esc(brandName()||'')}</b><br>${t('Fee voucher')} - ${m}</div><table style="width:100%;font-size:13px">${r(t('Voucher no.'),'V-'+m.replace('-','')+'-'+String(s.id).padStart(4,'0'))}${r(t('Student'),esc(s.name)+' ('+esc(s.class)+')')}${r(t('Father'),esc(s.father))}${r(t('Monthly fee'),s.fee)}${s.disc?r(t('Discount'),'-'+s.disc):''}${s.paid?r(t('Paid'),'-'+s.paid):''}${c.old?r(t('Old dues'),c.old):''}${r('<b>'+t('Total payable')+'</b>','<b>'+c.tot+'</b>')}</table><div style="margin-top:14px">${t('Receiver sign')}: ________ ${c.tot==0?' &nbsp; <b>'+t('Paid')+'</b>':''}</div></div>`}
+function vprint(){const S=vsel();if(!S.length){alert('No vouchers');return}const m=window.vm||month(),d=document.createElement('div');d.id='vprint';d.style.display='none';
+ d.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+S.map(s=>vhtml(s,m)).join('')+'</div>';document.body.appendChild(d);printEl('vprint');d.remove()}
+{const old={...TABS};for(const k in TABS)delete TABS[k];const add={dash:['Dashboard',['admin','accountant']],vouch:['Vouchers',['admin','accountant']]};
+ for(const k in old){if(k=='students')TABS.dash=add.dash;TABS[k]=old[k];if(k=='fees')TABS.vouch=add.vouch}}
+
+// ===== Step 2: receipt (print / PDF), class promotion, remind all =====
+Object.assign(UR,{"Promote classes":"جماعتیں ترقی دیں","Promote":"ترقی دیں","Remind all":"سب کو یاد دہانی","Fee receipt":"فیس رسید","Receipt no.":"رسید نمبر","Remaining":"باقی","Received":"وصول","Close":"بند کریں","No defaulters":"کوئی بقایا دار نہیں"});
+function rcpt(s,m,a,r,rem){const tx=`${t('Fee receipt')} #${r.receipt}\n${t('Date')}: ${r.date}\n${t('Student')}: ${s.name} (${s.class})\n${t('Father')}: ${s.father}\n${m=='old'?t('Old dues'):t('Month')+': '+m}\n${t('Received')}: ${a}\n${t('Remaining')}: ${rem}`,w=waNum(s.phone),row=(k,v)=>`<tr><td>${k}</td><td>${v}</td></tr>`;
+ modal(`<div id="rc" style="border:1px solid #000;padding:10px"><div style="text-align:center;border-bottom:1px solid #000;padding-bottom:4px">${logoImg(26)}<b>${esc(brandName()||'')}</b><br>${t('Fee receipt')}</div><table style="width:100%">${row(t('Receipt no.'),r.receipt)}${row(t('Date'),r.date)}${row(t('Student'),esc(s.name)+' ('+esc(s.class)+')')}${row(t('Father'),esc(s.father))}${row(m=='old'?t('Old dues'):t('Month'),m=='old'?'':m)}${row('<b>'+t('Received')+'</b>','<b>'+a+'</b>')}${row(t('Remaining'),rem)}</table><div style="margin-top:14px">${t('Receiver sign')}: ________</div></div><div class="row" style="margin-top:8px"><button onclick="printEl('rc')">Print / PDF</button>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">${t('Close')}</button></div>`)}
+async function promo(){const L=await api('students'),cl=[...new Set(L.map(s=>s.class||''))].sort(natCmp);window.PCL=cl;
+ modal(`<h4>${t('Promote classes')}</h4><p><small>New class for each class. Leave empty to keep. Write - to remove (passed out).</small></p><table>${cl.map((c,i)=>`<tr><td>${esc(c)||'-'} <small>(${L.filter(s=>(s.class||'')==c).length})</small></td><td><input id="pm${i}" style="width:90px" value="${/^\d+$/.test(c)?+c+1:''}"></td></tr>`).join('')}</table><div class="row" style="margin-top:8px"><button onclick="doPromo()">${t('Promote')}</button><button class="o" onclick="closeM()">${t('Close')}</button></div>`)}
+async function doPromo(){const map={};PCL.forEach((c,i)=>{const v=document.getElementById('pm'+i).value.trim();if(v)map[c]=v});if(!Object.keys(map).length){closeM();return}
+ if(!await ask('Promote all students now? A backup is made first.'))return;const r=await api('students/promote',{map});closeM();alert(r.moved+' promoted, '+r.grad+' removed');boot()}
+function remAll(){const m=document.getElementById('m').value,L=FL.map(s=>({s,due:Math.max(0,s.fee-(s.disc||0)-s.paid)+Math.max(0,(s.old||0)-s.oldpaid)})).filter(x=>x.due>0);
+ if(!L.length){alert('No defaulters');return}
+ modal(`<h4>${t('Remind all')} (${L.length})</h4><table>${L.map(x=>{const w=waNum(x.s.phone),tx=`${t('Fee reminder')}: ${x.s.name} (${x.s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${x.due}`;return`<tr><td>${esc(x.s.name)}<br><small>${esc(x.s.class)}</small></td><td>${x.due}</td><td>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank" onclick="this.firstChild.textContent='✓'"><button class="o sm">WhatsApp</button></a>`:'<small>-</small>'}</td></tr>`}).join('')}</table><div class="row"><button class="o" onclick="closeM()">${t('Close')}</button></div>`)}
+{const f0=V.fees;V.fees=async function(){await f0();const r=document.querySelector('#app .row');if(r)r.insertAdjacentHTML('beforeend',`<button class="o" onclick="remAll()">${t('Remind all')}</button>`)}}
+{const s0=V.students;V.students=async function(){await s0();if(ROLE=='admin'){const c=document.querySelector('#app .card');if(c)c.insertAdjacentHTML('beforeend',`<div class="row" style="margin-top:8px"><button class="o" onclick="promo()">${t('Promote classes')}</button></div>`)}}}
+// ===== Step 3: DMC (italic), class marksheet, Excel / PDF, print icons =====
+Object.assign(UR,{"Result card":"نتیجہ کارڈ","Principal sign":"پرنسپل کے دستخط","Subject":"مضمون","Marks":"نمبر","Detailed Marks Certificate":"تفصیلی نتیجہ سرٹیفکیٹ (DMC)","Class":"جماعت","Student ID":"طالب علم نمبر","Total marks":"کل نمبر","Obtained":"حاصل کردہ","Percentage":"فیصد","Result":"نتیجہ","PASS":"کامیاب","FAIL":"ناکام","Remarks":"ریمارکس","Class teacher sign":"کلاس ٹیچر کے دستخط","Issue date":"تاریخ اجراء","Outstanding":"شاندار","Very Good":"بہت اچھا","Good":"اچھا","Satisfactory":"تسلی بخش","Pass":"پاس","Fail":"فیل","Class marksheet":"کلاس مارک شیٹ","Print all DMC":"تمام DMC پرنٹ کریں","Print class marksheet":"کلاس مارک شیٹ پرنٹ کریں","Save Excel (.xlsx)":"ایکسل میں محفوظ کریں"});
+const PASSP=40,DFS="font-family:'Palatino Linotype',Palatino,Georgia,'Noto Naskh Arabic','Noto Nastaliq Urdu',serif;font-style:italic",DCX='-webkit-print-color-adjust:exact;print-color-adjust:exact';
+const rmk=p=>p>=80?'Outstanding':p>=70?'Very Good':p>=60?'Good':p>=50?'Satisfactory':p>=40?'Pass':'Fail',PCX=(m,x)=>m==null||m===''?null:Math.round(m*1000/x)/10;
+function dmcData(){const e=RE,tot=totOf(e),by={};RS.forEach(s=>(by[s.class||'']=by[s.class||'']||[]).push(s));
+ return{groups:Object.keys(by).sort(natCmp).map(c=>{const L=by[c].slice().sort((x,y)=>y.t-x.t);
+  L.forEach((s,i)=>{s.cp=i&&L[i-1].t==s.t?L[i-1].cp:i+1;s.pct=Math.round(s.t*1000/tot)/10;s.pass=s.pct>=(e.pass||PASSP);const st=D.students.find(z=>z.id==s.id);s.father=st&&st.father||''});return{c,L}})}}
+function printDoc(h,land){let s=document.getElementById('pgs');if(!s){s=document.createElement('style');s.id='pgs';document.head.appendChild(s)}
+ s.textContent=`@media print{@page{size:A4 ${land?'landscape':'portrait'};margin:10mm}.dmc{min-height:262mm}${h.includes('class="dmc"')?'#pr .wm{display:none!important}':''}}`;
+ const d=document.createElement('div');d.id='vprint';d.style.display='none';d.innerHTML=h;document.body.appendChild(d);printEl('vprint');d.remove()}
+Object.assign(UR,{"Roll No.":"رول نمبر","Total obtained":"کل حاصل کردہ"});
+{const st=document.createElement('style');st.textContent='.dmc{max-width:794px;margin-inline:auto!important}@media(max-width:600px){.dmc .pd{padding:14px 10px!important}.dmc .nm{font-size:20px!important}.dmc .rb{padding:5px 24px!important;font-size:14px!important}.dmc th,.dmc td{padding:4px 3px!important;font-size:12px}.dmc .bx{min-width:30%!important}}';document.head.appendChild(st)}
+function cardHtml(s){const e=RE,tot=totOf(e),p=s.pct,B='#1F3B33',G='#B4884A',LG=D.settings&&D.settings.logo,roll=(D.students.find(z=>z.id==s.id)||{}).roll||s.id,
+ cr=(v,h)=>`<i style="position:absolute;${v}:7px;${h}:7px;width:28px;height:28px;border-${v}:3px solid ${G};border-${h}:3px solid ${G}"></i>`,
+ ln=d=>`<div style="flex:1;height:1px;background:linear-gradient(${d},transparent,${G});${DCX}"></div>`,
+ inf=(k,v)=>`<div style="flex:1 1 44%;min-width:150px;display:flex;gap:6px;padding:4px 0;border-bottom:1px dotted ${G}"><span style="opacity:.7">${t(k)}:</span><b>${v}</b></div>`,
+ bx=(k,v,f)=>`<div class="bx" style="flex:1;min-width:15%;text-align:center;border:1px solid ${G};border-top:4px solid ${f||G};padding:6px 3px;background:#FFFFFFA0;${DCX}"><div style="font-size:11px;opacity:.7">${k}</div><div style="font-size:19px;font-weight:bold;color:${f||B}">${v}</div></div>`;
+ return`<div class="dmc" style="${DFS};${DCX};position:relative;overflow:hidden;border:3px double ${B};outline:1px solid ${G};outline-offset:3px;margin:6px;background:linear-gradient(160deg,#FFFEFB,#FAF3E3);color:#24211B;font-size:14px">
+${LG?`<img src="${LG}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;max-height:62%;object-fit:contain;opacity:.1">`:''}${cr('top','left')}${cr('top','right')}${cr('bottom','left')}${cr('bottom','right')}
+<div class="pd" style="position:relative;padding:22px 26px">
+<div style="text-align:center">${LG?`<img src="${LG}" style="height:84px;max-width:55%;object-fit:contain">`:''}<div class="nm" style="font-size:27px;font-weight:bold;color:${B};margin-top:4px;line-height:1.25">${esc(brandName()||'')}</div>
+<div style="display:flex;align-items:center;gap:8px;margin:8px 0">${ln('90deg')}<span style="color:${G}">&#9670;</span>${ln('270deg')}</div>
+<div class="rb" style="display:inline-block;padding:6px 48px;background:${B};color:#fff;font-size:16px;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%);${DCX}">${t('Detailed Marks Certificate')}</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:0 20px;margin:14px 0;padding:6px 14px;border:1px solid ${G};border-radius:6px;background:#FFFFFF90;${DCX}">${inf('Student',esc(s.name))}${inf('Father',esc(s.father))}${inf('Roll No.',esc(roll))}${inf('Class',esc(s.class))}${inf('Exam',esc(e.name))}</div>
+<table style="width:100%;border-collapse:collapse;text-align:center;border:1px solid ${B}"><tr style="background:${B};color:#fff;${DCX}"><th style="padding:7px;text-align:start">${t('Subject')}</th><th>${t('Total marks')}</th><th>${t('Obtained')}</th><th>%</th><th>${t('Grade')}</th></tr>
+${e.subjects.map((x,j)=>{const m=s.m[j],q=PCX(m,maxOf(e,j));return`<tr style="border-bottom:1px solid #E6DCC3;${j%2?'background:#F5F1E7B0;'+DCX:''}"><td style="padding:6px 8px;text-align:start">${esc(x)}</td><td>${maxOf(e,j)}</td><td><b>${m??'-'}</b></td><td>${q??'-'}</td><td>${q==null?'-':grade(q)}</td></tr>`}).join('')}
+<tr style="border-top:2px solid ${B};font-weight:bold;background:#EFE6D2;${DCX}"><td style="padding:8px;text-align:start">${t('Total')}</td><td>${tot}</td><td>${s.t}</td><td>${p}</td><td>${grade(p)}</td></tr></table>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0">${bx(t('Total marks'),tot)}${bx(t('Obtained'),s.t)}${bx(t('Percentage'),p+'%')}${bx(t('Grade'),grade(p))}${bx(t('Position'),s.cp)}${bx(t('Result'),t(s.pass?'PASS':'FAIL'),s.pass?'#2F6B45':'#B0453A')}</div>
+<div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center"><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Class teacher sign')}</div><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Principal sign')}</div></div>
+<div style="display:flex;align-items:center;gap:8px;margin-top:16px">${ln('90deg')}<span style="color:${G}">&#9670;</span>${ln('270deg')}</div>
+<div style="font-size:11px;margin-top:6px;text-align:center">A+ 80-100 &nbsp; A 70-79 &nbsp; B 60-69 &nbsp; C 50-59 &nbsp; D 40-49 &nbsp; F &lt;40 &nbsp;|&nbsp; ${t('Issue date')}: ${today()}</div></div></div>`}
+function card(i){const s=RS[i],e=RE,w=waNum(s.phone),tx=`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${maxOf(e,j)}`).join('\n')+`\n${t('Total')}: ${s.t}/${totOf(e)} (${s.pct}%)\n${t('Grade')}: ${grade(s.pct)}\n${t('Position')}: ${s.cp}`;
+ modal(`<div id="rc">${cardHtml(s)}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcSave('pdf',${i})">${t('Print DMC (PDF)')}</button>${navigator.canShare?`<button class="eb sec" onclick="dmcSave('pdf',${i},1)">${t('Share')}</button>`:''}<span id="dst" style="align-self:center"></span>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="eb sec">WhatsApp</button></a>`:''}<button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px'}
+function cardsAll(){const A=RG.groups.flatMap(g=>g.L);printDoc(A.map((s,i)=>`<div style="${i<A.length-1?'page-break-after:always;break-after:page':''}">${cardHtml(s)}</div>`).join(''))}
+Object.assign(UR,{"Save image":"تصویر محفوظ کریں","Save PDF":"PDF محفوظ کریں","Share":"شیئر کریں","Print":"پرنٹ","Save all DMC (PDF)":"تمام DMC کی PDF","Working...":"تیار ہو رہا ہے...","Could not save. Use Print instead.":"محفوظ نہیں ہو سکا۔ Print استعمال کریں۔"});
+// --- DMC -> image / PDF (offline, works on mobile) ---
+async function dmcCanvas(html,W0,H0){const W=W0||794,H=H0||1123,sc=innerWidth<700?2:3,host=document.createElement('div');host.style.cssText='position:fixed;left:-9999px;top:0;width:'+W+'px';host.innerHTML=html;document.body.appendChild(host);
+ try{const el=host.firstElementChild;el.style.minHeight=(H-12)+'px';const h=Math.max(H,el.offsetHeight+12),x=new XMLSerializer().serializeToString(el),
+  svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${W}px"><style>*{box-sizing:border-box}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee}</style>${x}</div></foreignObject></svg>`,
+  im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});
+  const c=document.createElement('canvas');c.width=W*sc;c.height=h*sc;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);return c}finally{host.remove()}}
+const dmcJpg=c=>{const d=atob(c.toDataURL('image/jpeg',.92).split(',')[1]),b=new Uint8Array(d.length);for(let i=0;i<d.length;i++)b[i]=d.charCodeAt(i);return{b,w:c.width,h:c.height}};
+function pdfOf(L,land){const te=new TextEncoder(),P=[],off=[];let len=0;const add=x=>{const b=typeof x=='string'?te.encode(x):x;P.push(b);len+=b.length},obj=(n,x)=>{off[n]=len;add(n+' 0 obj\n'+x+'\nendobj\n')},n=L.length,N=3+n*3,PW=land?841.89:595.28,PH=land?595.28:841.89;
+ add('%PDF-1.4\n');obj(1,'<</Type/Catalog/Pages 2 0 R>>');obj(2,`<</Type/Pages/Count ${n}/Kids[${L.map((_,i)=>(3+i*3)+' 0 R').join(' ')}]>>`);
+ L.forEach((m,i)=>{const p=3+i*3,k=Math.min(PW/m.w,PH/m.h),w=m.w*k,h=m.h*k,cs=`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${((PW-w)/2).toFixed(2)} ${(PH-h).toFixed(2)} cm /Im0 Do Q`;
+  obj(p,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${PW} ${PH}]/Resources<</XObject<</Im0 ${p+2} 0 R>>>>/Contents ${p+1} 0 R>>`);obj(p+1,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
+  off[p+2]=len;add(`${p+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${m.w}/Height ${m.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${m.b.length}>>\nstream\n`);add(m.b);add('\nendstream\nendobj\n')});
+ const xr=len;add(`xref\n0 ${N}\n0000000000 65535 f \n`+off.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<</Size ${N}/Root 1 0 R>>\nstartxref\n${xr}\n%%EOF`);return new Blob(P,{type:'application/pdf'})}
+function dmcName(x,id){const b=String(x).replace(/[^\x20-\x7E]+/g,' ').replace(/[^\w-]+/g,'_').replace(/_+/g,'_').replace(/^[_-]+|[_-]+$/g,'');return(b||'DMC')+'-'+id}
+function dmcGet(blob,name,share){if(share&&navigator.canShare){const f=new File([blob],name,{type:blob.type});if(navigator.canShare({files:[f]}))return navigator.share({files:[f],title:name})}
+ const fb=new Blob([blob],{type:'application/octet-stream'}),u=URL.createObjectURL(fb),a=document.createElement('a');a.href=u;a.download=name;a.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';document.body.appendChild(a);a.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},180000)}
+async function dmcSave(kind,i,share){const s=RS[i],e=RE,st=document.getElementById('dst'),nm=dmcName(s.name+'-'+e.name,s.id);if(st)st.textContent=t('Working...');
+ try{const c=await dmcCanvas(cardHtml(s)),b=kind=='png'?await new Promise(r=>c.toBlob(r,'image/png')):pdfOf([dmcJpg(c)]);await dmcGet(b,nm+(kind=='png'?'.png':'.pdf'),share);if(st)st.textContent='✓ '+t(share?'Shared':'PDF downloaded')}catch(x){if(st)st.textContent='';if(!x||x.name!='AbortError')alert(t('Could not save the PDF. Please try again.'))}}
+async function dmcAllPdf(){const A=RG.groups.flatMap(g=>g.L),L=[],b=document.getElementById('dap'),lab0=b?b.innerHTML:t('Print all DMC (PDF)');
+ try{for(let i=0;i<A.length;i++){if(b)b.textContent=t('Working...')+' '+(i+1)+'/'+A.length;L.push(dmcJpg(await dmcCanvas(cardHtml(A[i]))))}
+  window.DMCB={blob:pdfOf(L),name:dmcName(RE.name+'-DMC','all')+'.pdf'};
+  modal(`<div id="rc" style="max-height:68vh;overflow:auto">${A.map(s=>`<div style="margin-bottom:12px">${cardHtml(s)}</div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcGet(DMCB.blob,DMCB.name)">${t('Download again')}</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';
+  await new Promise(r=>setTimeout(r,250));await dmcGet(DMCB.blob,DMCB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}
+ const b2=document.getElementById('dap');if(b2)b2.innerHTML=lab0}
+function sheetHtml(g,k,n){const e=RE,tot=totOf(e),B='#1F3B33',G='#B4884A';
+ return`<div style="${DFS};${k<n-1?'page-break-after:always;break-after:page;':''}font-size:12px"><style>.cs td,.cs th{border:1px solid #B9AE95;padding:4px 5px}</style>
+<div style="text-align:center;border-bottom:2px solid ${G};padding-bottom:6px;margin-bottom:8px">${logoImg(46)}<span style="font-size:21px;font-weight:bold;color:${B}">${esc(brandName()||'')}</span><div style="margin-top:3px">${t('Class marksheet')} - ${esc(e.name)} - ${t('Class')}: <b>${esc(g.c)||'-'}</b></div></div>
+<table class="cs" style="width:100%;border-collapse:collapse;text-align:center"><tr style="background:${B};color:#fff;${DCX}"><th>#</th><th class="nm" style="text-align:start">${t('Student')}</th><th class="nm" style="text-align:start">${t('Father')}</th>${e.subjects.map((x,j)=>`<th>${esc(x)}<br><small>/${maxOf(e,j)}</small></th>`).join('')}<th>${t('Total')}<br><small>/${tot}</small></th><th>%</th><th>${t('Grade')}</th><th>${t('Result')}</th></tr>
+${g.L.map((s,i)=>`<tr style="${i%2?'background:#F5F1E7;'+DCX:''}"><td>${s.cp}</td><td class="nm" style="text-align:start">${esc(s.name)}</td><td class="nm" style="text-align:start">${esc(s.father)}</td>${e.subjects.map((x,j)=>`<td>${s.m[j]??'-'}</td>`).join('')}<td><b>${s.t}</b></td><td>${s.pct}</td><td>${grade(s.pct)}</td><td style="color:${s.pass?'#2F6B45':'#B0453A'}"><b>${t(s.pass?'PASS':'FAIL')}</b></td></tr>`).join('')}</table>
+<div style="display:flex;justify-content:space-between;margin-top:30px;text-align:center"><div style="width:26%;border-top:1px solid #000;padding-top:3px">${t('Class teacher sign')}</div><div style="width:26%;border-top:1px solid #000;padding-top:3px">${t('Principal sign')}</div></div></div>`}
+const sheetDim=()=>{const n=RE.subjects.length,land=n>9;return{land,W:land?1123:794,H:land?794:1123,fs:n<=5?13:n<=7?12:11}};
+function sheetPageHtml(g,R,pg,np,last){const dm=sheetDim(),e=RE,tot=totOf(e),B='#1F3B33',G='#B4884A',n=brandName(),dir=LANG=='ur'?'rtl':'ltr';
+ return`<div style="${DFS};${DCX};direction:${dir};background:#fff;color:#24211B;padding:22px 26px;font-size:${dm.fs}px;border:3px double ${B};margin:6px"><style>.cs td,.cs th{border:1px solid #B9AE95;padding:4px 3px;white-space:nowrap;font-size:inherit}.cs .nm{white-space:normal;overflow-wrap:anywhere}</style>
+<div class="sh-h" style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid ${G};padding-bottom:8px;margin-bottom:10px"><div style="flex:0 0 ${dm.land?130:100}px">${logoImg(64)}</div><div style="flex:1;text-align:center"><div style="font-size:${dm.land?26:22}px;font-weight:bold;color:${B}">${esc(n)}</div><div style="margin-top:3px;font-size:15px">${t('Class marksheet')} - ${esc(e.name)}</div></div><div style="flex:0 0 ${dm.land?130:100}px;text-align:end"><div style="display:inline-block;padding:4px 14px;background:${B};color:#fff;font-size:16px;font-weight:bold;${DCX}">${t('Class')}: ${esc(g.c)||'-'}</div>${np>1?`<div style="font-size:11px;margin-top:4px">${t('Page')} ${pg}/${np}</div>`:''}</div></div>
+<table class="cs" style="width:100%;border-collapse:collapse;text-align:center"><tr style="background:${B};color:#fff;${DCX}"><th>#</th><th class="nm" style="text-align:start">${t('Student')}</th><th class="nm" style="text-align:start">${t('Father')}</th>${e.subjects.map((x,j)=>`<th>${esc(x)}<br><small>/${maxOf(e,j)}</small></th>`).join('')}<th>${t('Total')}<br><small>/${tot}</small></th><th>%</th><th>${t('Grade')}</th><th>${t('Result')}</th></tr>
+${R.map((s,i)=>`<tr style="${i%2?'background:#F5F1E7;'+DCX:''}"><td>${s.cp}</td><td class="nm" style="text-align:start">${esc(s.name)}</td><td class="nm" style="text-align:start">${esc(s.father)}</td>${e.subjects.map((x,j)=>`<td>${s.m[j]??'-'}</td>`).join('')}<td><b>${s.t}</b></td><td>${s.pct}</td><td>${grade(s.pct)}</td><td style="color:${s.pass?'#2F6B45':'#B0453A'}"><b>${t(s.pass?'PASS':'FAIL')}</b></td></tr>`).join('')}</table>
+${last?`<div class="sh-s" style="display:flex;justify-content:space-between;margin-top:30px;text-align:center"><div style="width:26%;border-top:1px solid #000;padding-top:3px">${t('Class teacher sign')}</div><div style="width:26%;border-top:1px solid #000;padding-top:3px">${t('Principal sign')}</div></div>`:''}</div>`}
+async function sheetPages(g){const{W,H}=sheetDim(),host=document.createElement('div');host.style.cssText='position:fixed;left:-9999px;top:0;width:'+W+'px';host.innerHTML=sheetPageHtml(g,g.L,1,1,true);document.body.appendChild(host);
+ try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;await Promise.all([...host.querySelectorAll('img')].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r})));const el=host.firstElementChild,hd=el.querySelector('.sh-h').offsetHeight+10,tr=[...el.querySelectorAll('table.cs tr')],th=tr[0].offsetHeight,rh=tr.slice(1).map(r=>r.offsetHeight),sg=el.querySelector('.sh-s').offsetHeight+34,av=H-12-50-hd-th-16,P=[];
+  let cur=[],h=0;rh.forEach((x,i)=>{if(cur.length&&h+x>av){P.push(cur);cur=[];h=0}cur.push(i);h+=x});P.push(cur);
+  if(h+sg>av&&cur.length>1)P.push([cur.pop()]);
+  return P.map((ix,k)=>sheetPageHtml(g,ix.map(i=>g.L[i]),k+1,P.length,k==P.length-1))}finally{host.remove()}}
+async function sheetPdf(){const b=document.getElementById('shp'),lab=b&&b.innerHTML;
+ try{const pg=[];for(const g of RG.groups)pg.push(...await sheetPages(g));const J=[],prev=[],dm=sheetDim();
+  for(let i=0;i<pg.length;i++){if(b)b.textContent=t('Working...')+' '+(i+1)+'/'+pg.length;const c=await dmcCanvas(pg[i],dm.W,dm.H);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.8))}
+  window.SHB={blob:pdfOf(J,dm.land),name:dmcName(RE.name+'-Marksheet','class')+'.pdf'};
+  modal(`<div id="rc" style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="overflow-x:auto;margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;min-width:${dm.land?720:0}px;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="xlsExport()">${t('Save Excel (.xlsx)')}</button><button class="eb sec" onclick="dmcGet(SHB.blob,SHB.name)">${t('Download again')} (PDF)</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';
+  await new Promise(r=>setTimeout(r,250));await dmcGet(SHB.blob,SHB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}
+ const b2=document.getElementById('shp');if(b2&&lab)b2.innerHTML=lab}
+function sheetPrint(){printDoc(RG.groups.map((g,i)=>sheetHtml(g,i,RG.groups.length)).join(''),1)}
+// --- Excel (.xlsx) writer, works fully offline ---
+const DCRC=(()=>{const T=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;T[n]=c>>>0}return b=>{let c=-1;for(let i=0;i<b.length;i++)c=T[(c^b[i])&255]^(c>>>8);return(c^-1)>>>0}})();
+function zipStore(files){const te=new TextEncoder(),ch=[],cd=[],d=new Date(),dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();let off=0;
+ for(const[n,s]of files){const nb=te.encode(n),db=typeof s=='string'?te.encode(s):s,crc=DCRC(db),h=new DataView(new ArrayBuffer(30)),c=new DataView(new ArrayBuffer(46));
+  h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,dt,true);h.setUint32(14,crc,true);h.setUint32(18,db.length,true);h.setUint32(22,db.length,true);h.setUint16(26,nb.length,true);
+  c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,dt,true);c.setUint32(16,crc,true);c.setUint32(20,db.length,true);c.setUint32(24,db.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+  ch.push(new Uint8Array(h.buffer),nb,db);cd.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+db.length}
+ const cs=cd.reduce((x,y)=>x+y.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...ch,...cd,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+const xlCol=n=>{let s='';for(n++;n>0;n=(n-1)/26|0)s=String.fromCharCode(65+(n-1)%26)+s;return s},xlEsc=s=>String(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+function sheetXml(rows,mg,ws){return'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>'+ws.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>'+
+ rows.map((r,i)=>`<row r="${i+1}">`+r.map(([v,s],j)=>{const ref=xlCol(j)+(i+1);return v===''||v==null?`<c r="${ref}" s="${s}"/>`:typeof v=='number'?`<c r="${ref}" s="${s}"><v>${v}</v></c>`:`<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xlEsc(v)}</t></is></c>`}).join('')+'</row>').join('')+'</sheetData>'+`<mergeCells count="${mg.length}">`+mg.map(x=>`<mergeCell ref="${x}"/>`).join('')+'</mergeCells></worksheet>'}
+async function xlLogo(){const u=D.settings&&D.settings.logo;if(!u)return null;try{const im=new Image();await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;im.src=u});const h=Math.min(120,im.naturalHeight||120),w=Math.max(1,Math.round((im.naturalWidth||h)*h/(im.naturalHeight||h))),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);const d=atob(c.toDataURL('image/png').split(',')[1]),b=new Uint8Array(d.length);for(let i=0;i<d.length;i++)b[i]=d.charCodeAt(i);return{b,w,h}}catch(e){return null}}
+const XNS='http://schemas.openxmlformats.org/';
+function xlLogoSheet(x,has,land){const M=XNS+'spreadsheetml/2006/main';
+ x=x.replace('<worksheet xmlns="'+M+'">','<worksheet xmlns="'+M+'" xmlns:r="'+XNS+'officeDocument/2006/relationships">').replace('<cols>','<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A5" sqref="A5"/></sheetView></sheetViews><cols>').replace('<row r="4">','<row r="4" ht="32" customHeight="1">');
+ if(has)x=x.replace('<row r="1">','<row r="1" ht="56" customHeight="1">').replace('<row r="2">','<row r="2" ht="22" customHeight="1">');
+ return x.replace('</mergeCells></worksheet>','</mergeCells><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="'+(land?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="0"/>'+(has?'<drawing r:id="rId1"/>':'')+'</worksheet>')}
+function xlLogoCT(n,L){return L?'<Default Extension="png" ContentType="image/png"/>'+Array.from({length:n},(_,i)=>'<Override PartName="/xl/drawings/drawing'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>').join(''):''}
+function xlLogoFiles(n,L){if(!L)return[];const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',K=Math.min(92/L.w,50/L.h),W=Math.max(1,Math.round(L.w*K)),H=Math.max(1,Math.round(L.h*K)),cx=W*9525,cy=H*9525,
+ dr=X+'<xdr:wsDr xmlns:xdr="'+XNS+'drawingml/2006/spreadsheetDrawing" xmlns:a="'+XNS+'drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:from><xdr:ext cx="'+cx+'" cy="'+cy+'"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="'+XNS+'officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>',
+ R=(t,g)=>X+'<Relationships xmlns="'+XNS+'package/2006/relationships"><Relationship Id="rId1" Type="'+XNS+'officeDocument/2006/relationships/'+t+'" Target="'+g+'"/></Relationships>',F=[['xl/media/image1.png',L.b]];
+ for(let i=1;i<=n;i++)F.push(['xl/worksheets/_rels/sheet'+i+'.xml.rels',R('drawing','../drawings/drawing'+i+'.xml')],['xl/drawings/drawing'+i+'.xml',dr],['xl/drawings/_rels/drawing'+i+'.xml.rels',R('image','../media/image1.png')]);return F}
+async function xlsExport(){const e=RE,tot=totOf(e),used=new Set(),NS='http://schemas.openxmlformats.org/',X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+ const LGO=await xlLogo();
+ const S=RG.groups.map(({c,L})=>{let n=(c||'No class').replace(/[\[\]:*?\/\\]/g,'-').slice(0,31),b=n,q=1;while(used.has(n.toLowerCase()))n=b.slice(0,27)+'-'+(++q);used.add(n.toLowerCase());
+  const H=['Position','Student','Father',...e.subjects.map((x,j)=>x+' ('+maxOf(e,j)+')'),'Total','Out of','%','Grade','Result'],last=xlCol(H.length-1),
+  rows=[[['',0],[brandName()||'School',5]],[['',0],['Class marksheet - '+e.name+' - Class '+(c||'-'),6]],[],H.map(h=>[h,1]),...L.map(s=>[[s.cp,3],[s.name,4],[s.father,4],...e.subjects.map((x,j)=>[s.m[j]??'',3]),[s.t,3],[tot,3],[s.pct,3],[grade(s.pct),3],[s.pass?'PASS':'FAIL',3]])];
+  return{n,xml:xlLogoSheet(sheetXml(rows,['B1:'+last+'1','B2:'+last+'2'],H.map((h,i)=>i==0?10:i==1?28:i==2?22:i<3+e.subjects.length?11:8)),!!LGO,e.subjects.length>=4)}}),
+ M=NS+'spreadsheetml/2006/main',R=NS+'officeDocument/2006/relationships',
+ sty=`${X}<styleSheet xmlns="${M}"><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><i/><sz val="14"/><name val="Calibri"/></font><font><b/><sz val="16"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F3B33"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFB9AE95"/></left><right style="thin"><color rgb="FFB9AE95"/></right><top style="thin"><color rgb="FFB9AE95"/></top><bottom style="thin"><color rgb="FFB9AE95"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf></cellXfs></styleSheet>`,
+ F=[['[Content_Types].xml',`${X}<Types xmlns="${NS}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${xlLogoCT(S.length,LGO)}<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${S.map((x,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+ ['_rels/.rels',`${X}<Relationships xmlns="${NS}package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+ ['xl/workbook.xml',`${X}<workbook xmlns="${M}" xmlns:r="${R}"><sheets>${S.map((x,i)=>`<sheet name="${xlEsc(x.n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets><definedNames>${S.map((x,i)=>`<definedName name="_xlnm.Print_Titles" localSheetId="${i}">'${xlEsc(x.n.replace(/'/g,"''"))}'!$4:$4</definedName>`).join('')}</definedNames></workbook>`],
+ ['xl/_rels/workbook.xml.rels',`${X}<Relationships xmlns="${NS}package/2006/relationships">${S.map((x,i)=>`<Relationship Id="rId${i+1}" Type="${R}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${S.length+1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`],
+ ['xl/styles.xml',sty],...S.map((x,i)=>[`xl/worksheets/sheet${i+1}.xml`,x.xml]),...xlLogoFiles(S.length,LGO)],
+ xn=(e.name.replace(/[^\w\u0600-\u06FF -]+/g,'').trim()||'exam')+'-marksheet-'+today()+'.xlsx';
+ try{await dmcGet(zipStore(F),xn);const st=document.getElementById('dst');if(st)st.textContent='✓ '+t('Excel downloaded')}catch(x){if(!x||x.name!='AbortError')alert(t('Could not save the file. Please try again.'))}}
+{const r1=resu;resu=async function(id){await r1(id);window.RG=dmcData();const h=document.querySelector('#mk h4');if(h)h.insertAdjacentHTML('afterend',`<div class="row" style="margin:6px 0"><button id="dap" onclick="dmcAllPdf()">${t('Print all DMC (PDF)')}</button><button class="o" id="shp" onclick="sheetPdf()">${t('Print class marksheet (PDF + Excel)')}</button></div>`)}}
+// --- real printer icon on every print button in the portal ---
+const DPI='<svg class="pi" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3.5h10V8"/><rect x="3" y="8" width="18" height="8.5" rx="2"/><path d="M7 14h10v6.5H7z" fill="currentColor" fill-opacity=".18"/><circle cx="17.5" cy="11.2" r=".7" fill="currentColor"/></svg>';
+{const st=document.createElement('style');st.textContent='button.pic{display:inline-flex;align-items:center;gap:6px}button.pic svg{flex:none}';document.head.appendChild(st);
+ const dec=()=>document.querySelectorAll('button:not(.pic)').forEach(b=>{if(/printEl|printList|vprint\(|cardsAll|sheetPrint|printDoc|window\.print/.test(b.getAttribute('onclick')||'')||/^\s*(Print|پرنٹ)/.test(b.textContent)){b.classList.add('pic');b.insertAdjacentHTML('afterbegin',DPI)}});
+ let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;dec()})}).observe(document.body,{childList:true,subtree:true});dec()}
+
+
+// ===== Offline routes: dashboard + class promotion (computed in the browser) =====
+{const apiD=api;api=async function(p,o){
+ if(p==='students/promote'){if(ROLE!='admin'){alert('Not allowed for your role');throw 0}
+  try{localStorage.sp_pre_promote=JSON.stringify(D)}catch(e){}
+  const mp=(o&&o.map)||{};let moved=0,grad=0;for(const s of D.students.filter(s=>s.active)){const c=s.class||'',to=String(mp[c]??'').trim().slice(0,30);if(!to||to==c)continue;if(to=='-'){s.active=0;grad++}else{s.class=to;moved++}}save();return{moved,grad}}
+ if(p!=='dashboard')return apiD(p,o);
+ if(!PERM.fees.includes(ROLE)){alert('Not allowed for your role');throw 0}
+ const sm=a=>a.reduce((z,x)=>z+x.amount,0),mk=o=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-o);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
+ D.exp=D.exp||[];D.tpay=D.tpay||[];D.teachers=D.teachers||[];D.don=D.don||[];D.payments=D.payments||[];
+ const m=mk(0),A=D.students.filter(s=>s.active),paidOf=(id,mm)=>sm(D.payments.filter(x=>x.student_id==id&&x.month==mm)),
+ eff=s=>Math.max(0,s.fee-(s.disc||0)),dueOf=s=>Math.max(0,eff(s)-paidOf(s.id,m)),oldOf=s=>Math.max(0,(s.old||0)-paidOf(s.id,'old')),
+ at=D.att[today()]||{},ids=new Set(A.map(s=>s.id)),c={P:0,A:0,L:0};
+ for(const k in at)if(ids.has(+k)&&c[at[k]]!==undefined)c[at[k]]++;
+ const months=[5,4,3,2,1,0].map(o=>{const k=mk(o);return{m:k,in:sm(D.payments.filter(x=>x.date.startsWith(k))),out:sm(D.exp.filter(x=>x.date.startsWith(k)))+sm(D.tpay.filter(x=>x.date.startsWith(k)))}});
+ const TT=D.teachers.filter(x=>x.active),payable=TT.reduce((a,x)=>a+Math.max(0,x.salary-sm(D.tpay.filter(y=>y.teacher_id==x.id&&y.month==m))),0);
+ return{month:m,students:A.length,p:c.P,a:c.A,l:c.L,due:A.reduce((a,s)=>a+dueOf(s),0),oldDue:A.reduce((a,s)=>a+oldOf(s),0),in:months[5].in,out:months[5].out,payable,teachers:TT.length,don:sm(D.don.filter(x=>x.date.startsWith(m))),months,
+  top:A.map(s=>({id:s.id,name:s.name,class:s.class,phone:s.phone,due:dueOf(s)+oldOf(s)})).filter(x=>x.due>0).sort((a,b)=>b.due-a.due).slice(0,5)}}}
+{const b3=boot;boot=function(){if(!T)window.TS=0;else if(!window.TS){window.TS=1;if(ROLE=='admin'||ROLE=='accountant')tab='dash'}b3()}}
+// ===== Exam portal: easy marks entry, statistics, quick subjects, edit/copy =====
+Object.assign(UR,{"Search":"تلاش","Complete":"مکمل","Edit":"ترمیم","Copy":"کاپی","Class for the copy":"نئی جماعت کا نام","View results":"نتائج دیکھیں","Statistics":"اعداد و شمار","Appeared":"شریک","Passed":"کامیاب","Average":"اوسط","Highest":"سب سے زیادہ","Lowest":"سب سے کم","Pass rate":"کامیابی کی شرح","Needs attention":"توجہ طلب طلبہ","Grade distribution":"گریڈ کی تقسیم","Subject-wise":"مضمون وار","Fails":"ناکام","Saving...":"محفوظ ہو رہا ہے...","Quick subjects":"فوری مضامین","Marks above maximum were ignored":"زیادہ سے زیادہ حد سے بڑھے ہوئے نمبر نظر انداز ہوئے","Tip: Enter = next student, arrows move around, marks save automatically.":"ٹپ: Enter سے اگلا طالب علم، تیر والے بٹن سے حرکت؛ نمبر خود بخود محفوظ ہوتے ہیں۔"});
+async function marks(id){const r=await api('marks?id='+id);window.MK=r;const e=r.exam;
+ $('#mk').innerHTML=`<div class="card"><h4>${esc(e.name)}${e.class?' ('+esc(e.class)+')':''}</h4><div class="row"><input id="mq" placeholder="${t('Search')}" oninput="mFilt()"><b id="mp"></b><span id="ms" style="margin-inline-start:auto"></span></div><table id="mt"><tr><th>#</th><th>${t('Student')}</th>${e.subjects.map((x,j)=>`<th>${esc(x)}<br><small>/${maxOf(e,j)}</small></th>`).join('')}<th>${t('Total')}</th></tr>`+
+ r.rows.map((s,i)=>`<tr data-n="${esc(s.name.toLowerCase())}"><td>${i+1}</td><td>${esc(s.name)}</td>${e.subjects.map((x,j)=>`<td><input type="number" inputmode="decimal" min="0" max="${maxOf(e,j)}" data-i="${i}" data-j="${j}" style="width:62px" value="${s.m[j]??''}" oninput="mIn(this)" onkeydown="mKey(event,this)"></td>`).join('')}<td id="mt${i}"></td></tr>`).join('')+
+ `</table><div class="row" style="margin-top:8px"><button onclick="saveM(1)">${t('Save marks')}</button><button class="o" onclick="resu(${e.id})">${t('View results')}</button></div><small>${t('Tip: Enter = next student, arrows move around, marks save automatically.')}</small></div>`;
+ r.rows.forEach((s,i)=>mTot(i));mProg();$('#mk').scrollIntoView()}
+function mTot(i){const e=MK.exam,tot=totOf(e),m=MK.rows[i].m,got=e.subjects.some((x,j)=>m[j]!=null),T=Array.from(m).reduce((a,x)=>a+(+x||0),0),p=Math.round(T*1000/tot)/10,c=document.getElementById('mt'+i);
+ if(c)c.innerHTML=got?`<b>${T}</b> <small style="color:${p>=(e.pass||PASSP)?'#2F6B45':'#B0453A'}">${p}%</small>`:'-'}
+function mProg(){const e=MK.exam,d=MK.rows.filter(s=>e.subjects.every((x,j)=>s.m[j]!=null)).length;const b=document.getElementById('mp');if(b)b.textContent=t('Complete')+': '+d+' / '+MK.rows.length}
+function mIn(el){const i=+el.dataset.i,j=+el.dataset.j,v=el.value,bad=v!==''&&(+v<0||+v>maxOf(MK.exam,j));el.style.borderColor=bad?'#B0453A':'';el.style.background=bad?'#FBE9E7':'';
+ if(!bad){const r=MK.rows[i];r.m=Array.from(r.m);r.m[j]=v===''?null:+v}mTot(i);mProg();const st=document.getElementById('ms');if(st){st.style.color=bad?'#B0453A':'';st.textContent=bad?t('Marks above maximum were ignored'):t('Saving...')}
+ clearTimeout(window.MT);if(!bad)window.MT=setTimeout(()=>saveM(0),900)}
+function mKey(ev,el){const k=ev.key,i=+el.dataset.i,j=+el.dataset.j,n=MK.rows.length,up=k=='ArrowUp'||(k=='Enter'&&ev.shiftKey),dn=k=='ArrowDown'||(k=='Enter'&&!ev.shiftKey),
+ F=(a,b)=>[...document.querySelectorAll(`#mt input[data-i="${a}"][data-j="${b}"]`)].find(x=>x.closest('tr').style.display!='none');let nx=null;
+ if(dn){for(let a=i+1;a<n&&!nx;a++)nx=F(a,j);if(!nx&&k=='Enter')for(let a=0;a<n&&!nx;a++)nx=F(a,j+1)}else if(up){for(let a=i-1;a>=0&&!nx;a--)nx=F(a,j)}
+ else if(k=='ArrowRight'&&el.selectionStart==null)nx=F(i,j+1);else if(k=='ArrowLeft'&&el.selectionStart==null)nx=F(i,j-1);
+ if(dn||up){ev.preventDefault()}if(nx){nx.focus();nx.select()}}
+function mFilt(){const q=document.getElementById('mq').value.trim().toLowerCase();document.querySelectorAll('#mt tr[data-n]').forEach(r=>r.style.display=!q||r.dataset.n.includes(q)?'':'none')}
+async function saveM(man){clearTimeout(window.MT);const st=document.getElementById('ms');
+ await api('marks',{id:MK.exam.id,rows:MK.rows.map(s=>({id:s.id,m:Array.from(s.m,x=>x??null)}))});
+ if(st&&st.style.color==''){st.textContent=t('Saved')+' ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}else if(man)alert(t('Marks above maximum were ignored'))}
+function statsHtml(){const e=RE,A=RS.filter(s=>Array.from(s.m).some(x=>x!=null));if(!A.length)return'';const P=A.filter(s=>s.pass).length,av=Math.round(A.reduce((a,s)=>a+s.pct,0)*10/A.length)/10,hi=A.reduce((a,s)=>s.pct>a.pct?s:a),lo=A.reduce((a,s)=>s.pct<a.pct?s:a),
+ gd=['A+','A','B','C','D','F'].map(g=>[g,A.filter(s=>grade(s.pct)==g).length]),mx=Math.max(...gd.map(x=>x[1]),1),lim=j=>maxOf(e,j)*(e.pass||PASSP)/100,
+ sub=e.subjects.map((x,j)=>{const v=A.map(s=>s.m[j]).filter(z=>z!=null);return v.length?`<tr><td>${esc(x)}</td><td>${Math.round(v.reduce((a,z)=>a+z,0)*10/v.length)/10}</td><td>${Math.max(...v)}</td><td>${Math.min(...v)}</td><td class="${v.some(z=>z<lim(j))?'due':''}">${v.filter(z=>z<lim(j)).length}</td></tr>`:''}).join(''),
+ weak=A.map(s=>({s,f:e.subjects.filter((x,j)=>s.m[j]!=null&&s.m[j]<lim(j))})).filter(x=>x.f.length);
+ return`<div class="card"><h4>${t('Statistics')}</h4><div class="row" style="margin:4px 0 8px"><button class="eb pri" id="stp" onclick="statsPdf()">${ICO('pdf')}${t('Print statistics (PDF)')}</button></div><div class="row" style="gap:14px"><span>${t('Appeared')}: <b>${A.length}</b></span><span>${t('Passed')}: <b class="ok">${P}</b></span><span>${t('Pass rate')}: <b>${Math.round(P*1000/A.length)/10}%</b></span><span>${t('Average')}: <b>${av}%</b></span></div>
+<div>${t('Highest')}: <b>${esc(hi.name)}</b> (${hi.pct}%) &nbsp; ${t('Lowest')}: <b>${esc(lo.name)}</b> (${lo.pct}%)</div>
+<h4 style="margin:12px 0 4px">${t('Grade distribution')}</h4>${gd.map(([g,n])=>`<div style="display:flex;align-items:center;gap:6px;margin:2px 0"><b style="width:26px">${g}</b><div style="height:12px;border-radius:6px;background:var(--b);width:${n*100/mx*.7}%;min-width:${n?4:0}px"></div><span>${n}</span></div>`).join('')}
+<h4 style="margin:12px 0 4px">${t('Subject-wise')}</h4><table><tr><th>${t('Subject')}</th><th>${t('Average')}</th><th>${t('Highest')}</th><th>${t('Lowest')}</th><th>${t('Fails')}</th></tr>${sub}</table>
+${weak.length?`<h4 style="margin:12px 0 4px">${t('Needs attention')} (${weak.length})</h4>${weak.map(x=>`<div>${esc(x.s.name)} <small>(${esc(x.s.class)})</small>: <span class="due">${x.f.map(esc).join(', ')}</span></div>`).join('')}`:''}</div>`}
+{const r2=resu;resu=async function(id){await r2(id);const m=document.getElementById('mk');if(m)m.insertAdjacentHTML('beforeend',statsHtml())}}
+// exam list: quick subject chips, edit, copy
+const SUBJ=['Urdu','English','Math','Islamiyat','Science','Social Studies','Computer','Quran'];
+function addSub(x){const i=document.getElementById('exs'),a=i.value.split(/[,،]/).map(z=>z.trim()).filter(Boolean);if(!a.includes(x))a.push(x);i.value=a.join(', ')}
+function editE(id){const e=D.exams.find(x=>x.id==id);modal(`<h4>${t('Edit')}</h4><div class="row"><input id="eEn" value="${esc(e.name)}"><input id="eEc" value="${esc(e.class)}" placeholder="${t('Class')}"><input id="eEm" type="number" value="${e.max}" placeholder="Max" style="width:80px"><input id="eEp" type="number" value="${e.pass||PASSP}" placeholder="Pass %" style="width:80px"></div><div class="row"><input id="eEs" style="width:100%" value="${esc(e.subjects.map((x,j)=>x+':'+maxOf(e,j)).join(', '))}"></div><small>Urdu:50, English:100</small><div class="row" style="margin-top:8px"><button onclick="saveE(${id})">${t('Save')}</button><button class="o" onclick="closeM()">${t('Close')}</button></div>`)}
+function saveE(id){const e=D.exams.find(x=>x.id==id),n=eEn.value.trim(),m=+eEm.value;if(!n||!(m>0)){alert(t('Name required'));return}e.name=n;e.class=eEc.value.trim();e.max=m;save();closeM();boot()}
+async function copyE(id){const e=D.exams.find(x=>x.id==id),c=await askVal('Class for the copy','');if(!c)return;await api('exams',{name:e.name,class:String(c).trim(),subjects:e.subjects.join(','),max:e.max});boot()}
+{const x0=V.exams;V.exams=async function(){await x0();const r=app.querySelector('.card .row');if(r)r.insertAdjacentHTML('afterend',`<div class="row"><small>${t('Quick subjects')}:</small>${SUBJ.map(x=>`<button class="o sm" data-s="${x}" onclick="addSub(this.dataset.s)">${x}</button>`).join('')}</div>`);
+ app.querySelectorAll('.card table tr').forEach((tr,i)=>{const e=D.exams[i-1],c=tr.lastElementChild;if(i&&e&&c)c.insertAdjacentHTML('beforeend',` <button class="o sm" onclick="editE(${e.id})">${t('Edit')}</button> <button class="o sm" onclick="copyE(${e.id})">${t('Copy')}</button>`)})}}
+// ===== Per-subject max marks: write subjects like  Urdu:50, English:100, Math  (no number = default max) =====
+Object.assign(UR,{"Subjects count cannot change":"مضامین کی تعداد تبدیل نہیں ہو سکتی"});
+function maxOf(e,j){const v=e.maxes&&e.maxes[j];return v>0?v:e.max}
+function totOf(e){return e.subjects.reduce((a,x,j)=>a+maxOf(e,j),0)}
+function parseSubj(str,def){const L=str.split(/[,،]/).map(z=>z.trim()).filter(Boolean).map(z=>{const m=z.match(/^(.*?)\s*[:=]\s*(\d+(?:\.\d+)?)$/);return m&&m[1]?[m[1].trim(),+m[2]]:[z,0]}),d=+def||100;return{names:L.map(x=>x[0]),maxes:L.map(x=>x[1]||d),d}}
+async function mkExam(name,cls,P){await api('exams',{name,class:cls,subjects:P.names.join(','),max:P.d});const e=D.exams[D.exams.length-1];if(e&&P.maxes.some(x=>x!=P.d)){e.maxes=P.maxes;save()}}
+async function addE(){await mkExam(exn.value,exc.value,parseSubj(exs.value,exm.value));boot()}
+async function copyE(id){const e=D.exams.find(x=>x.id==id),c=await askVal('Class for the copy','');if(!c)return;await mkExam(e.name,String(c).trim(),{names:e.subjects,maxes:e.subjects.map((x,j)=>maxOf(e,j)),d:e.max});boot()}
+function saveE(id){const e=D.exams.find(x=>x.id==id),n=eEn.value.trim(),m=+eEm.value,P=parseSubj(eEs.value,m);if(!n||!(m>0)){alert(t('Name required'));return}
+ if(P.names.length!=e.subjects.length){alert(t('Subjects count cannot change'));return}
+ e.name=n;e.class=eEc.value.trim();e.max=m;e.pass=+(document.getElementById('eEp')||{}).value||PASSP;e.subjects=P.names;if(P.maxes.some(x=>x!=m))e.maxes=P.maxes;else delete e.maxes;save();closeM();boot()}
+{const x1=V.exams;V.exams=async function(){await x1();const i=document.getElementById('exs');if(i)i.placeholder='Urdu:50, English:100, Math';
+ app.querySelectorAll('.card table tr').forEach((tr,k)=>{const e=D.exams[k-1];if(k&&e&&e.maxes&&tr.children[2])tr.children[2].textContent=e.subjects.map((x,j)=>x+' ('+maxOf(e,j)+')').join(', ')})}}
+// ===== Clear all exams (admin only, backup downloaded first) =====
+Object.assign(UR,{"Delete all exams":"تمام امتحانات حذف کریں","Delete ALL exams and marks? A backup file is downloaded first.":"تمام امتحانات اور نمبر حذف کریں؟ پہلے بیک اپ فائل ڈاؤن لوڈ ہوگی۔"});
+async function clearExams(){if(ROLE!='admin')return;if(!await ask('Delete ALL exams and marks? A backup file is downloaded first.'))return;dl();try{localStorage.sp_pre_clear=JSON.stringify(D)}catch(e){}D.exams=[];D.marks={};save();boot()}
+{const x2=V.exams;V.exams=async function(){await x2();if(ROLE=='admin'&&D.exams.length)app.insertAdjacentHTML('beforeend',`<div class="row"><button class="r sm" onclick="clearExams()">${t('Delete all exams')}</button></div>`)}}
+// ===== Exam portal: old method removed (blank shell, saved exam data is untouched) =====
+Object.assign(UR,{"Exam portal is empty. The new method will be set up here.":"امتحانی پورٹل خالی ہے۔ نیا طریقہ یہاں شامل کیا جائے گا۔"});
+V.exams=async function(){app.innerHTML=`<div class="card"><h4>${t('Exams')}</h4><p>${t('Exam portal is empty. The new method will be set up here.')}</p></div>`};
+// ===== Exam portal (new method): class -> exams -> marks -> results -> DMC, with lock =====
+Object.assign(UR,{"Back":"واپس","Lock":"لاک","Unlock":"ان لاک","Locked":"لاک شدہ","All subjects":"تمام مضامین","Lock this exam? Marks cannot be changed until an admin unlocks it.":"یہ امتحان لاک کریں؟ ایڈمن کے ان لاک کرنے تک نمبر تبدیل نہیں ہوں گے۔","Max":"زیادہ سے زیادہ","Pass %":"پاس %","Delete":"حذف کریں"});
+{const st=document.createElement('style');st.textContent='.eg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button.eb{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border-radius:10px;font-size:14px;font-weight:600;border:1px solid var(--g);background:var(--g);color:#fff;white-space:nowrap}button.eb.sec{background:#fff;color:var(--g)}button.eb.ghost{background:transparent;border-color:#D9CFB8;color:#24211B}button.eb.dng{background:#fff;color:#B0453A;border-color:#B0453A}button.eb.sm{min-height:34px;padding:5px 11px;font-size:13px}button.eb svg{width:17px;height:17px;flex:none}.ex{border:1px solid #E6DCC3;border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}@media(max-width:600px){.ex .eg button.eb{padding:8px 11px}}';document.head.appendChild(st)}
+const IC={back:'<path d="M15 18l-6-6 6-6"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/>',marks:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>',edit:'<path d="M12 20h9M16 4l4 4L8 20H4v-4z"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>',unlock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017-2"/>',plus:'<path d="M12 5v14M5 12h14"/>',xl:'<path d="M14 3H6v18h12V7zM14 3v4h4M9 12l5 6M14 12l-5 6"/>',pdf:'<path d="M14 3H6v18h12V7zM14 3v4h4"/>'};
+const ICO=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" width="17" height="17" style="vertical-align:-3px">${IC[k]}</svg>`,
+ eb=(l,k,c,o,x)=>`<button class="eb ${c}" onclick="${o}" ${x||''}>${k?ICO(k):''}${t(l)}</button>`;
+function exCard(e){const S=D.students.filter(z=>z.active&&(!e.class||z.class==e.class)),mk=D.marks[e.id]||{},n=S.filter(z=>e.subjects.every((x,j)=>(mk[z.id]||[])[j]!=null)).length,adm=ROLE=='admin';
+ return`<div class="ex"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:16px">${esc(e.name)} ${e.locked?ICO('lock'):''}</b><small>${esc(e.class||'-')} &middot; ${t('Marks')}: ${n}/${S.length}</small></div>
+<div style="font-size:13px;opacity:.8;margin:4px 0 10px">${esc(e.subjects.map((x,j)=>x+' ('+maxOf(e,j)+')').join(', '))} &middot; ${t('Pass')} ${e.pass||PASSP}%</div>
+<div class="eg">${eb('Marks','marks','pri',`marks(${e.id})`)}${eb('Results','list','sec',`resu(${e.id})`)}${eb('Copy','copy','ghost',`copyE(${e.id})`)}${eb('Edit','edit','ghost',`editE(${e.id})`)}${adm?eb(e.locked?'Unlock':'Lock',e.locked?'unlock':'lock','ghost',`lockE(${e.id})`):''}${adm?'<span style="margin-inline-start:auto"></span>'+eb('Delete','trash','dng',`delE(${e.id})`):''}</div></div>`}
+V.exams=async function(){const cls=[...new Set(D.students.filter(z=>z.active).map(z=>z.class||''))].sort(natCmp);if(window.XC==null)window.XC=cls.length?cls[0]:'*';
+ const L=D.exams.filter(e=>XC=='*'||!e.class||e.class==XC).sort((a,b)=>b.id-a.id);
+ app.innerHTML=`<div id="xl"><div class="card"><div class="eg" style="justify-content:space-between"><div class="eg">${['*',...cls].map(c=>`<button class="eb sm ${XC===c?'pri':'sec'}" data-c="${esc(c)}" onclick="XC=this.dataset.c;boot()">${c=='*'?t('All'):esc(c)||'-'}</button>`).join('')}</div>${eb('New exam','plus','pri','newE()')}</div></div>${L.map(exCard).join('')||`<div class="card">${t('No exams yet')}</div>`}</div><div id="mk"></div>`};
+UR["No exams yet"]="ابھی کوئی امتحان نہیں";
+function newE(){modal(`<h4>${t('New exam')}</h4><div class="eg" style="margin-bottom:8px">${['Monthly Test','Mid-Term','Final Term'].map(x=>`<button class="eb sec sm" data-s="${x}" onclick="$('#nEn').value=this.dataset.s">${x}</button>`).join('')}</div>
+<div class="row"><input id="nEn" placeholder="${t('Exam name')}" style="flex:1 1 100%"><label style="font-size:12px">${t('Class')}<br><input id="nEc" value="${esc(XC=='*'?'':XC)}" style="width:110px"></label><label style="font-size:12px">${t('Max')}<br><input id="nEm" type="number" value="100" style="width:80px"></label><label style="font-size:12px">${t('Pass %')}<br><input id="nEp" type="number" value="40" style="width:80px"></label></div>
+<div class="eg" style="margin-bottom:8px">${SUBJ.map(x=>`<button class="eb sec sm" data-s="${x}" onclick="nAdd(this.dataset.s)">${x}</button>`).join('')}</div><input id="nEs" placeholder="Urdu:50, English:100, Math" style="width:100%">
+<div class="eg" style="margin-top:12px">${eb('Save','save','pri','saveNew()')}${eb('Close','','ghost','closeM()')}</div>`)}
+function nAdd(x){const i=$('#nEs'),a=i.value.split(/[,،]/).map(z=>z.trim()).filter(Boolean);if(!a.some(z=>z.split(/[:=]/)[0].trim()==x))a.push(x);i.value=a.join(', ')}
+async function saveNew(){const n=$('#nEn').value.trim(),P=parseSubj($('#nEs').value,$('#nEm').value);if(!n||!P.names.length){alert(t('Name and subjects required'));return}
+ await mkExam(n,$('#nEc').value.trim(),P);const e=D.exams[D.exams.length-1];e.pass=+$('#nEp').value||PASSP;save();closeM();window.XC=e.class||XC;boot()}
+async function copyE(id){const e=D.exams.find(x=>x.id==id),c=await askVal('Class for the copy','');if(!c)return;await mkExam(e.name,String(c).trim(),{names:e.subjects,maxes:e.subjects.map((x,j)=>maxOf(e,j)),d:e.max});const n=D.exams[D.exams.length-1];n.pass=e.pass||PASSP;save();window.XC=n.class||XC;boot()}
+async function lockE(id){const e=D.exams.find(x=>x.id==id);if(ROLE!='admin')return;if(!e.locked&&!await ask('Lock this exam? Marks cannot be changed until an admin unlocks it.'))return;e.locked=!e.locked;save();boot()}
+function xBack(){boot();window.scrollTo(0,0)}
+function msub(j){document.querySelectorAll('#mt tr').forEach(r=>[...r.children].forEach((c,k)=>{if(k>=2&&k<r.children.length-1)c.style.display=j===''||k-2==j?'':'none'}))}
+{const m1=marks;marks=async function(id){await m1(id);const e=MK.exam,c=document.querySelector('#mk .card'),l=document.getElementById('xl');if(l)l.style.display='none';if(!c)return;
+ c.insertAdjacentHTML('afterbegin',`<div class="eg" style="margin-bottom:10px">${eb('Back','back','ghost','xBack()')}<select id="msb" onchange="msub(this.value)" style="min-height:40px"><option value="">${t('All subjects')}</option>${e.subjects.map((x,j)=>`<option value="${j}">${esc(x)}</option>`).join('')}</select>${e.locked?`<b>${ICO('lock')} ${t('Locked')}</b>`:''}</div>`);
+ c.querySelectorAll('button').forEach(b=>{const o=b.getAttribute('onclick')||'';if(o.startsWith('saveM')){b.className='eb pri';b.insertAdjacentHTML('afterbegin',ICO('save'))}else if(o.startsWith('resu')){b.className='eb sec';b.insertAdjacentHTML('afterbegin',ICO('list'))}});
+ if(e.locked){c.querySelectorAll('#mt input').forEach(i=>i.disabled=true);const v=c.querySelector('button[onclick^="saveM"]');if(v)v.remove()}window.scrollTo(0,0)}}
+{const r3=resu;resu=async function(id){await r3(id);const l=document.getElementById('xl');if(l)l.style.display='none';const d=document.getElementById('dap'),row=d&&d.parentElement;
+ if(row)row.outerHTML=`<div class="eg" style="margin:8px 0 12px">${eb('Back','back','ghost','xBack()')}<button class="eb pri" id="dap" onclick="dmcAllPdf()">${ICO('pdf')}${t('Print all DMC (PDF)')}</button><button class="eb sec" id="shp" onclick="sheetPdf()">${t('Print class marksheet (PDF + Excel)')}</button></div>`;
+ document.querySelectorAll('#mk td button').forEach(b=>{if(/card\(/.test(b.getAttribute('onclick')||'')){b.className='eb sec sm';b.textContent='DMC'}});window.scrollTo(0,0)}}
+// ===== Teacher portal v2: My Class (scoped access), auto salary + PDF slip, class diary =====
+Object.assign(UR,{"My Class":"میری جماعت","Diary":"ڈائری","Class diary":"کلاس ڈائری","Lesson covered":"آج کا سبق","Lesson":"سبق","Homework":"گھر کا کام","Auto salary":"خودکار تنخواہ","Deduction":"کٹوتی","Net salary":"خالص تنخواہ","Payable":"قابلِ ادائیگی","Office copy":"دفتر کی کاپی","Teacher copy":"استاد کی کاپی","Per day":"فی دن","Accountant sign":"اکاؤنٹنٹ کے دستخط","Teacher sign":"استاد کے دستخط","Teacher login & classes":"استاد کا لاگ اِن اور جماعتیں","Login user":"لاگ اِن یوزر","Classes":"جماعتیں","Salary days in month":"مہینے کے تنخواہ والے دن","Free leaves":"بغیر کٹوتی چھٹیاں","Today":"آج","Not marked":"درج نہیں","Take attendance":"حاضری لگائیں","Today's periods":"آج کے پیریڈ","My attendance this month":"اس مہینے میری حاضری","Pay":"ادا کریں","No periods today":"آج آپ کا کوئی پیریڈ نہیں","Admin has not assigned your classes yet":"ایڈمن نے ابھی آپ کی جماعتیں مقرر نہیں کیں","No diary yet":"ابھی کوئی ڈائری نہیں","Period":"پیریڈ","Text":"ٹیکسٹ","Save settings":"سیٹنگ محفوظ کریں","none":"کوئی نہیں","Share day diary":"دن کی ڈائری شیئر کریں"});
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],cn=s=>String(s??'').trim().toLowerCase();
+function myT(){if(ROLE!='teacher')return null;const un=cn(localStorage.un);return un?((D.teachers||[]).find(x=>x.active&&x.uname&&cn(x.uname)==un)||null):null}
+function myCls(){const x=myT();return x&&x.classes&&x.classes.length?x.classes.map(cn):null}
+{const a0=api;api=async function(p,o){const[path,qs]=p.split('?'),q=new URLSearchParams(qs||''),b=o||{};D.diary=D.diary||[];
+ if(path==='login'){const r=await a0(p,o);localStorage.un=cn(b.username);return r}
+ if(!T)return a0(p,o);
+ const fail=m=>{alert(m);throw 0},sc=ROLE=='teacher'?myCls():null,isT=['admin','teacher'].includes(ROLE);
+ if(path==='tlink'){if(ROLE!='admin')fail('Not allowed for your role');const x=D.teachers.find(z=>z.id==b.id);if(!x)fail('Teacher not found');const u=cn(b.uname);
+  if(u&&D.teachers.some(z=>z.active&&z.id!=x.id&&cn(z.uname)==u))fail('This login is already linked to another teacher');
+  x.uname=u;x.classes=[...new Set(String(b.classes||'').split(/[,،]/).map(z=>z.trim()).filter(Boolean))];save();return{ok:1}}
+ if(path==='diary'&&!o){if(!isT)fail('Not allowed for your role');const c=q.get('class')||'';if(sc&&!sc.includes(cn(c)))return[];return D.diary.filter(x=>cn(x.class)==cn(c)).sort((x,y)=>String(y.date).localeCompare(x.date)||y.id-x.id)}
+ if(path==='diary'){if(!isT)fail('Not allowed for your role');const c=String(b.class||'').trim();if(!c)fail('Class required');if(sc&&!sc.includes(cn(c)))fail('You can only use your own classes');
+  if(!String(b.lesson||'').trim()&&!String(b.hw||'').trim())fail('Write the lesson or homework');
+  D.diary.push({id:D.seq++,date:b.date||today(),class:c,subject:String(b.subject||'').trim(),lesson:String(b.lesson||'').trim(),hw:String(b.hw||'').trim(),by:NAME,un:cn(localStorage.un)});save();return{ok:1}}
+ if(path==='diary/delete'){if(!isT)fail('Not allowed for your role');const e=D.diary.find(x=>x.id==b.id);if(!e)return{ok:1};if(ROLE!='admin'&&e.un!=cn(localStorage.un))fail('Not allowed for your role');D.diary=D.diary.filter(x=>x.id!=b.id);save();return{ok:1}}
+ if(!sc)return a0(p,o);
+ const ids=new Set(D.students.filter(s=>sc.includes(cn(s.class))).map(s=>String(s.id))),inS=c=>sc.includes(cn(c));
+ if(path==='students'&&!o)return(await a0(p,o)).filter(s=>inS(s.class));
+ if(path==='attendance'&&!o)return(await a0(p,o)).filter(s=>inS(s.class));
+ if(path==='attendance')return a0(p,{...b,marks:(b.marks||[]).filter(m=>ids.has(String(m.id)))});
+ if(path==='att-report')return(await a0(p,o)).filter(s=>inS(s.class));
+ if(path==='exams'&&!o)return(await a0(p,o)).filter(e=>!e.class||inS(e.class));
+ if(path==='exams'){if(!b.class||!inS(b.class))fail('You can only use your own classes');return a0(p,o)}
+ if(path==='marks'&&!o){const r=await a0(p,o);if(r.exam.class&&!inS(r.exam.class))fail('You can only use your own classes');return{...r,rows:r.rows.filter(s=>ids.has(String(s.id)))}}
+ if(path==='marks')return a0(p,{...b,rows:(b.rows||[]).filter(r=>ids.has(String(r.id)))});
+ return a0(p,o)}}
+{const l0=logout;logout=function(){localStorage.removeItem('un');window._mcN=null;l0()}}
+{const b0=boot;boot=function(){if(T&&ROLE=='teacher'&&window._mcN!==NAME+'|'+localStorage.un){window._mcN=NAME+'|'+localStorage.un;tab='myclass'}return b0.apply(this,arguments)}}
+{const old={...TABS};for(const k in TABS)delete TABS[k];TABS.myclass=['My Class',['teacher']];for(const k in old){TABS[k]=old[k];if(k=='att')TABS.diary=['Diary',['admin','teacher']]}}
+// exams: a scoped teacher sees only their own classes
+{const ec=exCard;exCard=function(e){return ec(e).replace('<div class="ex">','<div class="ex" data-cls="'+esc(e.class||'')+'">')}}
+{const ve=V.exams;V.exams=async function(){const sc=ROLE=='teacher'?myCls():null;
+ if(sc){const cls=[...new Set(D.students.filter(z=>z.active).map(z=>z.class||''))].sort(natCmp);if(window.XC==null||window.XC=='*'||!sc.includes(cn(window.XC)))window.XC=cls.find(c=>sc.includes(cn(c)))||'*'}
+ await ve();
+ if(sc){app.querySelectorAll('[data-c]').forEach(b=>{if(!sc.includes(cn(b.dataset.c)))b.remove()});app.querySelectorAll('.ex[data-cls]').forEach(e=>{const c=e.dataset.cls;if(c&&!sc.includes(cn(c)))e.remove()})}}}
+// ---- My Class screen ----
+V.myclass=async function(){const x=myT(),cs=x&&x.classes&&x.classes.length?x.classes:null,S=await api('students'),A=await api('attendance?date='+today());
+ const cls=cs||[...new Set(S.map(s=>s.class).filter(Boolean))].sort(natCmp),nm=cn(x?x.name:NAME),dy=WD[new Date().getDay()];
+ const P=(D.tt||[]).filter(e=>e.day==dy&&cn(e.teacher)&&(cn(e.teacher).includes(nm)||nm.includes(cn(e.teacher)))).sort((a,b)=>a.period-b.period);
+ let me='';if(x){const c={P:0,A:0,L:0},m=month();for(const d in D.tatt||{})if(d.startsWith(m)){const z=D.tatt[d][x.id];if(z)c[z]++}me=`<div class="card"><b>${t('My attendance this month')}</b><div>${t('Present')}: <b>${c.P}</b> &nbsp; ${t('Absent')}: <b>${c.A}</b> &nbsp; ${t('Leave')}: <b>${c.L}</b></div></div>`}
+ app.innerHTML=`<div class="card"><h4 style="margin:0 0 6px">${esc(x?x.name:NAME)}</h4>`+(cs?`<div>${t('Classes')}: <b>${cs.map(esc).join(', ')}</b></div>`:`<div class="due">${t('Admin has not assigned your classes yet')}</div>`)+`</div>`+
+ `<div class="card"><b>${t("Today's periods")}</b>`+(P.length?`<table>${P.map(e=>`<tr><td>${t('Period')} ${e.period}</td><td>${esc(e.class)}</td><td>${esc(e.subject)}</td></tr>`).join('')}</table>`:`<div style="opacity:.7">${t('No periods today')}</div>`)+`</div>`+me+
+ (cls.length?cls.map(c=>{const R=S.filter(s=>cn(s.class)==cn(c)),at=A.filter(s=>cn(s.class)==cn(c)),k={P:0,A:0,L:0};at.forEach(s=>{if(k[s.status]!=null)k[s.status]++});const nmk=at.length-k.P-k.A-k.L,ce=esc(c).replace(/'/g,'&#39;');
+  return`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b style="font-size:16px">${t('Class')} ${esc(c)}</b><small>${R.length} ${t('Students')}</small></div>
+  <div style="margin:6px 0">${t('Today')}: ${t('Present')} <b>${k.P}</b> &middot; ${t('Absent')} <b>${k.A}</b> &middot; ${t('Leave')} <b>${k.L}</b> &middot; ${t('Not marked')} <b>${nmk}</b></div>
+  <div class="row"><button class="sm" onclick="tab='att';boot()">${t('Take attendance')}</button><button class="sm" onclick="window.XC=this.dataset.c;tab='exams';boot()" data-c="${esc(c)}">${t('Exams')}</button><button class="sm" onclick="DC=this.dataset.c;tab='diary';boot()" data-c="${esc(c)}">${t('Diary')}</button><button class="o sm" onclick="var e=this.parentNode.nextElementSibling;e.style.display=e.style.display=='none'?'':'none'">${t('Students')}</button></div>
+  <div style="display:none"><table>${R.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.father||'')}</td><td>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:''}</td></tr>`).join('')||'<tr><td>-</td></tr>'}</table></div></div>`}).join(''):'<div class="card">-</div>')};
+// ---- Teachers tab (admin/accountant): auto salary + login/class linking ----
+const salCfg=()=>{const c=(D.settings&&D.settings.tsal)||{};return{days:+c.days>0?+c.days:30,free:(c.free===''||c.free==null||!(+c.free>=0))?2:+c.free}};
+function salCalc(x){const c=salCfg(),rate=x.salary/c.days,unLv=0,ded=0,net=x.salary;return{...c,rate:Math.round(rate),unLv,ded,net,pay:net-(x.adv||0)-(x.paid||0)}}
+{const vt=V.teachers;V.teachers=async function(){await vt();if(!['admin','accountant'].includes(ROLE))return;const row=app.querySelector('input[type=month]');if(row)row.parentNode.insertAdjacentHTML('beforeend',`<button class="o" onclick="autoSal()">${t('Auto salary')}</button>`);
+ app.insertAdjacentHTML('beforeend','<div id="asl"></div>');
+ if(ROLE=='admin'){const us=(await api('users')).filter(u=>u.role=='teacher'),cl=[...new Set(D.students.filter(s=>s.active&&s.class).map(s=>s.class))].sort(natCmp);
+  app.insertAdjacentHTML('beforeend',`<div class="card" id="tlk"><h4>${t('Teacher login & classes')}</h4><datalist id="clsl">${cl.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`+
+  TL.map((x,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:8px"><b style="flex:1 1 100%">${esc(x.name)}</b><select id="tlu${i}"><option value="">${t('Login user')}: ${t('none')}</option>${us.map(u=>`<option value="${esc(u.username)}" ${cn(u.username)==cn(x.uname)?'selected':''}>${esc(u.username)}</option>`).join('')}</select><input id="tlc${i}" list="clsl" placeholder="${t('Classes')}: 5, 6" value="${esc((x.classes||[]).join(', '))}" style="flex:1;min-width:130px"><button class="sm" onclick="saveTL(${i})">${t('Save')}</button></div>`).join('')+`</div>`)}
+ if(window._asl){window._asl=0;autoSal()}}}
+async function saveTL(i){await api('tlink',{id:TL[i].id,uname:document.getElementById('tlu'+i).value,classes:document.getElementById('tlc'+i).value});alert('Saved');boot()}
+function autoSal(){const m=window.tm||month(),c=salCfg(),box=document.getElementById('asl');if(!box)return;
+ box.innerHTML=`<div class="card"><h4>${t('Auto salary')} - ${m}</h4>
+ <table><tr><th>${t('Name')}</th><th>P/A/L</th><th>${t('Net salary')}</th><th>${t('Payable')}</th></tr>`+TL.map((x,i)=>{const s=salCalc(x);return`<tr><td>${esc(x.name)}<br><small>${x.salary}</small></td><td>${x.pa||0}/${x.ab||0}/${x.lv||0}</td><td>${s.net}</td><td class="${s.pay>0?'due':'ok'}">${s.pay}</td></tr><tr><td colspan="4" style="padding-bottom:10px"><button class="sm" ${s.pay>0?'':'disabled'} onclick="paySal(${i})">${t('Pay')} ${s.pay>0?s.pay:''}</button> <button class="o sm" onclick="slip(${i})">${t('Slip')}</button></td></tr>`}).join('')+`</table></div>`;box.scrollIntoView()}
+function saveSalCfg(){D.settings=D.settings||{};D.settings.tsal={days:+document.getElementById('sld').value||30,free:Math.max(0,+document.getElementById('slf').value||0)};save();window._asl=1;boot()}
+async function paySal(i){const x=TL[i],m=window.tm||month(),s=salCalc(x);if(!(s.pay>0))return;if(!await ask('Pay '+s.pay+' to '+x.name+'?'))return;await api('tpay',{teacher_id:x.id,month:m,type:'salary',amount:s.pay});window._asl=1;boot()}
+{const tp0=tpay;tpay=async function(i,ty){if(ty!='salary')return tp0(i,ty);const x=TL[i],m=window.tm||month(),s=salCalc(x),a=await askVal(x.name+' - '+t('Salary amount'),Math.max(0,s.pay));if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}}
+// ---- salary slip (PDF / print / text) ----
+function slipHtml(x,m){const s=salCalc(x),B='#1F3B33',G='#B4884A',sc=brandName(),
+ r=(k,v,b)=>`<tr style="${b?'font-weight:bold;background:#EFE6D2;':''}border-bottom:1px solid #E6DCC3"><td style="padding:6px 8px;text-align:start">${k}</td><td style="padding:6px 8px;text-align:end">${v}</td></tr>`,
+ cp=lab=>`<div><div style="text-align:center"><div style="font-size:22px;font-weight:bold;color:${B}">${esc(sc)}</div><div style="display:inline-block;margin-top:6px;padding:4px 34px;background:${B};color:#fff;font-size:15px;${DCX}">${t('Salary slip')}</div><div style="font-size:12px;margin-top:4px;opacity:.7">${t(lab)}</div></div>
+ <div style="display:flex;flex-wrap:wrap;gap:0 20px;margin:10px 0;padding:6px 12px;border:1px solid ${G};border-radius:6px"><div style="flex:1 1 44%;padding:3px 0">${t('Name')}: <b>${esc(x.name)}</b></div><div style="flex:1 1 44%;padding:3px 0">${t('Month')}: <b>${esc(m)}</b></div><div style="flex:1 1 44%;padding:3px 0">${t('Subject')}: <b>${esc(x.subject||'-')}</b></div><div style="flex:1 1 44%;padding:3px 0">${t('Per day')}: <b>${s.rate}</b></div></div>
+ <table style="width:100%;border-collapse:collapse;border:1px solid ${B}">${r(t('Salary'),x.salary)}${r(t('Present days')+' / '+t('Absent days')+' / '+t('Leave days'),(x.pa||0)+' / '+(x.ab||0)+' / '+(x.lv||0))}${r(t('Net salary'),s.net,1)}${r(t('Advance'),x.adv?'-'+x.adv:0)}${r(t('Salary paid'),x.paid?'-'+x.paid:0)}${r(t('Payable'),s.pay,1)}</table>
+ <div style="display:flex;justify-content:space-between;margin-top:34px;text-align:center"><div style="width:38%;border-top:1px solid #000;padding-top:3px">${t('Accountant sign')}</div><div style="width:38%;border-top:1px solid #000;padding-top:3px">${t('Teacher sign')}</div></div><div style="font-size:11px;margin-top:8px;text-align:center">${t('Issue date')}: ${today()}</div></div>`;
+ return`<div style="${DFS};${DCX};direction:${LANG=='ur'?'rtl':'ltr'};background:#fff;color:#24211B;border:3px double ${B};margin:6px;padding:18px 22px;font-size:14px;display:flex;flex-direction:column;justify-content:space-around">${cp('Office copy')}<div style="border-top:2px dashed ${G};margin:14px 0;text-align:center;font-size:12px;opacity:.7">&#9986;</div>${cp('Teacher copy')}</div>`}
+function slip(i){const x=TL[i],m=window.tm||month(),s=salCalc(x);window.SLX=x;window.SLH=slipHtml(x,m);
+ window.SLT=`${t('Salary slip')} ${m}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Present days')}: ${x.pa||0}\n${t('Absent days')}: ${x.ab||0}\n${t('Leave days')}: ${x.lv||0}\n${t('Net salary')}: ${s.net}\n${t('Advance')}: ${x.adv||0}\n${t('Salary paid')}: ${x.paid||0}\n${t('Payable')}: ${s.pay}`;
+ modal(`<div id="rc">${SLH}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="slipSave()">${t('Save PDF')}</button>${navigator.canShare?`<button class="eb sec" onclick="slipSave(1)">${t('Share')}</button>`:''}<button class="eb sec" onclick="printDoc($('#rc').innerHTML)">Print</button><button class="eb sec" onclick="sendBox(SLT,SLX.phone)">${t('Text')}</button><span id="dst" style="align-self:center"></span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px'}
+async function slipSave(share){const st=document.getElementById('dst'),x=SLX,m=window.tm||month();if(st)st.textContent=t('Working...');
+ try{const c=await dmcCanvas(SLH);await dmcGet(pdfOf([dmcJpg(c)]),dmcName(x.name+'-Salary-'+m,x.id)+'.pdf',share);if(st)st.textContent='✓'}catch(e){if(st)st.textContent='';if(!e||e.name!='AbortError')alert(t('Could not save the PDF. Please try again.'))}}
+// ---- Class diary ----
+let DC='';
+V.diary=async function(){const sc=myCls(),my=myT(),all=[...new Set(D.students.filter(s=>s.active&&s.class).map(s=>s.class))].sort(natCmp),cls=ROLE=='teacher'&&sc?(my.classes||[]):all;
+ if(!cls.some(c=>cn(c)==cn(DC)))DC=cls[0]||'';const E=DC?await api('diary?class='+encodeURIComponent(DC)):[];window.DE=E;
+ const sj=[...new Set([...(my&&my.subject?[my.subject]:[]),...SUBJ])],me=cn(localStorage.un),ts='padding:8px;border:1px solid #D9CFB8;border-radius:8px;font:inherit;width:100%';
+ const G={};E.forEach(e=>(G[e.date]=G[e.date]||[]).push(e));const ds=Object.keys(G).sort().reverse().slice(0,30);
+ app.innerHTML=`<div class="card"><div class="row"><select id="dyC" onchange="DC=this.value;boot()">${cls.map(c=>`<option value="${esc(c)}" ${cn(c)==cn(DC)?'selected':''}>${t('Class')} ${esc(c)}</option>`).join('')}</select></div>`+
+ (DC?`<div class="row"><input type="date" id="dyDate" value="${today()}"><input id="dySub" list="dySl" placeholder="${t('Subject')}" value="${esc(my&&my.subject||'')}"><datalist id="dySl">${sj.map(z=>`<option value="${esc(z)}">`).join('')}</datalist></div>
+ <div class="row"><textarea id="dyLes" rows="3" placeholder="${t('Lesson covered')}" style="${ts}"></textarea></div><div class="row"><textarea id="dyHw" rows="3" placeholder="${t('Homework')}" style="${ts}"></textarea></div><div class="row"><button onclick="addDiary()">${t('Save')}</button></div>`:'<div>-</div>')+`</div>`+
+ (ds.length?ds.map(d=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(d)}</b><button class="o sm" onclick="shareDiary('${d}')">${t('Share day diary')}</button></div>`+G[d].map(e=>`<div style="border-top:1px solid #eee;margin-top:8px;padding-top:6px">${e.subject?`<b>${esc(e.subject)}</b> `:''}<small style="opacity:.7">${esc(e.by||'')}</small>${e.lesson?`<div style="white-space:pre-wrap"><span style="opacity:.7">${t('Lesson')}:</span> ${esc(e.lesson)}</div>`:''}${e.hw?`<div style="white-space:pre-wrap"><span style="opacity:.7">${t('Homework')}:</span> ${esc(e.hw)}</div>`:''}${(ROLE=='admin'||e.un==me)?`<button class="r sm" style="margin-top:4px" onclick="delDiary(${e.id})">${t('Delete')}</button>`:''}</div>`).join('')+`</div>`).join(''):`<div class="card">${t('No diary yet')}</div>`)};
+async function addDiary(){await api('diary',{class:DC,date:document.getElementById('dyDate').value,subject:document.getElementById('dySub').value,lesson:document.getElementById('dyLes').value,hw:document.getElementById('dyHw').value});boot()}
+async function delDiary(id){if(await ask('Delete this?')){await api('diary/delete',{id});boot()}}
+function shareDiary(d){const L=(window.DE||[]).filter(e=>e.date==d);sendBox(`${t('Class diary')} - ${t('Class')} ${DC}\n${d}\n\n`+L.map(e=>`${e.subject||'-'}${e.lesson?'\n'+t('Lesson')+': '+e.lesson:''}${e.hw?'\n'+t('Homework')+': '+e.hw:''}`).join('\n\n'),'any')}
+Object.assign(UR,{"Print DMC (PDF)":"DMC پرنٹ کریں (PDF)","Print all DMC (PDF)":"سب DMC پرنٹ کریں (PDF)","PDF downloaded":"PDF ڈاؤن لوڈ ہو گئی","Shared":"شیئر ہو گئی","Download again":"دوبارہ ڈاؤن لوڈ کریں","Could not save the PDF. Please try again.":"PDF محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔"});
+Object.assign(UR,{"Print class marksheet (PDF + Excel)":"کلاس مارکس شیٹ پرنٹ کریں (PDF + Excel)","Excel downloaded":"Excel ڈاؤن لوڈ ہو گئی","Page":"صفحہ","Could not save the file. Please try again.":"فائل محفوظ نہیں ہو سکی۔ دوبارہ کوشش کریں۔"});
+Object.assign(UR,{"No marks":"نمبر نہیں"});
+// ---- Statistics: A4 PDF (download) + print ----
+function statsData(){const e=RE,A=RS.filter(s=>Array.from(s.m).some(x=>x!=null));if(!A.length)return null;const P=A.filter(s=>s.pass).length,lim=j=>maxOf(e,j)*(e.pass||PASSP)/100,gd=['A+','A','B','C','D','F'].map(g=>[g,A.filter(s=>grade(s.pct)==g).length]);
+ return{e,A,P,gd,mx:Math.max(...gd.map(x=>x[1]),1),av:Math.round(A.reduce((a,s)=>a+s.pct,0)*10/A.length)/10,hi:A.reduce((a,s)=>s.pct>a.pct?s:a),lo:A.reduce((a,s)=>s.pct<a.pct?s:a),
+ sub:e.subjects.map((x,j)=>{const v=A.map(s=>s.m[j]).filter(z=>z!=null);return v.length?{x,mx:maxOf(e,j),av:Math.round(v.reduce((a,z)=>a+z,0)*10/v.length)/10,hi:Math.max(...v),lo:Math.min(...v),fl:v.filter(z=>z<lim(j)).length}:null}).filter(Boolean),
+ weak:A.map(s=>({s,f:e.subjects.filter((x,j)=>s.m[j]!=null&&s.m[j]<lim(j))})).filter(x=>x.f.length)}}
+function statsBlocks(d){const B='#1F3B33',G='#B4884A',e=d.e,box=(k,v)=>`<div style="flex:1 1 22%;min-width:120px;text-align:center;border:1px solid ${G};border-top:4px solid ${G};border-radius:4px;padding:6px 4px"><div style="font-size:11px;opacity:.7">${k}</div><div style="font-size:20px;font-weight:bold">${v}</div></div>`,
+ h=x=>`<div style="font-size:15px;font-weight:bold;color:${B};border-bottom:1px solid ${G};padding-bottom:3px;margin-bottom:6px">${x}</div>`,K=[],pr=e.pass||PASSP;
+ K.push(`<div style="display:flex;gap:8px;flex-wrap:wrap">${box(t('Appeared'),d.A.length)}${box(t('Passed'),d.P)}${box(t('Pass rate'),Math.round(d.P*1000/d.A.length)/10+'%')}${box(t('Average'),d.av+'%')}</div><div style="margin-top:8px">${t('Highest')}: <b><bdi>${esc(d.hi.name)}</bdi></b> <bdi>(${d.hi.pct}%)</bdi> &nbsp; ${t('Lowest')}: <b><bdi>${esc(d.lo.name)}</bdi></b> <bdi>(${d.lo.pct}%)</bdi></div><div style="margin-top:3px;opacity:.75">${t('Passing mark')}: ${pr}%</div>`);
+ K.push(h(t('Grade distribution'))+d.gd.map(([g,n])=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><b style="width:30px">${g}</b><div style="flex:1"><div style="height:13px;border-radius:6px;background:${B};${DCX};width:${n*100/d.mx}%;min-width:${n?4:0}px"></div></div><span style="width:70px;text-align:end">${n} <small>(${Math.round(n*1000/d.A.length)/10}%)</small></span></div>`).join(''));
+ K.push(h(t('Subject-wise'))+`<table class="cs" style="width:100%;border-collapse:collapse;text-align:center"><tr style="background:${B};color:#fff;${DCX}"><th style="text-align:start">${t('Subject')}</th><th>${t('Total marks')}</th><th>${t('Average')}</th><th>${t('Highest')}</th><th>${t('Lowest')}</th><th>${t('Fails')}</th></tr>${d.sub.map(r=>`<tr><td style="text-align:start">${esc(r.x)}</td><td>${r.mx}</td><td>${r.av}</td><td>${r.hi}</td><td>${r.lo}</td><td style="${r.fl?'color:#B0453A;font-weight:bold':''}">${r.fl}</td></tr>`).join('')}</table>`);
+ const wr=x=>`<div style="display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #B9AE95;padding:3px 0"><span><bdi>${esc(x.s.name)}</bdi> <small><bdi>(${esc(x.s.class)})</bdi></small></span><span style="color:#B0453A;text-align:end">${x.f.map(esc).join(', ')}</span></div>`;
+ d.weak.forEach((x,i)=>K.push((i?'':h(t('Needs attention')+' ('+d.weak.length+')'))+wr(x)));
+ K.push(`<div style="padding-top:26px"><div style="display:flex;justify-content:space-between;text-align:center"><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Class teacher sign')}</div><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Principal sign')}</div></div><div style="text-align:center;font-size:11px;margin-top:8px">${t('Issue date')}: ${today()}</div></div>`);return K}
+function statsPageHtml(inner,pg,np){const e=RE,B='#1F3B33',G='#B4884A',n=brandName();
+ return`<div style="${DFS};${DCX};direction:${LANG=='ur'?'rtl':'ltr'};background:#fff;color:#24211B;padding:22px 26px;font-size:13px;border:3px double ${B};margin:6px"><style>.cs td,.cs th{border:1px solid #B9AE95;padding:4px 5px}</style>
+<div class="sh-h" style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid ${G};padding-bottom:8px;margin-bottom:12px"><div style="flex:0 0 100px">${logoImg(64)}</div><div style="flex:1;text-align:center"><div style="font-size:22px;font-weight:bold;color:${B}">${esc(n)}</div><div style="margin-top:3px;font-size:15px">${t('Exam statistics')} - ${esc(e.name)}</div></div><div style="flex:0 0 100px;text-align:end"><div style="display:inline-block;padding:4px 12px;background:${B};color:#fff;font-size:15px;font-weight:bold;${DCX}">${e.class?t('Class')+': '+esc(e.class):t('All classes')}</div>${np>1?`<div style="font-size:11px;margin-top:4px">${t('Page')} ${pg}/${np}</div>`:''}</div></div>${inner}</div>`}
+async function statsPages(d){const W=794,H=1123,K=statsBlocks(d),host=document.createElement('div');host.style.cssText='position:fixed;left:-9999px;top:0;width:'+W+'px';host.innerHTML=statsPageHtml(K.map(k=>`<div class="blk" style="margin-bottom:10px">${k}</div>`).join(''),1,1);document.body.appendChild(host);
+ try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;await Promise.all([...host.querySelectorAll('img')].map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r})));const el=host.firstElementChild,hd=el.querySelector('.sh-h').offsetHeight+12,bh=[...el.querySelectorAll('.blk')].map(b=>b.offsetHeight+10),av=H-12-50-hd-8,P=[];
+  let cur=[],h=0;bh.forEach((x,i)=>{if(cur.length&&h+x>av){P.push(cur);cur=[];h=0}cur.push(i);h+=x});P.push(cur);
+  return P.map((ix,k)=>statsPageHtml(ix.map(i=>`<div style="margin-bottom:10px">${K[i]}</div>`).join(''),k+1,P.length))}finally{host.remove()}}
+async function statsPdf(){const b=document.getElementById('stp'),lab=b&&b.innerHTML,d=statsData();if(!d)return;
+ try{if(b)b.textContent=t('Working...');const pg=await statsPages(d),J=[],prev=[];
+  for(let i=0;i<pg.length;i++){const c=await dmcCanvas(pg[i],794,1123);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.88))}
+  window.STB={blob:pdfOf(J),name:dmcName(RE.name+'-Statistics',RE.class||'all')+'.pdf',prev};
+  modal(`<div id="rc" style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="statsPrint()">${t('Print')}</button><button class="eb sec" onclick="dmcGet(STB.blob,STB.name)">${t('Download again')} (PDF)</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';
+  await new Promise(r=>setTimeout(r,250));await dmcGet(STB.blob,STB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}
+ const b2=document.getElementById('stp');if(b2&&lab)b2.innerHTML=lab}
+async function statsPrint(){await Promise.all(STB.prev.map(u=>{const i=new Image();i.src=u;return i.decode?i.decode().catch(()=>0):0}));printDoc(STB.prev.map((u,i)=>`<img src="${u}" style="width:100%;display:block;${i?'break-before:page;page-break-before:always':''}">`).join(''))}
+Object.assign(UR,{"Print statistics (PDF)":"اعداد و شمار پرنٹ کریں (PDF)","Exam statistics":"امتحانی اعداد و شمار","All classes":"تمام جماعتیں","Passing mark":"پاس ہونے کے نمبر (فیصد)"});
+// ===== Teacher marks entry: own subjects only =====
+Object.assign(UR,{"Your subjects":"آپ کے مضامین","Admin has not set your subject yet":"ایڈمن نے ابھی آپ کا مضمون مقرر نہیں کیا","This exam is locked":"یہ امتحان لاک ہے"});
+function tSubs(){const x=myT();return x?String(x.subject||'').split(/[,،]/).map(cn).filter(Boolean):[]}
+function tOk(e){const s=tSubs();return e.subjects.map(n=>s.includes(cn(n)))}
+{const a1=api;api=async function(p,o){
+ if(p.split('?')[0]==='marks'&&o){const e=D.exams.find(x=>x.id==o.id);
+  if(e&&e.locked){alert(t('This exam is locked'));throw 0}
+  if(e&&ROLE=='teacher'){const ok=tOk(e),old=D.marks[e.id]||{};
+   o={...o,rows:(o.rows||[]).map(r=>{const cur=Array.from(old[r.id]||[]),m=Array.from(r.m||[]);return{id:r.id,m:e.subjects.map((x,j)=>ok[j]?(m[j]??null):(cur[j]??null))}})}}}
+ return a1(p,o)}}
+{const m2=marks;marks=async function(id){await m2(id);if(ROLE!='teacher')return;
+ const e=MK.exam,c=document.querySelector('#mk .card');if(!c)return;const ok=tOk(e),mine=e.subjects.map((x,j)=>j).filter(j=>ok[j]);
+ if(!mine.length){c.querySelectorAll('#mt input').forEach(i=>i.disabled=true);const v=c.querySelector('button[onclick^="saveM"]');if(v)v.remove();
+  c.insertAdjacentHTML('afterbegin',`<div style="background:#FBE9E7;padding:8px;border-radius:6px;margin-bottom:8px">${t('Admin has not set your subject yet')}</div>`);return}
+ const s=document.getElementById('msb');
+ if(s){s.innerHTML=mine.map(j=>`<option value="${j}">${esc(e.subjects[j])}</option>`).join('');s.value=mine[0];msub(String(mine[0]))}
+ c.querySelectorAll('#mt tr').forEach(r=>{const l=r.lastElementChild;if(l)l.style.display='none'});
+ c.querySelectorAll('#mt input').forEach(i=>{if(!ok[+i.dataset.j])i.disabled=true});
+ const h=c.querySelector('h4');if(h)h.insertAdjacentHTML('afterend',`<small>${t('Your subjects')}: ${esc(mine.map(j=>e.subjects[j]).join(', '))}</small>`);
+ mProg()}}
+{const p0=mProg;mProg=function(){if(ROLE!='teacher')return p0();const e=MK.exam,ok=tOk(e),b=document.getElementById('mp');if(!b)return;
+ const d=MK.rows.filter(s=>e.subjects.every((x,j)=>!ok[j]||s.m[j]!=null)).length;b.textContent=t('Complete')+': '+d+' / '+MK.rows.length}}
+{const v3=V.teachers;V.teachers=async function(){await v3();const i=document.getElementById('ths');if(i)i.placeholder='Subject: Urdu, Islamiat'}}
+// ===== Timetable v2: tap-to-fill grid, subject list, copy, teacher clash warning =====
+Object.assign(UR,{"Periods":"گھنٹے","Periods and days":"گھنٹے اور دن","Subjects of this class":"اس جماعت کے مضامین","Subject":"مضمون","Copy day":"دن کاپی کریں","Copy class":"جماعت کاپی کریں","All days":"تمام دن","Save":"محفوظ کریں","Clear":"خالی کریں","Other…":"دیگر…","Copy teachers too":"استاد بھی کاپی کریں","Copy to class":"اس جماعت میں کاپی کریں","Add":"شامل کریں","Copy":"کاپی","already in class":"پہلے سے جماعت میں ہے","is already teaching in class":"پہلے سے اس جماعت میں پڑھا رہا ہے","at this time. Save anyway?":"اسی وقت۔ پھر بھی محفوظ کریں؟","Subject required":"مضمون ضروری ہے","Nothing to copy":"کاپی کرنے کو کچھ نہیں","Copied":"کاپی ہو گیا","Existing entries there will be replaced. Continue?":"وہاں کی موجودہ اندراجات بدل جائیں گی۔ جاری رکھیں؟","Tap a box to fill it":"بھرنے کے لیے خانے پر ٹیپ کریں","Teacher clash":"استاد کا ٹکراؤ"});
+const TTD=['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
+function ttCfg(){D.ttcfg=D.ttcfg||{};if(!D.ttcfg.days)D.ttcfg.days=['Sat','Sun','Mon','Tue','Wed','Thu'];if(!D.ttcfg.periods)D.ttcfg.periods=8;D.ttsubs=D.ttsubs||{};D.tt=D.tt||[];return D.ttcfg}
+const ttSubs=c=>{ttCfg();return D.ttsubs[c]=D.ttsubs[c]||[]};
+const ttTeachers=()=>(D.teachers||[]).filter(x=>x.active).map(x=>x.name).sort(natCmp);
+const ttClash=(cl,d,p,tn)=>{if(!cn(tn))return null;const e=D.tt.find(x=>x.class!=cl&&x.day==d&&+x.period==+p&&cn(x.teacher)==cn(tn));return e?e.class:null};
+const ttOpts=(arr,v,blank)=>(blank?`<option value="">${esc(blank)}</option>`:'')+arr.map(x=>`<option value="${esc(x)}"${x==v?' selected':''}>${esc(x)}</option>`).join('');
+function ttCell(el){const d=el.dataset.d,p=+el.dataset.p,cl=el.dataset.c||TTC,e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p)||{},SB=ttSubs(cl),names=SB.map(x=>x.s);if(e.subject&&!names.includes(e.subject))names.push(e.subject);
+ const tn=ttTeachers();if(e.teacher&&!tn.includes(e.teacher))tn.push(e.teacher);
+ const dg=dlgBox(`<h4 style="margin:0 0 8px">${esc(cl)} · ${d} · ${t('Period')} ${p}</h4><div class="row"><select id="dsb" style="width:100%">${ttOpts(names,e.subject||'',t('Subject'))}<option value="__o">${t('Other…')}</option></select></div><div class="row"><input id="dso" placeholder="${t('Subject')}" style="display:none;width:100%"></div><div class="row"><select id="dtc" style="width:100%">${ttOpts(tn,e.teacher||'',t('Teacher'))}<option value="__o">${t('Other…')}</option></select></div><div class="row"><input id="dto" placeholder="${t('Teacher')}" style="display:none;width:100%"></div><div id="dw" style="color:#B3261E;min-height:18px;font-size:13px"></div><div class="row"><button class="ok">${t('Save')}</button>${e.id?`<button class="o r clr">${t('Clear')}</button>`:''}<button class="o no">${t('Cancel')}</button></div>`);
+ const sb=dg.querySelector('#dsb'),so=dg.querySelector('#dso'),tc=dg.querySelector('#dtc'),to=dg.querySelector('#dto'),w=dg.querySelector('#dw'),tvl=()=>tc.value=='__o'?to.value.trim():tc.value;
+ const chk=()=>{to.style.display=tc.value=='__o'?'':'none';const x=ttClash(cl,d,p,tvl());w.textContent=x?`⚠ ${tvl()} — ${t('already in class')} ${x}`:''};
+ sb.onchange=()=>{so.style.display=sb.value=='__o'?'':'none';const f=SB.find(z=>z.s==sb.value);if(f&&f.t&&[...tc.options].some(o=>o.value==f.t))tc.value=f.t;chk()};
+ tc.onchange=chk;to.oninput=chk;chk();
+ dg.querySelector('.no').onclick=()=>dg.remove();
+ const cb=dg.querySelector('.clr');if(cb)cb.onclick=()=>{D.tt=D.tt.filter(z=>!(z.class==cl&&z.day==d&&+z.period==p));save();dg.remove();ttRef()};
+ dg.querySelector('.ok').onclick=async()=>{const s=sb.value=='__o'?so.value.trim():sb.value;if(!s){alert(t('Subject required'));return}
+  const tv=tvl(),x=ttClash(cl,d,p,tv);if(x&&!await ask(`${tv} ${t('is already teaching in class')} ${x} ${t('at this time. Save anyway?')}`))return;
+  D.tt=D.tt.filter(z=>!(z.class==cl&&z.day==d&&+z.period==p));D.tt.push({id:D.seq++,class:cl,day:d,period:p,subject:s,teacher:tv});
+  const f=SB.find(z=>z.s==s);if(!f)SB.push({s,t:tv});else if(!f.t&&tv)f.t=tv;
+  save();dg.remove();ttRef()}}
+async function ttRef(){const y=window.scrollY,g=document.getElementById('ttg'),x=g?g.parentNode.scrollLeft:0;await boot();window.scrollTo(0,y);const g2=document.getElementById('ttg');if(g2)g2.parentNode.scrollLeft=x}
+function ttPer(n){const c=ttCfg();c.periods=Math.max(1,Math.min(12,c.periods+n));save();boot()}
+function ttDay(d){const c=ttCfg();c.days=c.days.includes(d)?c.days.filter(x=>x!=d):c.days.concat(d);c.days=TTD.filter(x=>c.days.includes(x));save();boot()}
+function ttSubAdd(){const n=document.getElementById('tsn').value.trim(),tv=document.getElementById('tst').value;if(!n)return;const SB=ttSubs(TTC),f=SB.find(x=>cn(x.s)==cn(n));if(f)f.t=tv||f.t;else SB.push({s:n,t:tv});save();boot()}
+function ttSubDel(i){ttSubs(TTC).splice(i,1);save();boot()}
+
+Object.assign(UR,{"Break":"وقفہ","Period timings":"گھنٹوں کے اوقات","Start":"آغاز","Minutes":"منٹ","Break after":"وقفہ بعد از","Break minutes":"وقفے کے منٹ","Auto-fill times":"اوقات خود بھریں","Save timings":"اوقات محفوظ کریں","None":"کوئی نہیں","Break time":"وقفے کا وقت"});
+function ttFmt(m){const h=Math.floor(m/60)%24,mm=m%60;return(h%12||12)+':'+String(mm).padStart(2,'0')}
+function ttTimeCard(np){const c=ttCfg(),b=c.brk||{after:0,time:''},tm=c.times||{};
+ return`<div class="card"><b>${t('Period timings')}</b><div class="row"><label>${t('Start')} <input id="tms" type="time" value="${esc(c.start||'08:00')}"></label><label>${t('Minutes')} <input id="tml" type="number" value="${c.len||40}" style="width:70px"></label></div><div class="row"><label>${t('Break after')} <select id="tmb"><option value="0">${t('None')}</option>${Array.from({length:np},(_,i)=>`<option value="${i+1}"${b.after==i+1?' selected':''}>${i+1}</option>`).join('')}</select></label><label>${t('Break minutes')} <input id="tmk" type="number" value="${c.bl||20}" style="width:70px"></label></div><div class="row"><button onclick="ttAuto()">${t('Auto-fill times')}</button></div><table>${Array.from({length:np},(_,i)=>`<tr><td>${t('Period')} ${i+1}</td><td><input id="tmp${i+1}" value="${esc(tm[i+1]||'')}" placeholder="8:00-8:40"></td></tr>`).join('')}<tr><td>${t('Break')}</td><td><input id="tmbt" value="${esc(b.time||'')}" placeholder="10:00-10:20"></td></tr></table><div class="row"><button onclick="ttTimeSave()">${t('Save timings')}</button></div></div>`}
+function ttAuto(){const c=ttCfg(),np=ttNP(),s=document.getElementById('tms').value||'08:00',len=+document.getElementById('tml').value||40,after=+document.getElementById('tmb').value||0,bl=+document.getElementById('tmk').value||20;
+ let cur=(+s.slice(0,2))*60+(+s.slice(3,5));c.start=s;c.len=len;c.bl=bl;c.times={};c.brk={after,time:''};
+ for(let p=1;p<=np;p++){c.times[p]=ttFmt(cur)+'-'+ttFmt(cur+len);cur+=len;if(p==after){c.brk.time=ttFmt(cur)+'-'+ttFmt(cur+bl);cur+=bl}}
+ save();toast('Saved');boot()}
+function ttTimeSave(){const c=ttCfg();c.times={};for(let p=1;p<=12;p++){const i=document.getElementById('tmp'+p);if(i&&i.value.trim())c.times[p]=i.value.trim()}
+ c.brk={after:+document.getElementById('tmb').value||0,time:document.getElementById('tmbt').value.trim()};save();toast('Saved');boot()}
+
+Object.assign(UR,{"Add class":"جماعت شامل کریں","Setup":"سیٹ اپ","Whole week":"پورا ہفتہ","Fill whole week":"پورا ہفتہ خود بھریں","Fill this day":"یہ دن خود بھریں","Copy subjects to classes with no subjects":"بغیر مضامین والی جماعتوں میں کاپی کریں","Add classes and subjects in Setup first":"پہلے سیٹ اپ میں جماعتیں اور مضامین شامل کریں","Setup tip":"پہلے سیٹ اپ میں گھنٹے، اوقات اور ہر جماعت کے مضامین اور استاد لکھیں، پھر ماسٹر میں خود بھر دیں۔","Print / PDF":"پرنٹ / PDF","Timetable":"نظام الاوقات"});
+const TTL={en:{Period:'Period',Class:'Class',Break:'Break',Day:'Day',TT:'Timetable',M:'Master timetable',W:'Whole week',days:{Sat:'Saturday',Sun:'Sunday',Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'}},
+ ur:{Period:'پیریڈ',Class:'جماعت',Break:'وقفہ',Day:'دن',TT:'نظام الاوقات',M:'ماسٹر نظام الاوقات',W:'پورا ہفتہ',days:{Sat:'ہفتہ',Sun:'اتوار',Mon:'پیر',Tue:'منگل',Wed:'بدھ',Thu:'جمعرات',Fri:'جمعہ'}},
+ ar:{Period:'الحصة',Class:'الصف',Break:'استراحة',Day:'اليوم',TT:'الجدول الدراسي',M:'الجدول العام للمدرسة',W:'الأسبوع كاملاً',days:{Sat:'السبت',Sun:'الأحد',Mon:'الاثنين',Tue:'الثلاثاء',Wed:'الأربعاء',Thu:'الخميس',Fri:'الجمعة'}}};
+let TTLG=localStorage.ttlang||'en',TTM='master',TTDAY='';
+const ttW=k=>TTL[TTLG][k],ttD=d=>TTL[TTLG].days[d],ttN=x=>TTLG=='ar'?String(x).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]):String(x);
+const ttFont="'Noto Naskh Arabic','Noto Nastaliq Urdu','Segoe UI',Tahoma,Arial,sans-serif";
+const ttAllCls=()=>[...new Set([...(D.students||[]).filter(s=>s.active).map(s=>s.class),...(D.tt||[]).map(x=>x.class),...(D.ttcls||[])].filter(Boolean))].sort(natCmp);
+function ttClsAdd(){const n=document.getElementById('tcn').value.trim();if(!n)return;D.ttcls=D.ttcls||[];if(!D.ttcls.includes(n))D.ttcls.push(n);TTC=n;save();boot()}
+const ttDays=()=>{const c=ttCfg();return TTD.filter(d=>c.days.includes(d)||D.tt.some(e=>e.day==d))};
+const ttNP=()=>Math.max(ttCfg().periods,...D.tt.map(e=>+e.period));
+function ttToggle(){const a=ROLE=='admin',b=(k,l)=>`<button class="${TTM==k?'on':'o'}" onclick="TTM='${k}';boot()">${t(l)}</button>`,g=(k,l)=>`<button class="${TTLG==k?'on':'o'} sm" onclick="TTLG='${k}';localStorage.ttlang='${k}';boot()">${l}</button>`;
+ return`<div class="card"><div class="row">${b('master','Master timetable')}${b('class','Class timetable')}${a?b('setup','Setup'):''}</div><div class="row">${g('en','English')}${g('ur','اردو')}${g('ar','العربية')}</div></div>`}
+function ttTitle(){return TTM=='class'?`${ttW('TT')} — ${ttW('Class')} ${esc(TTC)}`:`${ttW('M')} — ${ttD(TTDAY)}`}
+function ttWrap(title,inner,id){const lg=D.settings&&D.settings.logo,nm=brandName();
+ return`<div ${id?`id="${id}" `:''}dir="${TTLG=='en'?'ltr':'rtl'}" style="position:relative;padding:14px 16px;background:#fff;color:#111;font-family:${ttFont}">${lg?`<img src="${lg}" style="position:absolute;left:50%;top:50%;width:62%;max-height:80%;object-fit:contain;transform:translate(-50%,-50%);opacity:.16">`:''}<div style="position:relative;text-align:center;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:center;gap:12px">${lg?`<img src="${lg}" style="height:54px;max-width:120px;object-fit:contain">`:''}<div style="font-size:22px;font-weight:700">${esc(nm)}</div></div><div style="font-size:15px;margin-top:3px">${title}</div></div><div style="position:relative">${inner}</div></div>`}
+function ttGrid(cls,days,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;',multi=days.length>1,busy={};
+ if(edit)D.tt.forEach(e=>{if(cn(e.teacher)){const k=e.day+'|'+e.period+'|'+cn(e.teacher);busy[k]=(busy[k]||0)+1}});
+ let head=`<tr><th style="${hs}">${ttW('Class')}</th>${multi?`<th style="${hs}">${ttW('Day')}</th>`:''}`;
+ for(let p=1;p<=np;p++){head+=`<th style="${hs}">${ttN(p)}${tm[p]?`<br><small>${esc(ttN(tm[p]))}</small>`:''}</th>`;if(brk&&brk.after==p)head+=`<th style="${bg}font-weight:700"><small>${ttW('Break')}${brk.time?`<br>${esc(ttN(brk.time))}`:''}</small></th>`}
+ head+='</tr>';
+ const blocks=cls.map(cl=>days.map((d,i)=>{let r='<tr>';if(i==0)r+=`<td rowspan="${days.length}" style="${hs}">${esc(cl)}</td>`;if(multi)r+=`<td style="${hs}">${ttD(d)}</td>`;
+  for(let p=1;p<=np;p++){const e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p),cx=edit&&e&&cn(e.teacher)&&busy[d+'|'+p+'|'+cn(e.teacher)]>1;
+   r+=`<td${edit?` data-c="${esc(cl)}" data-d="${d}" data-p="${p}" onclick="ttCell(this)" style="cursor:pointer;`:` style="`}${bs}min-width:64px;${cx?'background:#FBE9E7;':''}">${e?`<b>${esc(e.subject)}</b><br><small>${esc(e.teacher)}</small>`:(edit?'<span style="opacity:.3">+</span>':'')}</td>`;
+   if(brk&&brk.after==p)r+=`<td style="${bg}"></td>`}
+  return r+'</tr>'}).join(''));
+ return{head,blocks}}
+function ttMTable(cls,dy,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;',busy={};
+ if(edit)D.tt.forEach(e=>{if(e.day==dy&&cn(e.teacher)){const k=e.period+'|'+cn(e.teacher);busy[k]=(busy[k]||0)+1}});
+ let r=`<tr><th style="${hs}">${ttW('Period')}</th>${cls.map(cl=>`<th style="${hs}">${esc(cl)}</th>`).join('')}</tr>`;
+ for(let p=1;p<=np;p++){r+=`<tr><td style="${hs}">${ttN(p)}${tm[p]?`<br><small>${esc(ttN(tm[p]))}</small>`:''}</td>`+cls.map(cl=>{const e=D.tt.find(x=>x.class==cl&&x.day==dy&&+x.period==p),cx=edit&&e&&cn(e.teacher)&&busy[p+'|'+cn(e.teacher)]>1;
+   return`<td${edit?` data-c="${esc(cl)}" data-d="${dy}" data-p="${p}" onclick="ttCell(this)" style="cursor:pointer;`:` style="`}${bs}min-width:84px;${cx?'background:#FBE9E7;':''}">${e?`<b>${esc(e.subject)}</b><br><i style="font-weight:400;font-size:12px">${esc(e.teacher)}</i>`:(edit?'<span style="opacity:.3">+</span>':'')}</td>`}).join('')+'</tr>';
+  if(brk&&brk.after==p)r+=`<tr><td colspan="${cls.length+1}" style="${bg}"><small>${ttW('Break')} ${esc(ttN(brk.time||''))}</small></td></tr>`}
+ return`<table style="border-collapse:collapse;width:100%">${r}</table>`}
+function ttTable(edit){const np=ttNP();if(TTM=='master')return ttMTable(ttAllCls(),TTDAY,np,edit);const g=ttGrid([TTC],ttDays(),np,edit);return`<table style="border-collapse:collapse;width:100%">${g.head}${g.blocks.join('')}</table>`}
+V.timetable=async function(){const adm=ROLE=='admin',c=ttCfg(),cls=ttAllCls(),days=ttDays(),np=ttNP();
+ if(!adm&&TTM=='setup')TTM='master';if(!TTC||!cls.includes(TTC))TTC=cls[0]||'';if(!days.includes(TTDAY))TTDAY=days[0]||'Sat';
+ const chips=`<div class="card"><div class="row">${cls.map(x=>`<button class="${x==TTC?'on':'o'} sm" data-c="${esc(x)}" onclick="TTC=this.dataset.c;boot()">${esc(x)}</button>`).join('')}</div></div>`;
+ let h=ttToggle();
+ if(TTM=='setup'){const SB=ttSubs(TTC);
+  h+=`<div class="card"><small>${t('Setup tip')}</small></div><div class="card"><b>${t('Periods and days')}</b><div class="row"><button class="o sm" onclick="ttPer(-1)">−</button><b>${c.periods} ${t('Periods')}</b><button class="o sm" onclick="ttPer(1)">+</button></div><div class="row">${TTD.map(d=>`<button class="${c.days.includes(d)?'on':'o'} sm" onclick="ttDay('${d}')">${d}</button>`).join('')}</div></div>`+ttTimeCard(np)+`<div class="card"><div class="row"><input id="tcn" placeholder="${t('Add class')}"><button onclick="ttClsAdd()">${t('Add')}</button></div></div>`+chips+
+  `<div class="card"><b>${t('Subjects of this class')}: ${esc(TTC)}</b>${SB.length?`<table>${SB.map((x,i)=>`<tr><td>${esc(x.s)}</td><td><small>${esc(x.t||'')}</small></td><td><button class="r sm" onclick="ttSubDel(${i})">X</button></td></tr>`).join('')}</table>`:''}<div class="row"><input id="tsn" placeholder="${t('Subject')}"><select id="tst">${ttOpts(ttTeachers(),'',t('Teacher'))}</select><button onclick="ttSubAdd()">${t('Add')}</button></div>${SB.length?`<div class="row"><button class="o sm" onclick="ttSubsAll()">${t('Copy subjects to classes with no subjects')}</button></div>`:''}</div>`}
+ else{
+  if(TTM=='master')h+=`<div class="card"><div class="row">${days.map(d=>`<button class="${d==TTDAY?'on':'o'} sm" onclick="TTDAY='${d}';boot()">${d}</button>`).join('')}</div>${adm?`<div class="row"><button class="o sm" onclick="ttGen()">${t('Fill whole week')}</button><button class="o sm" onclick="ttAllDays()">${t('Copy to all days')}</button></div>`:''}</div>`;
+  else h+=chips;
+  if(adm&&!D.tt.length&&!cls.some(x=>(D.ttsubs[x]||[]).length))h+=`<div class="card"><small>${t('Setup tip')}</small></div>`;
+  if(cls.length){
+   h+=`<div class="card">${adm?`<small>${t('Tap a box to fill it')}</small>`:''}<div style="overflow-x:auto">${ttWrap(ttTitle(),ttTable(adm),'ttg')}</div><div class="row"><button class="o" onclick="ttPdf()">${t('Print / PDF')}</button></div></div>`}
+  else h+=`<div class="card">${t('Add classes and subjects in Setup first')}</div>`;}
+ app.innerHTML=h};
+async function ttGen(){if(!await ask('Fill empty boxes of the whole week automatically?'))return;const ds=ttDays(),cls=ttAllCls();
+ if(!cls.some(x=>ttSubs(x).length)){alert(t('Add classes and subjects in Setup first'));return}
+ const np=ttNP();let n=0;
+ ds.forEach((dy,di)=>cls.forEach((cl,ci)=>{const SB=ttSubs(cl),L=SB.length;if(!L)return;const cap=Math.ceil(np/L);
+  for(let p=1;p<=np;p++){if(D.tt.some(x=>x.class==cl&&x.day==dy&&+x.period==p))continue;
+   const cnt=s=>D.tt.filter(x=>x.class==cl&&x.day==dy&&x.subject==s).length,
+    cand=SB.map((x,i)=>({x,i})).filter(o=>cnt(o.x.s)<cap&&(!o.x.t||!ttClash(cl,dy,p,o.x.t))).sort((a,b)=>cnt(a.x.s)-cnt(b.x.s)||((a.i+ci+di)%L)-((b.i+ci+di)%L));
+   if(!cand.length)continue;const f=cand[0].x;D.tt.push({id:D.seq++,class:cl,day:dy,period:p,subject:f.s,teacher:f.t||''});n++}}));
+ save();toast(n+' ✓');boot()}
+async function ttSubsAll(){const src=ttSubs(TTC);if(!src.length||!await ask('Copy subjects to classes with no subjects?'))return;let n=0;for(const x of ttAllCls())if(x!=TTC&&!(D.ttsubs[x]||[]).length){D.ttsubs[x]=src.map(o=>({...o}));n++}save();toast(n+' ✓');boot()}
+function ttPages(){const np=ttNP();if(TTM=='master'){const cls=ttAllCls(),P=[];for(let i=0;i<cls.length;i+=10)P.push(ttWrap(ttTitle(),ttMTable(cls.slice(i,i+10),TTDAY,np,false)));return P}
+ const g=ttGrid([TTC],ttDays(),np,false);return[ttWrap(ttTitle(),`<table style="width:100%;border-collapse:collapse">${g.head}${g.blocks.join('')}</table>`)]}
+async function ttPdf(){try{if(!ttAllCls().length)return;const pages=ttPages();toast('Working...');const J=[],prev=[];
+  for(const h of pages){const c=await dmcCanvas(h,1123,794);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.85))}
+  window.TTB={blob:pdfOf(J,true),name:dmcName(TTM=='class'?'Timetable-'+TTC:'Master-Timetable-'+TTDAY,'tt')+'.pdf',prev};
+  modal(`<div id="rc" style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="overflow-x:auto;margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;min-width:720px;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="ttPrintImg()">${t('Print')}</button><button class="eb sec" onclick="dmcGet(TTB.blob,TTB.name)">${t('Download again')} (PDF)</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);
+  $('#md .card').style.maxWidth='820px';await new Promise(r=>setTimeout(r,250));await dmcGet(TTB.blob,TTB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}}
+async function ttPrintImg(){await Promise.all(TTB.prev.map(u=>{const i=new Image();i.src=u;return i.decode?i.decode().catch(()=>0):0}));
+ printDoc(TTB.prev.map((u,i)=>`<img src="${u}" style="display:block;margin:0 auto;max-width:100%;max-height:186mm;${i?'break-before:page;page-break-before:always;':''}">`).join(''),true)}
+
+async function ttAllDays(){const c=ttCfg(),dy=TTDAY,targets=c.days.filter(d=>d!=dy),src=D.tt.filter(x=>x.day==dy);if(!src.length||!targets.length)return;
+ if(!await ask('Copy this day to all other days (all classes)?'))return;
+ D.tt=D.tt.filter(x=>!targets.includes(x.day));for(const d of targets)for(const e of src)D.tt.push({id:D.seq++,class:e.class,day:d,period:+e.period,subject:e.subject,teacher:e.teacher||''});save();toast('Copied');boot()}
+apply();boot();
+</script></body></html>

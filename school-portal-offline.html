@@ -9,6 +9,16 @@ main{padding:10px;max-width:900px;margin:auto}.card{background:#fff;border-radiu
 .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee;text-align:start}
 .due{color:#B0453A;font-weight:600}.ok{color:#4C7A5C;font-weight:600}
 @media(max-width:600px){td,th{padding:5px 3px;font-size:13px}button.sm{padding:5px 7px;font-size:12px}td button{margin:1px 0}}
+
+.pi{display:inline-flex;align-items:center;justify-content:center;border-radius:28%;background:linear-gradient(145deg,var(--c1),var(--c2));box-shadow:0 4px 10px rgba(0,0,0,.22),inset 0 1px 1px rgba(255,255,255,.45),inset 0 -3px 6px rgba(0,0,0,.18);flex:none}
+.pi svg{width:56%;height:56%;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.phd{display:flex;align-items:center;gap:12px;padding:6px 4px 2px}.phd h2{margin:0;font-size:20px;color:var(--g)}.phd small{color:#7a705c}
+.pgh{font-weight:700;color:var(--g);margin:16px 4px 8px;font-size:14px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+button.ptile{display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff;color:#24211B;border-radius:16px;padding:14px 6px 10px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;font-weight:600;text-align:center;line-height:1.3;transition:transform .12s}
+button.ptile:active{transform:scale(.95)}
+button.hb{display:flex;align-items:center;gap:6px;background:#fff;color:var(--g);border:1px solid var(--g);padding:5px 10px 5px 6px}
+.pt{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;color:var(--g);white-space:nowrap}
 </style></head><body>
 <header><b id="brand"></b> <small data-k="first login: admin / admin123">first login: admin / admin123</small><span><button class="o" id="lg" onclick="setLang()"></button> <span id="who"></span></span></header><nav id="nav"></nav><div id="bk"></div><main id="app"></main>
 <script>let T=localStorage.t,ROLE=localStorage.r,NAME=localStorage.n,tab='students';
@@ -69,19 +79,13 @@ async admin(){const U=await api('users');
  app.innerHTML=`<div class="card"><h4>Users (same username = reset password)</h4><div class="row"><input id="un" placeholder="Username" autocapitalize="none" autocorrect="off"><input id="nm" placeholder="Full name"><input id="pw" placeholder="Password" autocapitalize="none" autocorrect="off"><select id="rl"><option>teacher</option><option>accountant</option><option>admin</option></select><button onclick="addU()">Save user</button></div>
  <table>${U.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.name)}</td><td>${u.role}</td></tr>`).join('')}</table></div>
  <div class="card"><h4>Backup</h4><p><b>Data is stored only in this browser on this device.</b> Download a backup regularly (and keep it safe: it contains password hashes). Clearing browser data erases everything.</p><div class="row"><button onclick="dl()">Download backup</button><label>Restore: <input type="file" accept=".json,.txt,application/json,text/plain" onchange="rs(this)"></label></div></div>`}};
-function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin';
- $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(adm?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(adm?`<td><button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button></td>`:'')+'</tr>').join('')}
 let eid=null;
-function editS(id){const s=L.find(x=>x.id==id);eid=id;n.value=s.name;f.value=s.father;ph.value=s.phone;c.value=s.class;fe.value=s.fee;di.value=s.disc||0;ol.value=s.old||0;$('#ft').textContent='Edit student';scrollTo(0,0)}
 function rsz(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>{const cv=document.createElement('canvas'),k=Math.min(1,160/Math.max(i.width,i.height));cv.width=i.width*k;cv.height=i.height*k;cv.getContext('2d').drawImage(i,0,0,cv.width,cv.height);r(cv.toDataURL('image/jpeg',.7))};i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
 async function saveS(){const pic=await rsz(pf.files[0]);await api('students',{id:eid,name:n.value,father:f.value,phone:ph.value,class:c.value,fee:fe.value,disc:di.value,old:ol.value,photo:pic});eid=null;boot()}
 async function delS(id){if(await ask('Remove this student from active list?')){await api('students/delete',{id});boot()}}
 async function pay(i,old){const s=FL[i],m=old?'old':$('#m').value,due=old?Math.max(0,(s.old||0)-s.oldpaid):Math.max(0,s.fee-(s.disc||0)-s.paid);
  const a=await askVal((old?'OLD dues received from ':'Amount received from ')+s.name,due);if(!a||!(+a>0))return;
  const r=await api('pay',{student_id:s.id,month:m,amount:a});rcpt(s,m,+a,r,Math.max(0,due-a));boot()}
-function rcpt(s,m,a,r,rem){const t=`Fee Receipt #${r.receipt}\nDate: ${r.date}\nStudent: ${s.name} (${s.class})\nFather: ${s.father}\n${m=='old'?'Old dues':'Month: '+m}\nReceived: ${a}\nRemaining: ${rem}`;
- let wp=String(s.phone||'').replace(/\D/g,'');if(wp.startsWith('0'))wp='92'+wp.slice(1);else if(wp.length==10)wp='92'+wp;
- modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(t)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${wp?`<a href="https://wa.me/${wp}?text=${encodeURIComponent(t)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
 function modal(x){closeM();const d=document.createElement('div');d.id='md';d.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:12px;z-index:9';d.innerHTML='<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto">'+x+'</div>';document.body.appendChild(d)}
 function closeM(){const d=$('#md');if(d)d.remove()}
 function printEl(id){let s=document.getElementById('prs');if(!s){s=document.createElement('style');s.id='prs';s.textContent='#pr{display:none}@media print{body>*:not(#pr){display:none!important}#pr{display:block!important;font-family:sans-serif;padding:12px}#pr .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:-1;pointer-events:none}#pr .wm img{max-width:65%;max-height:60vh;opacity:.08}}';document.head.appendChild(s)}
@@ -92,7 +96,6 @@ async function hist(i){const s=FL[i],hx=await api('history?id='+s.id),adm=ROLE==
  modal(`<h4>${esc(s.name)} - fee history</h4><table><tr><th>#</th><th>Date</th><th>For</th><th>Amount</th>${adm?'<th></th>':''}</tr>`+(hx.map(x=>`<tr><td>${x.id}</td><td>${x.date}</td><td>${x.month=='old'?'Old dues':x.month}</td><td>${x.amount}</td>${adm?`<td><button class="o" onclick="pedit(${x.id},${x.amount})">Edit</button> <button class="r sm" onclick="pdel(${x.id})">Delete</button></td>`:''}</tr>`).join('')||'<tr><td colspan=5>No payments yet</td></tr>')+`</table><div class="row"><button class="o" onclick="closeM()">Close</button></div>`)}
 async function pedit(id,a){const v=await askVal('Correct amount',a);if(!v)return;await api('pay/edit',{id,amount:v});closeM();boot()}
 async function pdel(id){if(await ask('Delete this payment entry?')){await api('pay/delete',{id});closeM();boot()}}
-function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')}</td></tr>`).join('')}
 function mark(id,x){AL.find(s=>s.id==id).status=x;attRows()}
 async function saveA(){await api('attendance',{date:$('#d').value,marks:AL.filter(s=>s.status).map(s=>({id:s.id,status:s.status}))});alert('Saved')}
 async function attRep(){const R=await api('att-report?month='+$('#d').value.slice(0,7));$('#rep').innerHTML=`<div class="card"><h4>Monthly report</h4><table><tr><th>Name</th><th>Class</th><th>Present</th><th>Absent</th><th>Leave</th></tr>${R.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.class)}</td><td>${r.p||0}</td><td>${r.a||0}</td><td>${r.l||0}</td></tr>`).join('')}</table></div>`}
@@ -149,8 +152,6 @@ api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||'
 }
 // ---- send box (receipts, results, reminders, slips) ----
 const waNum=p=>{let w=String(p||'').replace(/\D/g,'');return w.startsWith('0')?'92'+w.slice(1):w.length==10?'92'+w:w};
-function sendBox(tx,ph){const w=waNum(ph);modal(`<div id="rc"><pre style="white-space:pre-wrap;font:inherit">${esc(tx)}</pre></div><div class="row"><button onclick="printEl('rc')">Print</button>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="o">WhatsApp</button></a>`:''}<button class="o" onclick="closeM()">Close</button></div>`)}
-function rcpt(s,m,a,r,rem){sendBox(`${t('Fee Receipt')} #${r.receipt}\n${t('Date')}: ${r.date}\n${t('Student')}: ${s.name} (${s.class})\n${t('Father')}: ${s.father}\n${m=='old'?t('Old dues'):t('Month')+': '+m}\n${t('Received')}: ${a}\n${t('Remaining')}: ${rem}`,s.phone)}
 function remind(i){const s=FL[i],m=$('#m').value;sendBox(`${t('Fee reminder')}: ${s.name} (${s.class})\n${t('Month')}: ${m}\n${t('Due')}: ${s.fee-(s.disc||0)-s.paid}`,s.phone)}
 function attRows(){const cf=$('#cf').value;$('#at').innerHTML=AL.filter(s=>!cf||s.class==cf).map(s=>`<tr><td>${esc(s.name)}<br><small>${esc(s.class)}</small></td><td>${['P','A','L'].map(x=>`<button class="${s.status==x?'on':'o'}" onclick="mark(${s.id},'${x}')">${x}</button>`).join(' ')} ${s.status=='A'&&s.phone?`<button class="o" onclick="absMsg(${s.id})">Msg</button>`:''}</td></tr>`).join('')}
 function absMsg(id){const s=AL.find(x=>x.id==id);sendBox(`${t('Absent')}: ${s.name} (${s.class}) - ${$('#d').value}`,s.phone)}
@@ -163,26 +164,18 @@ V.fees=async function(){const m=window.fm||month();const L=await api('fees?month
 V.exams=async function(){const E=await api('exams');
  app.innerHTML=`<div class="card"><h4>New exam</h4><div class="row"><input id="exn" placeholder="Exam name"><input id="exc" placeholder="Class"><input id="exs" placeholder="Subjects (comma separated)"><input id="exm" type="number" placeholder="Max marks per subject"><button onclick="addE()">Save</button></div></div><div class="card"><table><tr><th>Exam</th><th>Class</th><th>Subjects</th><th></th></tr>`+
  E.map(e=>`<tr><td>${esc(e.name)}</td><td>${esc(e.class)}</td><td>${esc(e.subjects.join(', '))}</td><td><button onclick="marks(${e.id})">Marks</button> <button class="o" onclick="resu(${e.id})">Results</button>${ROLE=='admin'?` <button class="r sm" onclick="delE(${e.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div><div id="mk"></div>`};
-async function addE(){await api('exams',{name:exn.value,class:exc.value,subjects:exs.value,max:exm.value});boot()}
 async function delE(id){if(await ask('Delete this exam?')){await api('exams/delete',{id});boot()}}
-async function marks(id){const r=await api('marks?id='+id);window.MK=r;
- $('#mk').innerHTML=`<div class="card"><h4>${esc(r.exam.name)}</h4><table><tr><th>Name</th>${r.exam.subjects.map(s=>`<th>${esc(s)}</th>`).join('')}</tr>`+r.rows.map((s,i)=>`<tr><td>${esc(s.name)}</td>${r.exam.subjects.map((x,j)=>`<td><input type="number" style="width:64px" value="${s.m[j]??''}" onchange="MK.rows[${i}].m[${j}]=this.value===''?null:+this.value"></td>`).join('')}</tr>`).join('')+`</table><div class="row"><button onclick="saveM()">Save marks</button></div></div>`;$('#mk').scrollIntoView()}
-async function saveM(){await api('marks',{id:MK.exam.id,rows:MK.rows.map(s=>({id:s.id,m:Array.from(s.m,x=>x??null)}))});alert('Saved')}
 const grade=p=>p>=80?'A+':p>=70?'A':p>=60?'B':p>=50?'C':p>=40?'D':'F';
 async function resu(id){const r=await api('marks?id='+id),e=r.exam,tot=totOf(e);
  const R=r.rows.map(s=>({...s,t:Array.from(s.m).reduce((a,x)=>a+(+x||0),0)})).sort((a,b)=>b.t-a.t);window.RS=R;window.RE=e;
  $('#mk').innerHTML=`<div class="card"><h4>${esc(e.name)} - Results</h4><table><tr><th>#</th><th>Name</th><th>Total</th><th>%</th><th>Grade</th><th></th></tr>`+R.map((s,i)=>{const p=Math.round(s.t*1000/tot)/10;return`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${s.t}/${tot}</td><td>${p}</td><td>${grade(p)}</td><td><button class="o" onclick="card(${i})">Card</button></td></tr>`}).join('')+`</table></div>`;$('#mk').scrollIntoView()}
-function card(i){const s=RS[i],e=RE,tot=totOf(e),p=Math.round(s.t*1000/tot)/10;
- sendBox(`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${maxOf(e,j)}`).join('\n')+`\n${t('Total')}: ${s.t}/${tot} (${p}%)\n${t('Grade')}: ${grade(p)}\n${t('Position')}: ${i+1}`,s.phone)}
 let teid=null;
 V.teachers=async function(){const m=window.tm||month(),L=await api('teachers?month='+m);window.TL=L;const adm=ROLE=='admin';
  app.innerHTML=(adm?`<div class="card"><h4 id="tth">Add teacher</h4><div class="row"><input id="thn" placeholder="Name"><input id="thp" placeholder="Phone"><input id="ths" placeholder="Subject"><input id="thl" type="number" placeholder="Monthly salary"><button onclick="saveT()">Save</button></div></div>`:'')+
  `<div class="card"><div class="row"><input type="month" value="${m}" onchange="tm=this.value;boot()"></div><table class="tt"><tr><th>Name</th><th>Salary</th><th>Advance</th><th>Salary paid</th><th>Balance</th></tr>`+L.map((x,i)=>{const b=x.salary-x.adv-x.paid;return`<tr><td>${esc(x.name)}<br><small>${esc(x.subject)}</small></td><td>${x.salary}</td><td>${x.adv}</td><td>${x.paid}</td><td class="${b>0?'due':'ok'}">${b}</td></tr><tr><td colspan="5" class="acts" style="white-space:nowrap;padding-bottom:12px"><button class="sm" onclick="tpay(${i},'salary')">Pay salary</button> <button class="o sm" onclick="tpay(${i},'advance')">Advance</button> <button class="o sm" onclick="slip(${i})">Slip</button>${adm?` <button class="o sm" onclick="editT(${i})">Edit</button> <button class="r sm" onclick="delT(${x.id})">Remove</button>`:''}</td></tr>`}).join('')+`</table></div>`};
 async function saveT(){await api('teachers',{id:teid,name:thn.value,phone:thp.value,subject:ths.value,salary:thl.value});teid=null;boot()}
-function editT(i){const x=TL[i];teid=x.id;thn.value=x.name;thp.value=x.phone;ths.value=x.subject;thl.value=x.salary;$('#tth').textContent=t('Edit teacher');scrollTo(0,0)}
 async function delT(id){if(await ask('Delete this teacher?')){await api('teachers/delete',{id});boot()}}
 async function tpay(i,ty){const x=TL[i],m=window.tm||month(),a=await askVal(x.name+' - '+t(ty=='salary'?'Salary amount':'Advance amount'),ty=='salary'?Math.max(0,x.salary-x.adv-x.paid):'');if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}
-function slip(i){const x=TL[i];sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}`,x.phone)}
 V.acct=async function(){const m=window.am||month(),[S,X]=await Promise.all([api('summary?month='+m),api('exp?month='+m)]),net=S.fees-S.sal-S.exp;
  app.innerHTML=`<div class="card"><div class="row"><input type="month" value="${m}" onchange="am=this.value;boot()"></div><table><tr><td>Income (fees)</td><td>${S.fees}</td></tr><tr><td>Teacher salaries</td><td>${S.sal}</td></tr><tr><td>Expenses</td><td>${S.exp}</td></tr><tr><th>Net</th><th class="${net<0?'due':'ok'}">${net}</th></tr></table></div>
  <div class="card"><h4>Add expense</h4><div class="row"><input id="xt" placeholder="Title"><input id="xa" type="number" placeholder="Amount"><button onclick="addX()">Save</button></div><table><tr><th>Date</th><th>Title</th><th>Amount</th><th></th></tr>`+X.map(x=>`<tr><td>${x.date}</td><td>${esc(x.title)}</td><td>${x.amount}</td><td>${ROLE=='admin'?`<button class="r sm" onclick="delX(${x.id})">Delete</button>`:''}</td></tr>`).join('')+`</table></div>`};
@@ -196,11 +189,6 @@ async function unzip(buf){const v=new DataView(buf),u=new Uint8Array(buf),out={}
  const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);
  for(let i=0;i<n;i++){const m=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true),name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));
   const st=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true),d=u.subarray(st,st+cs);out[name]=m==0?d:await inflate(d);p+=46+nl+xl+cl}return out}
-async function readXlsx(buf){const z=await unzip(buf),td=new TextDecoder(),dp=new DOMParser(),X=n=>z[n]?dp.parseFromString(td.decode(z[n]),'text/xml'):null;
- const ss=X('xl/sharedStrings.xml'),S=ss?[...ss.getElementsByTagName('si')].map(s=>[...s.getElementsByTagName('t')].map(q=>q.textContent).join('')):[];
- const sn=Object.keys(z).filter(k=>/^xl\/worksheets\/sheet\d+\.xml$/.test(k)).sort()[0],rows=[];
- for(const r of X(sn).getElementsByTagName('row')){const row=[];for(const c of r.getElementsByTagName('c')){const col=c.getAttribute('r').replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1,ty=c.getAttribute('t'),v=c.getElementsByTagName('v')[0],is=c.getElementsByTagName('t')[0];
-  row[col]=ty=='s'&&v?S[+v.textContent]:ty=='inlineStr'&&is?is.textContent:v?v.textContent:''}rows.push(Array.from(row,x=>x??''))}return rows}
 function readCsv(tx){return tx.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim()).map(l=>{const o=[];let c='',q=false;for(const ch of l){if(ch=='"')q=!q;else if((ch==','||ch==';'||ch=='\t')&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o})}
 function mapRows(R){const hi=R.findIndex(r=>r.some(x=>/name|naam|نام/i.test(x))),idx={};
  if(hi>=0)R[hi].forEach((h,i)=>{h=String(h).toLowerCase();const k=/father|walid|والد|ولدیت/.test(h)?'father':/disc|رعایت/.test(h)?'disc':/old|baqaya|بقایا|arrear/.test(h)?'old':/phone|mobile|contact|cell|فون|موبائل/.test(h)?'phone':/class|جماعت|کلاس|درجہ|grade/.test(h)?'class':/fee|فیس/.test(h)?'fee':/name|naam|نام/.test(h)?'name':null;if(k&&!(k in idx))idx[k]=i});
@@ -213,8 +201,6 @@ const api1=api;api=async function(p,o){if(p!=='students/import')return api1(p,o)
 const vs=V.students;V.students=async function(){await vs();if(ROLE=='admin')app.firstElementChild.insertAdjacentHTML('afterend',`<div class="card"><h4>Import from Excel</h4><div class="row"><input type="file" id="xf" accept=".xlsx,.csv,.txt" onchange="impF(this)"><button class="o" onclick="tmpl()">Download template</button></div><div id="imp"></div></div>`)};
 async function impF(el){const f=el.files[0];if(!f)return;let R;try{R=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):readCsv(await f.text())}catch(e){return alert('Could not read file')}
  window.IMP=mapRows(R);$('#imp').innerHTML=IMP.length?`<p><b>${IMP.length}</b> ${t('students found')}</p><table><tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th></tr>${IMP.slice(0,5).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.father)}</td><td>${esc(r.phone)}</td><td>${esc(r.class)}</td><td>${esc(r.fee)}</td></tr>`).join('')}</table><div class="row"><button onclick="doImp()">Import all</button></div>`:`<p class="due">${t('No students found in file')}</p>`}
-async function doImp(){const r=await api('students/import',{rows:IMP});alert(r.added+' '+t('added')+', '+r.skipped+' '+t('skipped (duplicate)'));boot()}
-function tmpl(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFFName,Father,Phone,Class,Fee,Discount,Old dues\nAli,Ahmed,03001234567,5,500,0,0\n'],{type:'text/csv'}));a.download='students-template.csv';a.click()}
 // ===== Excel / CSV import =====
 Object.assign(UR,{"Import from Excel":"ایکسل سے طلبہ شامل کریں","Download template":"نمونہ فائل ڈاؤن لوڈ کریں","Columns: Name, Father, Phone, Class, Fee, Discount, Old dues (first row = headings). Save Excel as .xlsx or CSV.":"کالم: نام، والد، فون، جماعت، فیس، رعایت، پرانا بقایا (پہلی لائن = عنوان)۔ ایکسل کو .xlsx یا CSV میں محفوظ کریں۔","Students found in file":"فائل میں طلبہ ملے","Import":"شامل کریں","Cancel":"منسوخ کریں","Added":"شامل ہوئے","Skipped (already exist)":"چھوڑے گئے (پہلے سے موجود)","Could not read this file":"یہ فائل پڑھی نہیں جا سکی","No students found in file":"فائل میں کوئی طالب علم نہیں ملا"});
 const SYN={father:['father','walid','والد','ولدیت'],phone:['phone','mobile','contact','فون','موبائل','رابطہ'],class:['class','grade','jamaat','جماعت','کلاس','درجہ'],disc:['discount','رعایت','ماہانہ رعایت'],old:['old','arrears','balance','pichla','purana','پرانا','بقایا'],fee:['fee','فیس','ماہانہ فیس'],name:['name','student','naam','نام','طالب']};
@@ -290,7 +276,6 @@ async function tat(){window.TT=await api('tatt?date='+(TAD||today()));drawTA();$
 function drawTA(){const d=TAD||today();$('#tat').innerHTML=`<div class="card"><h4>Teacher attendance</h4><div class="row"><input type="date" value="${d}" onchange="TAD=this.value;tat()"><button onclick="saveTA()">Save</button></div><table>`+TT.map(x=>`<tr><td>${esc(x.name)}</td><td>${['P','A','L'].map(s=>`<button class="${x.status==s?'on':'o'}" onclick="markT(${x.id},'${s}')">${s}</button>`).join(' ')}</td></tr>`).join('')+`</table></div>`}
 function markT(id,s){TT.find(x=>x.id==id).status=s;drawTA()}
 async function saveTA(){await api('tatt',{date:TAD||today(),marks:TT.filter(x=>x.status).map(x=>({id:x.id,status:x.status}))});alert('Saved');boot()}
-function slip(i){const x=TL[i],ded=Math.round(x.salary/30*x.ab);sendBox(`${t('Salary slip')} ${window.tm||month()}\n${t('Name')}: ${x.name}\n${t('Salary')}: ${x.salary}\n${t('Advance')}: ${x.adv}\n${t('Salary paid')}: ${x.paid}\n${t('Balance')}: ${x.salary-x.adv-x.paid}\n${t('Present days')}: ${x.pa}\n${t('Absent days')}: ${x.ab}\n${t('Leave days')}: ${x.lv}`,x.phone)}
 {const a=TABS.admin;delete TABS.admin;Object.assign(TABS,{timetable:['Timetable',['admin','teacher','accountant']],notices:['Notices',['admin','teacher','accountant']],admin:a})}
 // ===== Phase 3: certificates, hifz, donations, library, parent report =====
 Object.assign(UR,{"Certificates":"سرٹیفکیٹ","Hifz":"حفظ","Donations":"عطیات","Library":"لائبریری","Report":"رپورٹ","Parent report":"والدین کے لیے رپورٹ","Fee due":"فیس بقایا","Latest exam":"تازہ امتحان","Last sabaq":"آخری سبق","Paras completed":"مکمل پارے","Sabaq":"سبق","Sabqi":"سبقی","Manzil":"منزل","Note":"نوٹ","School name":"ادارے کا نام","Preview":"پیش نظارہ","Leaving certificate":"اسکول چھوڑنے کا سرٹیفکیٹ","Character certificate":"کردار کا سرٹیفکیٹ","ID card":"طالب علم کارڈ","No students yet":"ابھی کوئی طالب علم نہیں","Donor":"عطیہ دہندہ","Type":"قسم","Donation receipt":"عطیہ کی رسید","General":"عمومی","Zakat":"زکوٰۃ","Sadaqah":"صدقہ","Fitra":"فطرہ","Receipt":"رسید","Book title":"کتاب کا نام","Add book":"کتاب شامل کریں","Author":"مصنف","Copies":"نسخے","Available":"دستیاب","Issue":"جاری کریں","Return":"واپسی","Books on loan":"جاری شدہ کتابیں","Date out":"تاریخ اجرا","No copies available":"کوئی نسخہ دستیاب نہیں"});
@@ -323,9 +308,6 @@ api=async function(p,o){const [path,qs]=p.split('?'),q=new URLSearchParams(qs||'
   return{s,c,due:Math.max(0,s.fee-(s.disc||0)-paid),old:Math.max(0,(s.old||0)-op),ex,paras:(D.para[s.id]||[]).length,sabaq:hs?hs.sabaq:''}}
 }
 const schoolName=async()=>(await api('settings')).school||'';
-// parent report (button in students list)
-function filt(){const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant';
- $('#tb').innerHTML='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>'+L.filter(s=>(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).map(s=>`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>').join('')}
 async function rep(id){const m=month(),r=await api('report?id='+id+'&month='+m),sch=await schoolName(),s=r.s;
  sendBox(`${sch?sch+'\n':''}${t('Parent report')}\n${s.name} (${s.class}) - ${m}\n${t('Attendance')}: ${t('Present')} ${r.c.P} / ${t('Absent')} ${r.c.A} / ${t('Leave')} ${r.c.L}\n${t('Fee due')}: ${r.due}`+(r.old?` (${t('Old dues')}: ${r.old})`:'')+(r.ex?`\n${t('Latest exam')}: ${r.ex.name} ${r.ex.pct}% (${t('Position')} ${r.ex.pos})`:'')+(r.paras||r.sabaq?`\n${t('Hifz')}: ${t('Paras completed')} ${r.paras}/30${r.sabaq?', '+t('Last sabaq')+': '+r.sabaq:''}`:''),s.phone)}
 // certificates + ID card
@@ -384,7 +366,6 @@ async function rmLogo(){await api('settings',{school:document.getElementById('bn
 // ===== Edit in a popup (works even when the page can't scroll) =====
 document.head.insertAdjacentHTML('beforeend','<style>#ef input:not([type=file]){width:100%}#ef{display:grid;gap:6px}</style>');
 function editS(id){const s=L.find(x=>x.id==id);if(!s)return;modal(`<h4>Edit student</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(s.name)}"><input id="e_f" placeholder="Father name" value="${esc(s.father)}"><input id="e_p" placeholder="Phone" value="${esc(s.phone)}"><input id="e_c" placeholder="Class" value="${esc(s.class)}"><input id="e_fe" type="number" placeholder="Monthly fee" value="${s.fee}"><input id="e_di" type="number" placeholder="Discount per month" value="${s.disc||0}"><input id="e_ol" type="number" placeholder="Old dues (purana baqaya)" value="${s.old||0}"><label>Photo: <input id="e_pf" type="file" accept="image/*"></label></div><div class="row" style="margin-top:8px"><button onclick="saveE(${s.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
-async function saveE(id){const pic=await rsz(document.getElementById('e_pf').files[0]),g=k=>document.getElementById(k).value;await api('students',{id,name:g('e_n'),father:g('e_f'),phone:g('e_p'),class:g('e_c'),fee:g('e_fe'),disc:g('e_di'),old:g('e_ol'),photo:pic});closeM();boot()}
 function editT(i){const x=TL[i];modal(`<h4>Edit teacher</h4><div id="ef"><input id="e_n" placeholder="Name" value="${esc(x.name)}"><input id="e_p" placeholder="Phone" value="${esc(x.phone)}"><input id="e_s" placeholder="Subject" value="${esc(x.subject)}"><input id="e_l" type="number" placeholder="Monthly salary" value="${x.salary}"></div><div class="row" style="margin-top:8px"><button onclick="saveTE(${x.id})">Save</button><button class="o" onclick="closeM()">Cancel</button></div>`)}
 async function saveTE(id){const g=k=>document.getElementById(k).value;await api('teachers',{id,name:g('e_n'),phone:g('e_p'),subject:g('e_s'),salary:g('e_l')});closeM();boot()}
 // ===== Automatic backup =====
@@ -410,14 +391,6 @@ async function shareBk(){const f=new File([JSON.stringify(D)],'school-backup-'+t
 Object.assign(UR,{"All":"تمام","Print list":"فہرست پرنٹ کریں","Students in class":"اس جماعت کے طلبہ"});
 let CF='';
 const natCmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
-function filt(){if(!document.getElementById('cc'))return;const q=($('#q').value||'').toLowerCase(),adm=ROLE=='admin',rp=adm||ROLE=='accountant',cls=[...new Set(L.map(s=>s.class||''))].sort(natCmp);
- if(CF&&!cls.includes(CF))CF='';
- $('#cc').innerHTML=`<button class="${CF?'o':'on'}" onclick="CF='';filt()">${t('All')} (${L.length})</button>`+cls.map(c=>`<button class="${CF===c?'on':'o'}" data-c="${esc(c)}" onclick="CF=this.dataset.c;filt()">${esc(c)||'-'} (${L.filter(s=>(s.class||'')===c).length})</button>`).join('')+(CF?`<button class="o" onclick="printList()">Print list</button>`:'');
- const F=L.filter(s=>(!CF||(s.class||'')===CF)&&(s.name+s.father+s.class+s.phone).toLowerCase().includes(q)).sort((a,b)=>natCmp(a.class||'',b.class||'')||a.name.localeCompare(b.name));
- const cols=5+(rp?1:0);let last=null,h='<tr><th>Name</th><th>Father</th><th>Phone</th><th>Class</th><th>Fee</th>'+(rp?'<th></th>':'')+'</tr>';
- for(const s of F){if(!CF&&(s.class||'')!==last){last=s.class||'';h+=`<tr><td colspan="${cols}" style="background:#F5F1E7"><b>${t('Class')} ${esc(last)||'-'}</b> (${F.filter(x=>(x.class||'')===last).length})</td></tr>`}
-  h+=`<tr><td>${s.photo?`<img src="${s.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:6px">`:''}${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td><td>${esc(s.class)}</td><td>${s.fee}${s.disc?' (-'+s.disc+')':''}</td>`+(rp?`<td><button class="o" onclick="rep(${s.id})">Report</button>${adm?` <button class="o" onclick="editS(${s.id})">Edit</button> <button class="r sm" onclick="delS(${s.id})">Delete</button>`:''}</td>`:'')+'</tr>'}
- $('#tb').innerHTML=h}
 function printList(){const F=L.filter(s=>(s.class||'')===CF).sort((a,b)=>a.name.localeCompare(b.name)),d=document.createElement('div');d.id='plist';d.style.display='none';
  d.innerHTML=`<h3>${t('Class')} ${esc(CF)} (${F.length})</h3><table style="width:100%;border-collapse:collapse"><tr><th align="start">#</th><th align="start">${t('Name')}</th><th align="start">${t('Father')}</th><th align="start">${t('Phone')}</th></tr>${F.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name)}</td><td>${esc(s.father)}</td><td>${esc(s.phone)}</td></tr>`).join('')}</table>`;
  document.body.appendChild(d);printEl('plist');d.remove()}
@@ -488,7 +461,7 @@ function remAll(){const m=document.getElementById('m').value,L=FL.map(s=>({s,due
 // ===== Step 3: DMC (italic), class marksheet, Excel / PDF, print icons =====
 Object.assign(UR,{"Result card":"نتیجہ کارڈ","Principal sign":"پرنسپل کے دستخط","Subject":"مضمون","Marks":"نمبر","Detailed Marks Certificate":"تفصیلی نتیجہ سرٹیفکیٹ (DMC)","Class":"جماعت","Student ID":"طالب علم نمبر","Total marks":"کل نمبر","Obtained":"حاصل کردہ","Percentage":"فیصد","Result":"نتیجہ","PASS":"کامیاب","FAIL":"ناکام","Remarks":"ریمارکس","Class teacher sign":"کلاس ٹیچر کے دستخط","Issue date":"تاریخ اجراء","Outstanding":"شاندار","Very Good":"بہت اچھا","Good":"اچھا","Satisfactory":"تسلی بخش","Pass":"پاس","Fail":"فیل","Class marksheet":"کلاس مارک شیٹ","Print all DMC":"تمام DMC پرنٹ کریں","Print class marksheet":"کلاس مارک شیٹ پرنٹ کریں","Save Excel (.xlsx)":"ایکسل میں محفوظ کریں"});
 const PASSP=40,DFS="font-family:'Palatino Linotype',Palatino,Georgia,'Noto Naskh Arabic','Noto Nastaliq Urdu',serif;font-style:italic",DCX='-webkit-print-color-adjust:exact;print-color-adjust:exact';
-const rmk=p=>p>=80?'Outstanding':p>=70?'Very Good':p>=60?'Good':p>=50?'Satisfactory':p>=40?'Pass':'Fail',PCX=(m,x)=>m==null||m===''?null:Math.round(m*1000/x)/10;
+const PCX=(m,x)=>m==null||m===''?null:Math.round(m*1000/x)/10;
 function dmcData(){const e=RE,tot=totOf(e),by={};RS.forEach(s=>(by[s.class||'']=by[s.class||'']||[]).push(s));
  return{groups:Object.keys(by).sort(natCmp).map(c=>{const L=by[c].slice().sort((x,y)=>y.t-x.t);
   L.forEach((s,i)=>{s.cp=i&&L[i-1].t==s.t?L[i-1].cp:i+1;s.pct=Math.round(s.t*1000/tot)/10;s.pass=s.pct>=(e.pass||PASSP);const st=D.students.find(z=>z.id==s.id);s.father=st&&st.father||''});return{c,L}})}}
@@ -496,28 +469,31 @@ function printDoc(h,land){let s=document.getElementById('pgs');if(!s){s=document
  s.textContent=`@media print{@page{size:A4 ${land?'landscape':'portrait'};margin:10mm}.dmc{min-height:262mm}${h.includes('class="dmc"')?'#pr .wm{display:none!important}':''}}`;
  const d=document.createElement('div');d.id='vprint';d.style.display='none';d.innerHTML=h;document.body.appendChild(d);printEl('vprint');d.remove()}
 Object.assign(UR,{"Roll No.":"رول نمبر","Total obtained":"کل حاصل کردہ"});
-{const st=document.createElement('style');st.textContent='.dmc{max-width:794px;margin-inline:auto!important}@media(max-width:600px){.dmc .pd{padding:14px 10px!important}.dmc .nm{font-size:20px!important}.dmc .rb{padding:5px 24px!important;font-size:14px!important}.dmc th,.dmc td{padding:4px 3px!important;font-size:12px}.dmc .bx{min-width:30%!important}}';document.head.appendChild(st)}
-function cardHtml(s){const e=RE,tot=totOf(e),p=s.pct,B='#1F3B33',G='#B4884A',LG=D.settings&&D.settings.logo,roll=(D.students.find(z=>z.id==s.id)||{}).roll||s.id,
+{const st=document.createElement('style');st.textContent='.dmc{max-width:794px;margin-inline:auto!important}.a4box{overflow:hidden}.a4in{width:794px;transform-origin:0 0}.a4 .dmc{min-height:1111px}@media(max-width:600px){#rc:not(.a4) .dmc .pd{padding:14px 10px!important}#rc:not(.a4) .dmc .nm{font-size:20px!important}#rc:not(.a4) .dmc .rb{padding:5px 24px!important;font-size:14px!important}#rc:not(.a4) .dmc th,#rc:not(.a4) .dmc td{padding:4px 3px!important;font-size:12px}#rc:not(.a4) .dmc .bx{min-width:30%!important}}';document.head.appendChild(st)}
+function cardHtml(s){const e=RE,tot=totOf(e),p=s.pct,B='#1F3B33',G='#B4884A',LG=D.settings&&D.settings.logo,BG=!!(D.settings&&D.settings.dmcBg),roll=(D.students.find(z=>z.id==s.id)||{}).roll||s.id,
  cr=(v,h)=>`<i style="position:absolute;${v}:7px;${h}:7px;width:28px;height:28px;border-${v}:3px solid ${G};border-${h}:3px solid ${G}"></i>`,
  ln=d=>`<div style="flex:1;height:1px;background:linear-gradient(${d},transparent,${G});${DCX}"></div>`,
  inf=(k,v)=>`<div style="flex:1 1 44%;min-width:150px;display:flex;gap:6px;padding:4px 0;border-bottom:1px dotted ${G}"><span style="opacity:.7">${t(k)}:</span><b>${v}</b></div>`,
- bx=(k,v,f)=>`<div class="bx" style="flex:1;min-width:15%;text-align:center;border:1px solid ${G};border-top:4px solid ${f||G};padding:6px 3px;background:#FFFFFFA0;${DCX}"><div style="font-size:11px;opacity:.7">${k}</div><div style="font-size:19px;font-weight:bold;color:${f||B}">${v}</div></div>`;
- return`<div class="dmc" style="${DFS};${DCX};position:relative;overflow:hidden;border:3px double ${B};outline:1px solid ${G};outline-offset:3px;margin:6px;background:linear-gradient(160deg,#FFFEFB,#FAF3E3);color:#24211B;font-size:14px">
-${LG?`<img src="${LG}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;max-height:62%;object-fit:contain;opacity:.1">`:''}${cr('top','left')}${cr('top','right')}${cr('bottom','left')}${cr('bottom','right')}
+ bx=(k,v,f)=>`<div class="bx" style="flex:0 1 92px;text-align:center;border:1px solid ${G};border-top:3px solid ${f||G};padding:3px 2px;${BG?'background:#FFFFFFA0;':''}${DCX}"><div style="font-size:9px;opacity:.7">${k}</div><div style="font-size:13px;font-weight:bold;color:${f||B}">${v}</div></div>`;
+ return`<div class="dmc" style="${DFS};${DCX};position:relative;overflow:hidden;border:3px double ${B};outline:1px solid ${G};outline-offset:3px;margin:6px;background:${BG?'linear-gradient(160deg,#FFFEFB,#FAF3E3)':'#fff'};color:#24211B;font-size:14px">
+${LG&&BG?`<img src="${LG}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;max-height:62%;object-fit:contain;opacity:.1">`:''}${cr('top','left')}${cr('top','right')}${cr('bottom','left')}${cr('bottom','right')}
 <div class="pd" style="position:relative;padding:22px 26px">
 <div style="text-align:center">${LG?`<img src="${LG}" style="height:84px;max-width:55%;object-fit:contain">`:''}<div class="nm" style="font-size:27px;font-weight:bold;color:${B};margin-top:4px;line-height:1.25">${esc(brandName()||'')}</div>
 <div style="display:flex;align-items:center;gap:8px;margin:8px 0">${ln('90deg')}<span style="color:${G}">&#9670;</span>${ln('270deg')}</div>
 <div class="rb" style="display:inline-block;padding:6px 48px;background:${B};color:#fff;font-size:16px;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%);${DCX}">${t('Detailed Marks Certificate')}</div></div>
-<div style="display:flex;flex-wrap:wrap;gap:0 20px;margin:14px 0;padding:6px 14px;border:1px solid ${G};border-radius:6px;background:#FFFFFF90;${DCX}">${inf('Student',esc(s.name))}${inf('Father',esc(s.father))}${inf('Roll No.',esc(roll))}${inf('Class',esc(s.class))}${inf('Exam',esc(e.name))}</div>
+<div style="display:flex;flex-wrap:wrap;gap:0 20px;margin:14px 0;padding:6px 14px;border:1px solid ${G};border-radius:6px;${BG?'background:#FFFFFF90;':''}${DCX}">${inf('Student',esc(s.name))}${inf('Father',esc(s.father))}${inf('Roll No.',esc(roll))}${inf('Class',esc(s.class))}${inf('Exam',esc(e.name))}</div>
 <table style="width:100%;border-collapse:collapse;text-align:center;border:1px solid ${B}"><tr style="background:${B};color:#fff;${DCX}"><th style="padding:7px;text-align:start">${t('Subject')}</th><th>${t('Total marks')}</th><th>${t('Obtained')}</th><th>%</th><th>${t('Grade')}</th></tr>
-${e.subjects.map((x,j)=>{const m=s.m[j],q=PCX(m,maxOf(e,j));return`<tr style="border-bottom:1px solid #E6DCC3;${j%2?'background:#F5F1E7B0;'+DCX:''}"><td style="padding:6px 8px;text-align:start">${esc(x)}</td><td>${maxOf(e,j)}</td><td><b>${m??'-'}</b></td><td>${q??'-'}</td><td>${q==null?'-':grade(q)}</td></tr>`}).join('')}
-<tr style="border-top:2px solid ${B};font-weight:bold;background:#EFE6D2;${DCX}"><td style="padding:8px;text-align:start">${t('Total')}</td><td>${tot}</td><td>${s.t}</td><td>${p}</td><td>${grade(p)}</td></tr></table>
-<div style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0">${bx(t('Total marks'),tot)}${bx(t('Obtained'),s.t)}${bx(t('Percentage'),p+'%')}${bx(t('Grade'),grade(p))}${bx(t('Position'),s.cp)}${bx(t('Result'),t(s.pass?'PASS':'FAIL'),s.pass?'#2F6B45':'#B0453A')}</div>
+${e.subjects.map((x,j)=>{const m=s.m[j],q=PCX(m,maxOf(e,j));return`<tr style="border-bottom:1px solid #E6DCC3;${BG&&j%2?'background:#F5F1E7B0;'+DCX:''}"><td style="padding:6px 8px;text-align:start">${esc(x)}</td><td>${maxOf(e,j)}</td><td><b>${m??'-'}</b></td><td>${q??'-'}</td><td>${q==null?'-':grade(q)}</td></tr>`}).join('')}
+<tr style="border-top:2px solid ${B};font-weight:bold;${BG?'background:#EFE6D2;':''}${DCX}"><td style="padding:8px;text-align:start">${t('Total')}</td><td>${tot}</td><td>${s.t}</td><td>${p}</td><td>${grade(p)}</td></tr></table>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;justify-content:center">${bx(t('Total marks'),tot)}${bx(t('Obtained'),s.t)}${bx(t('Percentage'),p+'%')}${bx(t('Grade'),grade(p))}${bx(t('Position'),s.cp)}${bx(t('Result'),t(s.pass?'PASS':'FAIL'),s.pass?'#2F6B45':'#B0453A')}</div>
 <div style="display:flex;justify-content:space-between;margin-top:40px;text-align:center"><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Class teacher sign')}</div><div style="width:30%;border-top:1px solid #000;padding-top:3px">${t('Principal sign')}</div></div>
 <div style="display:flex;align-items:center;gap:8px;margin-top:16px">${ln('90deg')}<span style="color:${G}">&#9670;</span>${ln('270deg')}</div>
 <div style="font-size:11px;margin-top:6px;text-align:center">A+ 80-100 &nbsp; A 70-79 &nbsp; B 60-69 &nbsp; C 50-59 &nbsp; D 40-49 &nbsp; F &lt;40 &nbsp;|&nbsp; ${t('Issue date')}: ${today()}</div></div></div>`}
 function card(i){const s=RS[i],e=RE,w=waNum(s.phone),tx=`${e.name}\n${t('Student')}: ${s.name} (${s.class})\n`+e.subjects.map((x,j)=>`${x}: ${s.m[j]??'-'}/${maxOf(e,j)}`).join('\n')+`\n${t('Total')}: ${s.t}/${totOf(e)} (${s.pct}%)\n${t('Grade')}: ${grade(s.pct)}\n${t('Position')}: ${s.cp}`;
- modal(`<div id="rc">${cardHtml(s)}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcSave('pdf',${i})">${t('Print DMC (PDF)')}</button>${navigator.canShare?`<button class="eb sec" onclick="dmcSave('pdf',${i},1)">${t('Share')}</button>`:''}<span id="dst" style="align-self:center"></span>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="eb sec">WhatsApp</button></a>`:''}<button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px'}
+ modal(`<div id="rc" class="a4"><div class="a4box"><div class="a4in">${cardHtml(s)}</div></div></div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcSave('pdf',${i})">${t('Print DMC (PDF)')}</button>${navigator.canShare?`<button class="eb sec" onclick="dmcSave('pdf',${i},1)">${t('Share')}</button>`:''}<label style="align-self:center;font-size:14px"><input type="checkbox" ${D.settings&&D.settings.dmcBg?'checked':''} onchange="dmcBg(this.checked);closeM();card(${i})"> ${t('DMC background')}</label><span id="dst" style="align-self:center"></span>${w?`<a href="https://wa.me/${w}?text=${encodeURIComponent(tx)}" target="_blank"><button class="eb sec">WhatsApp</button></a>`:''}<button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';a4Fit()}
+function dmcBg(on){D.settings=D.settings||{};D.settings.dmcBg=!!on;save()}
+function a4Fit(){document.querySelectorAll('.a4in').forEach(el=>{const bx=el.parentElement,k=Math.min(1,bx.clientWidth/794);el.style.transform=k<1?`scale(${k})`:'';bx.style.height=(el.offsetHeight*k)+'px'})}
+addEventListener('resize',a4Fit);
 function cardsAll(){const A=RG.groups.flatMap(g=>g.L);printDoc(A.map((s,i)=>`<div style="${i<A.length-1?'page-break-after:always;break-after:page':''}">${cardHtml(s)}</div>`).join(''))}
 Object.assign(UR,{"Save image":"تصویر محفوظ کریں","Save PDF":"PDF محفوظ کریں","Share":"شیئر کریں","Print":"پرنٹ","Save all DMC (PDF)":"تمام DMC کی PDF","Working...":"تیار ہو رہا ہے...","Could not save. Use Print instead.":"محفوظ نہیں ہو سکا۔ Print استعمال کریں۔"});
 // --- DMC -> image / PDF (offline, works on mobile) ---
@@ -528,11 +504,11 @@ async function dmcCanvas(html,W0,H0){const W=W0||794,H=H0||1123,sc=innerWidth<70
   const c=document.createElement('canvas');c.width=W*sc;c.height=h*sc;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);return c}finally{host.remove()}}
 const dmcJpg=c=>{const d=atob(c.toDataURL('image/jpeg',.92).split(',')[1]),b=new Uint8Array(d.length);for(let i=0;i<d.length;i++)b[i]=d.charCodeAt(i);return{b,w:c.width,h:c.height}};
 function pdfOf(L,land){const te=new TextEncoder(),P=[],off=[];let len=0;const add=x=>{const b=typeof x=='string'?te.encode(x):x;P.push(b);len+=b.length},obj=(n,x)=>{off[n]=len;add(n+' 0 obj\n'+x+'\nendobj\n')},n=L.length,N=3+n*3,PW=land?841.89:595.28,PH=land?595.28:841.89;
- add('%PDF-1.4\n');obj(1,'<</Type/Catalog/Pages 2 0 R>>');obj(2,`<</Type/Pages/Count ${n}/Kids[${L.map((_,i)=>(3+i*3)+' 0 R').join(' ')}]>>`);
+ add('%PDF-1.4\n%âãÏÓ\n');obj(1,'<</Type/Catalog/Pages 2 0 R>>');obj(2,`<</Type/Pages/Count ${n}/Kids[${L.map((_,i)=>(3+i*3)+' 0 R').join(' ')}]>>`);
  L.forEach((m,i)=>{const p=3+i*3,k=Math.min(PW/m.w,PH/m.h),w=m.w*k,h=m.h*k,cs=`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${((PW-w)/2).toFixed(2)} ${(PH-h).toFixed(2)} cm /Im0 Do Q`;
-  obj(p,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${PW} ${PH}]/Resources<</XObject<</Im0 ${p+2} 0 R>>>>/Contents ${p+1} 0 R>>`);obj(p+1,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
+  obj(p,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${PW} ${PH}]/Resources<</ProcSet[/PDF/ImageC]/XObject<</Im0 ${p+2} 0 R>>>>/Contents ${p+1} 0 R>>`);obj(p+1,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
   off[p+2]=len;add(`${p+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${m.w}/Height ${m.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${m.b.length}>>\nstream\n`);add(m.b);add('\nendstream\nendobj\n')});
- const xr=len;add(`xref\n0 ${N}\n0000000000 65535 f \n`+off.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<</Size ${N}/Root 1 0 R>>\nstartxref\n${xr}\n%%EOF`);return new Blob(P,{type:'application/pdf'})}
+ const id=Array.from({length:32},()=>'0123456789abcdef'[Math.random()*16|0]).join('');obj(N,`<</Title(School Portal)/Producer(School Portal)/CreationDate(D:${new Date().toISOString().replace(/\D/g,'').slice(0,14)})>>`);const xr=len;add(`xref\n0 ${N+1}\n0000000000 65535 f \n`+off.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<</Size ${N+1}/Root 1 0 R/Info ${N} 0 R/ID[<${id}><${id}>]>>\nstartxref\n${xr}\n%%EOF`);return new Blob(P,{type:'application/pdf'})}
 function dmcName(x,id){const b=String(x).replace(/[^\x20-\x7E]+/g,' ').replace(/[^\w-]+/g,'_').replace(/_+/g,'_').replace(/^[_-]+|[_-]+$/g,'');return(b||'DMC')+'-'+id}
 function dmcGet(blob,name,share){if(share&&navigator.canShare){const f=new File([blob],name,{type:blob.type});if(navigator.canShare({files:[f]}))return navigator.share({files:[f],title:name})}
  const fb=new Blob([blob],{type:'application/octet-stream'}),u=URL.createObjectURL(fb),a=document.createElement('a');a.href=u;a.download=name;a.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';document.body.appendChild(a);a.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},180000)}
@@ -541,7 +517,7 @@ async function dmcSave(kind,i,share){const s=RS[i],e=RE,st=document.getElementBy
 async function dmcAllPdf(){const A=RG.groups.flatMap(g=>g.L),L=[],b=document.getElementById('dap'),lab0=b?b.innerHTML:t('Print all DMC (PDF)');
  try{for(let i=0;i<A.length;i++){if(b)b.textContent=t('Working...')+' '+(i+1)+'/'+A.length;L.push(dmcJpg(await dmcCanvas(cardHtml(A[i]))))}
   window.DMCB={blob:pdfOf(L),name:dmcName(RE.name+'-DMC','all')+'.pdf'};
-  modal(`<div id="rc" style="max-height:68vh;overflow:auto">${A.map(s=>`<div style="margin-bottom:12px">${cardHtml(s)}</div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcGet(DMCB.blob,DMCB.name)">${t('Download again')}</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';
+  modal(`<div id="rc" class="a4" style="max-height:68vh;overflow:auto">${A.map(s=>`<div class="a4box" style="margin-bottom:12px"><div class="a4in">${cardHtml(s)}</div></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="dmcGet(DMCB.blob,DMCB.name)">${t('Download again')}</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);$('#md .card').style.maxWidth='820px';a4Fit();
   await new Promise(r=>setTimeout(r,250));await dmcGet(DMCB.blob,DMCB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}
  const b2=document.getElementById('dap');if(b2)b2.innerHTML=lab0}
 function sheetHtml(g,k,n){const e=RE,tot=totOf(e),B='#1F3B33',G='#B4884A';
@@ -589,10 +565,6 @@ function xlLogoSheet(x,has,land){const M=XNS+'spreadsheetml/2006/main';
  if(has)x=x.replace('<row r="1">','<row r="1" ht="56" customHeight="1">').replace('<row r="2">','<row r="2" ht="22" customHeight="1">');
  return x.replace('</mergeCells></worksheet>','</mergeCells><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="'+(land?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="0"/>'+(has?'<drawing r:id="rId1"/>':'')+'</worksheet>')}
 function xlLogoCT(n,L){return L?'<Default Extension="png" ContentType="image/png"/>'+Array.from({length:n},(_,i)=>'<Override PartName="/xl/drawings/drawing'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>').join(''):''}
-function xlLogoFiles(n,L){if(!L)return[];const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',K=Math.min(92/L.w,50/L.h),W=Math.max(1,Math.round(L.w*K)),H=Math.max(1,Math.round(L.h*K)),cx=W*9525,cy=H*9525,
- dr=X+'<xdr:wsDr xmlns:xdr="'+XNS+'drawingml/2006/spreadsheetDrawing" xmlns:a="'+XNS+'drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>95250</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>47625</xdr:rowOff></xdr:from><xdr:ext cx="'+cx+'" cy="'+cy+'"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="'+XNS+'officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>',
- R=(t,g)=>X+'<Relationships xmlns="'+XNS+'package/2006/relationships"><Relationship Id="rId1" Type="'+XNS+'officeDocument/2006/relationships/'+t+'" Target="'+g+'"/></Relationships>',F=[['xl/media/image1.png',L.b]];
- for(let i=1;i<=n;i++)F.push(['xl/worksheets/_rels/sheet'+i+'.xml.rels',R('drawing','../drawings/drawing'+i+'.xml')],['xl/drawings/drawing'+i+'.xml',dr],['xl/drawings/_rels/drawing'+i+'.xml.rels',R('image','../media/image1.png')]);return F}
 async function xlsExport(){const e=RE,tot=totOf(e),used=new Set(),NS='http://schemas.openxmlformats.org/',X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
  const LGO=await xlLogo();
  const S=RG.groups.map(({c,L})=>{let n=(c||'No class').replace(/[\[\]:*?\/\\]/g,'-').slice(0,31),b=n,q=1;while(used.has(n.toLowerCase()))n=b.slice(0,27)+'-'+(++q);used.add(n.toLowerCase());
@@ -670,8 +642,6 @@ ${weak.length?`<h4 style="margin:12px 0 4px">${t('Needs attention')} (${weak.len
 const SUBJ=['Urdu','English','Math','Islamiyat','Science','Social Studies','Computer','Quran'];
 function addSub(x){const i=document.getElementById('exs'),a=i.value.split(/[,،]/).map(z=>z.trim()).filter(Boolean);if(!a.includes(x))a.push(x);i.value=a.join(', ')}
 function editE(id){const e=D.exams.find(x=>x.id==id);modal(`<h4>${t('Edit')}</h4><div class="row"><input id="eEn" value="${esc(e.name)}"><input id="eEc" value="${esc(e.class)}" placeholder="${t('Class')}"><input id="eEm" type="number" value="${e.max}" placeholder="Max" style="width:80px"><input id="eEp" type="number" value="${e.pass||PASSP}" placeholder="Pass %" style="width:80px"></div><div class="row"><input id="eEs" style="width:100%" value="${esc(e.subjects.map((x,j)=>x+':'+maxOf(e,j)).join(', '))}"></div><small>Urdu:50, English:100</small><div class="row" style="margin-top:8px"><button onclick="saveE(${id})">${t('Save')}</button><button class="o" onclick="closeM()">${t('Close')}</button></div>`)}
-function saveE(id){const e=D.exams.find(x=>x.id==id),n=eEn.value.trim(),m=+eEm.value;if(!n||!(m>0)){alert(t('Name required'));return}e.name=n;e.class=eEc.value.trim();e.max=m;save();closeM();boot()}
-async function copyE(id){const e=D.exams.find(x=>x.id==id),c=await askVal('Class for the copy','');if(!c)return;await api('exams',{name:e.name,class:String(c).trim(),subjects:e.subjects.join(','),max:e.max});boot()}
 {const x0=V.exams;V.exams=async function(){await x0();const r=app.querySelector('.card .row');if(r)r.insertAdjacentHTML('afterend',`<div class="row"><small>${t('Quick subjects')}:</small>${SUBJ.map(x=>`<button class="o sm" data-s="${x}" onclick="addSub(this.dataset.s)">${x}</button>`).join('')}</div>`);
  app.querySelectorAll('.card table tr').forEach((tr,i)=>{const e=D.exams[i-1],c=tr.lastElementChild;if(i&&e&&c)c.insertAdjacentHTML('beforeend',` <button class="o sm" onclick="editE(${e.id})">${t('Edit')}</button> <button class="o sm" onclick="copyE(${e.id})">${t('Copy')}</button>`)})}}
 // ===== Per-subject max marks: write subjects like  Urdu:50, English:100, Math  (no number = default max) =====
@@ -681,7 +651,6 @@ function totOf(e){return e.subjects.reduce((a,x,j)=>a+maxOf(e,j),0)}
 function parseSubj(str,def){const L=str.split(/[,،]/).map(z=>z.trim()).filter(Boolean).map(z=>{const m=z.match(/^(.*?)\s*[:=]\s*(\d+(?:\.\d+)?)$/);return m&&m[1]?[m[1].trim(),+m[2]]:[z,0]}),d=+def||100;return{names:L.map(x=>x[0]),maxes:L.map(x=>x[1]||d),d}}
 async function mkExam(name,cls,P){await api('exams',{name,class:cls,subjects:P.names.join(','),max:P.d});const e=D.exams[D.exams.length-1];if(e&&P.maxes.some(x=>x!=P.d)){e.maxes=P.maxes;save()}}
 async function addE(){await mkExam(exn.value,exc.value,parseSubj(exs.value,exm.value));boot()}
-async function copyE(id){const e=D.exams.find(x=>x.id==id),c=await askVal('Class for the copy','');if(!c)return;await mkExam(e.name,String(c).trim(),{names:e.subjects,maxes:e.subjects.map((x,j)=>maxOf(e,j)),d:e.max});boot()}
 function saveE(id){const e=D.exams.find(x=>x.id==id),n=eEn.value.trim(),m=+eEm.value,P=parseSubj(eEs.value,m);if(!n||!(m>0)){alert(t('Name required'));return}
  if(P.names.length!=e.subjects.length){alert(t('Subjects count cannot change'));return}
  e.name=n;e.class=eEc.value.trim();e.max=m;e.pass=+(document.getElementById('eEp')||{}).value||PASSP;e.subjects=P.names;if(P.maxes.some(x=>x!=m))e.maxes=P.maxes;else delete e.maxes;save();closeM();boot()}
@@ -724,7 +693,7 @@ function msub(j){document.querySelectorAll('#mt tr').forEach(r=>[...r.children].
  c.querySelectorAll('button').forEach(b=>{const o=b.getAttribute('onclick')||'';if(o.startsWith('saveM')){b.className='eb pri';b.insertAdjacentHTML('afterbegin',ICO('save'))}else if(o.startsWith('resu')){b.className='eb sec';b.insertAdjacentHTML('afterbegin',ICO('list'))}});
  if(e.locked){c.querySelectorAll('#mt input').forEach(i=>i.disabled=true);const v=c.querySelector('button[onclick^="saveM"]');if(v)v.remove()}window.scrollTo(0,0)}}
 {const r3=resu;resu=async function(id){await r3(id);const l=document.getElementById('xl');if(l)l.style.display='none';const d=document.getElementById('dap'),row=d&&d.parentElement;
- if(row)row.outerHTML=`<div class="eg" style="margin:8px 0 12px">${eb('Back','back','ghost','xBack()')}<button class="eb pri" id="dap" onclick="dmcAllPdf()">${ICO('pdf')}${t('Print all DMC (PDF)')}</button><button class="eb sec" id="shp" onclick="sheetPdf()">${t('Print class marksheet (PDF + Excel)')}</button></div>`;
+ if(row)row.outerHTML=`<div class="eg" style="margin:8px 0 12px">${eb('Back','back','ghost','xBack()')}<button class="eb pri" id="dap" onclick="dmcAllPdf()">${ICO('pdf')}${t('Print all DMC (PDF)')}</button><button class="eb sec" id="shp" onclick="sheetPdf()">${t('Print class marksheet (PDF + Excel)')}</button><label style="align-self:center;font-size:14px"><input type="checkbox" ${D.settings&&D.settings.dmcBg?'checked':''} onchange="dmcBg(this.checked)"> ${t('DMC background')}</label></div>`;
  document.querySelectorAll('#mk td button').forEach(b=>{if(/card\(/.test(b.getAttribute('onclick')||'')){b.className='eb sec sm';b.textContent='DMC'}});window.scrollTo(0,0)}}
 // ===== Teacher portal v2: My Class (scoped access), auto salary + PDF slip, class diary =====
 Object.assign(UR,{"My Class":"میری جماعت","Diary":"ڈائری","Class diary":"کلاس ڈائری","Lesson covered":"آج کا سبق","Lesson":"سبق","Homework":"گھر کا کام","Auto salary":"خودکار تنخواہ","Deduction":"کٹوتی","Net salary":"خالص تنخواہ","Payable":"قابلِ ادائیگی","Office copy":"دفتر کی کاپی","Teacher copy":"استاد کی کاپی","Per day":"فی دن","Accountant sign":"اکاؤنٹنٹ کے دستخط","Teacher sign":"استاد کے دستخط","Teacher login & classes":"استاد کا لاگ اِن اور جماعتیں","Login user":"لاگ اِن یوزر","Classes":"جماعتیں","Salary days in month":"مہینے کے تنخواہ والے دن","Free leaves":"بغیر کٹوتی چھٹیاں","Today":"آج","Not marked":"درج نہیں","Take attendance":"حاضری لگائیں","Today's periods":"آج کے پیریڈ","My attendance this month":"اس مہینے میری حاضری","Pay":"ادا کریں","No periods today":"آج آپ کا کوئی پیریڈ نہیں","Admin has not assigned your classes yet":"ایڈمن نے ابھی آپ کی جماعتیں مقرر نہیں کیں","No diary yet":"ابھی کوئی ڈائری نہیں","Period":"پیریڈ","Text":"ٹیکسٹ","Save settings":"سیٹنگ محفوظ کریں","none":"کوئی نہیں","Share day diary":"دن کی ڈائری شیئر کریں"});
@@ -788,7 +757,6 @@ async function saveTL(i){await api('tlink',{id:TL[i].id,uname:document.getElemen
 function autoSal(){const m=window.tm||month(),c=salCfg(),box=document.getElementById('asl');if(!box)return;
  box.innerHTML=`<div class="card"><h4>${t('Auto salary')} - ${m}</h4>
  <table><tr><th>${t('Name')}</th><th>P/A/L</th><th>${t('Net salary')}</th><th>${t('Payable')}</th></tr>`+TL.map((x,i)=>{const s=salCalc(x);return`<tr><td>${esc(x.name)}<br><small>${x.salary}</small></td><td>${x.pa||0}/${x.ab||0}/${x.lv||0}</td><td>${s.net}</td><td class="${s.pay>0?'due':'ok'}">${s.pay}</td></tr><tr><td colspan="4" style="padding-bottom:10px"><button class="sm" ${s.pay>0?'':'disabled'} onclick="paySal(${i})">${t('Pay')} ${s.pay>0?s.pay:''}</button> <button class="o sm" onclick="slip(${i})">${t('Slip')}</button></td></tr>`}).join('')+`</table></div>`;box.scrollIntoView()}
-function saveSalCfg(){D.settings=D.settings||{};D.settings.tsal={days:+document.getElementById('sld').value||30,free:Math.max(0,+document.getElementById('slf').value||0)};save();window._asl=1;boot()}
 async function paySal(i){const x=TL[i],m=window.tm||month(),s=salCalc(x);if(!(s.pay>0))return;if(!await ask('Pay '+s.pay+' to '+x.name+'?'))return;await api('tpay',{teacher_id:x.id,month:m,type:'salary',amount:s.pay});window._asl=1;boot()}
 {const tp0=tpay;tpay=async function(i,ty){if(ty!='salary')return tp0(i,ty);const x=TL[i],m=window.tm||month(),s=salCalc(x),a=await askVal(x.name+' - '+t('Salary amount'),Math.max(0,s.pay));if(!a||!(+a>0))return;await api('tpay',{teacher_id:x.id,month:m,type:ty,amount:a});boot()}}
 // ---- salary slip (PDF / print / text) ----
@@ -880,21 +848,6 @@ const ttSubs=c=>{ttCfg();return D.ttsubs[c]=D.ttsubs[c]||[]};
 const ttTeachers=()=>(D.teachers||[]).filter(x=>x.active).map(x=>x.name).sort(natCmp);
 const ttClash=(cl,d,p,tn)=>{if(!cn(tn))return null;const e=D.tt.find(x=>x.class!=cl&&x.day==d&&+x.period==+p&&cn(x.teacher)==cn(tn));return e?e.class:null};
 const ttOpts=(arr,v,blank)=>(blank?`<option value="">${esc(blank)}</option>`:'')+arr.map(x=>`<option value="${esc(x)}"${x==v?' selected':''}>${esc(x)}</option>`).join('');
-function ttCell(el){const d=el.dataset.d,p=+el.dataset.p,cl=el.dataset.c||TTC,e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p)||{},SB=ttSubs(cl),names=SB.map(x=>x.s);if(e.subject&&!names.includes(e.subject))names.push(e.subject);
- const tn=ttTeachers();if(e.teacher&&!tn.includes(e.teacher))tn.push(e.teacher);
- const dg=dlgBox(`<h4 style="margin:0 0 8px">${esc(cl)} · ${d} · ${t('Period')} ${p}</h4><div class="row"><select id="dsb" style="width:100%">${ttOpts(names,e.subject||'',t('Subject'))}<option value="__o">${t('Other…')}</option></select></div><div class="row"><input id="dso" placeholder="${t('Subject')}" style="display:none;width:100%"></div><div class="row"><select id="dtc" style="width:100%">${ttOpts(tn,e.teacher||'',t('Teacher'))}<option value="__o">${t('Other…')}</option></select></div><div class="row"><input id="dto" placeholder="${t('Teacher')}" style="display:none;width:100%"></div><div id="dw" style="color:#B3261E;min-height:18px;font-size:13px"></div><div class="row"><button class="ok">${t('Save')}</button>${e.id?`<button class="o r clr">${t('Clear')}</button>`:''}<button class="o no">${t('Cancel')}</button></div>`);
- const sb=dg.querySelector('#dsb'),so=dg.querySelector('#dso'),tc=dg.querySelector('#dtc'),to=dg.querySelector('#dto'),w=dg.querySelector('#dw'),tvl=()=>tc.value=='__o'?to.value.trim():tc.value;
- const chk=()=>{to.style.display=tc.value=='__o'?'':'none';const x=ttClash(cl,d,p,tvl());w.textContent=x?`⚠ ${tvl()} — ${t('already in class')} ${x}`:''};
- sb.onchange=()=>{so.style.display=sb.value=='__o'?'':'none';const f=SB.find(z=>z.s==sb.value);if(f&&f.t&&[...tc.options].some(o=>o.value==f.t))tc.value=f.t;chk()};
- tc.onchange=chk;to.oninput=chk;chk();
- dg.querySelector('.no').onclick=()=>dg.remove();
- const cb=dg.querySelector('.clr');if(cb)cb.onclick=()=>{D.tt=D.tt.filter(z=>!(z.class==cl&&z.day==d&&+z.period==p));save();dg.remove();ttRef()};
- dg.querySelector('.ok').onclick=async()=>{const s=sb.value=='__o'?so.value.trim():sb.value;if(!s){alert(t('Subject required'));return}
-  const tv=tvl(),x=ttClash(cl,d,p,tv);if(x&&!await ask(`${tv} ${t('is already teaching in class')} ${x} ${t('at this time. Save anyway?')}`))return;
-  D.tt=D.tt.filter(z=>!(z.class==cl&&z.day==d&&+z.period==p));D.tt.push({id:D.seq++,class:cl,day:d,period:p,subject:s,teacher:tv});
-  const f=SB.find(z=>z.s==s);if(!f)SB.push({s,t:tv});else if(!f.t&&tv)f.t=tv;
-  save();dg.remove();ttRef()}}
-async function ttRef(){const y=window.scrollY,g=document.getElementById('ttg'),x=g?g.parentNode.scrollLeft:0;await boot();window.scrollTo(0,y);const g2=document.getElementById('ttg');if(g2)g2.parentNode.scrollLeft=x}
 function ttPer(n){const c=ttCfg();c.periods=Math.max(1,Math.min(12,c.periods+n));save();boot()}
 function ttDay(d){const c=ttCfg();c.days=c.days.includes(d)?c.days.filter(x=>x!=d):c.days.concat(d);c.days=TTD.filter(x=>c.days.includes(x));save();boot()}
 function ttSubAdd(){const n=document.getElementById('tsn').value.trim(),tv=document.getElementById('tst').value;if(!n)return;const SB=ttSubs(TTC),f=SB.find(x=>cn(x.s)==cn(n));if(f)f.t=tv||f.t;else SB.push({s:n,t:tv});save();boot()}
@@ -911,11 +864,11 @@ function ttAuto(){const c=ttCfg(),np=ttNP(),s=document.getElementById('tms').val
 function ttTimeSave(){const c=ttCfg();c.times={};for(let p=1;p<=12;p++){const i=document.getElementById('tmp'+p);if(i&&i.value.trim())c.times[p]=i.value.trim()}
  c.brk={after:+document.getElementById('tmb').value||0,time:document.getElementById('tmbt').value.trim()};save();toast('Saved');boot()}
 
-Object.assign(UR,{"Add class":"جماعت شامل کریں","Setup":"سیٹ اپ","Whole week":"پورا ہفتہ","Fill whole week":"پورا ہفتہ خود بھریں","Fill this day":"یہ دن خود بھریں","Copy subjects to classes with no subjects":"بغیر مضامین والی جماعتوں میں کاپی کریں","Add classes and subjects in Setup first":"پہلے سیٹ اپ میں جماعتیں اور مضامین شامل کریں","Setup tip":"پہلے سیٹ اپ میں گھنٹے، اوقات اور ہر جماعت کے مضامین اور استاد لکھیں، پھر ماسٹر میں خود بھر دیں۔","Print / PDF":"پرنٹ / PDF","Timetable":"نظام الاوقات"});
+Object.assign(UR,{"DMC background":"DMC میں بیک گراؤنڈ","Open PDF":"PDF کھولیں","Add class":"جماعت شامل کریں","Setup":"سیٹ اپ","Whole week":"پورا ہفتہ","Fill whole week":"پورا ہفتہ خود بھریں","Fill this day":"یہ دن خود بھریں","Copy subjects to classes with no subjects":"بغیر مضامین والی جماعتوں میں کاپی کریں","Add classes and subjects in Setup first":"پہلے سیٹ اپ میں جماعتیں اور مضامین شامل کریں","Setup tip":"پہلے سیٹ اپ میں گھنٹے، اوقات اور ہر جماعت کے مضامین اور استاد لکھیں، پھر ماسٹر میں خود بھر دیں۔","Print / PDF":"پرنٹ / PDF","Timetable":"نظام الاوقات"});
 const TTL={en:{Period:'Period',Class:'Class',Break:'Break',Day:'Day',TT:'Timetable',M:'Master timetable',W:'Whole week',days:{Sat:'Saturday',Sun:'Sunday',Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'}},
  ur:{Period:'پیریڈ',Class:'جماعت',Break:'وقفہ',Day:'دن',TT:'نظام الاوقات',M:'ماسٹر نظام الاوقات',W:'پورا ہفتہ',days:{Sat:'ہفتہ',Sun:'اتوار',Mon:'پیر',Tue:'منگل',Wed:'بدھ',Thu:'جمعرات',Fri:'جمعہ'}},
  ar:{Period:'الحصة',Class:'الصف',Break:'استراحة',Day:'اليوم',TT:'الجدول الدراسي',M:'الجدول العام للمدرسة',W:'الأسبوع كاملاً',days:{Sat:'السبت',Sun:'الأحد',Mon:'الاثنين',Tue:'الثلاثاء',Wed:'الأربعاء',Thu:'الخميس',Fri:'الجمعة'}}};
-let TTLG=localStorage.ttlang||'en',TTM='master',TTDAY='';
+let TTLG=localStorage.ttlang||'en',TTM='master',TTDAY='',ttTN=[];
 const ttW=k=>TTL[TTLG][k],ttD=d=>TTL[TTLG].days[d],ttN=x=>TTLG=='ar'?String(x).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]):String(x);
 const ttFont="'Noto Naskh Arabic','Noto Nastaliq Urdu','Segoe UI',Tahoma,Arial,sans-serif";
 const ttAllCls=()=>[...new Set([...(D.students||[]).filter(s=>s.active).map(s=>s.class),...(D.tt||[]).map(x=>x.class),...(D.ttcls||[])].filter(Boolean))].sort(natCmp);
@@ -927,26 +880,41 @@ function ttToggle(){const a=ROLE=='admin',b=(k,l)=>`<button class="${TTM==k?'on'
 function ttTitle(){return TTM=='class'?`${ttW('TT')} — ${ttW('Class')} ${esc(TTC)}`:`${ttW('M')} — ${ttD(TTDAY)}`}
 function ttWrap(title,inner,id){const lg=D.settings&&D.settings.logo,nm=brandName();
  return`<div ${id?`id="${id}" `:''}dir="${TTLG=='en'?'ltr':'rtl'}" style="position:relative;padding:14px 16px;background:#fff;color:#111;font-family:${ttFont}">${lg?`<img src="${lg}" style="position:absolute;left:50%;top:50%;width:62%;max-height:80%;object-fit:contain;transform:translate(-50%,-50%);opacity:.16">`:''}<div style="position:relative;text-align:center;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:center;gap:12px">${lg?`<img src="${lg}" style="height:54px;max-width:120px;object-fit:contain">`:''}<div style="font-size:22px;font-weight:700">${esc(nm)}</div></div><div style="font-size:15px;margin-top:3px">${title}</div></div><div style="position:relative">${inner}</div></div>`}
-function ttGrid(cls,days,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;',multi=days.length>1,busy={};
- if(edit)D.tt.forEach(e=>{if(cn(e.teacher)){const k=e.day+'|'+e.period+'|'+cn(e.teacher);busy[k]=(busy[k]||0)+1}});
+function ttCellH(cl,d,p,e,edit,fmt){
+ if(!edit)return e?`<b>${esc(e.subject)}</b><br>${fmt=='m'?`<i style="font-weight:400;font-size:12px">${esc(e.teacher)}</i>`:`<small>${esc(e.teacher)}</small>`}`:'';
+ const names=ttSubs(cl).map(x=>x.s);if(e&&e.subject&&!names.includes(e.subject))names.push(e.subject);
+ const tn=ttTN.slice();if(e&&e.teacher&&!tn.includes(e.teacher))tn.push(e.teacher);
+ const st='width:100%;border:0;background:transparent;font:inherit;color:inherit;text-align:center;text-align-last:center;-webkit-appearance:none;appearance:none;padding:2px 0;cursor:pointer;';
+ return`<select onchange="ttSet(this,'s')" style="${st}font-weight:700;${e?'':'opacity:.35;'}"><option value="">＋</option>${names.map(x=>`<option value="${esc(x)}"${e&&e.subject==x?' selected':''}>${esc(x)}</option>`).join('')}<option value="__n">${t('Other…')}</option></select><select onchange="ttSet(this,'t')" style="${st}font-style:italic;font-size:12px;${e?'':'display:none;'}">${ttOpts(tn,e&&e.teacher||'','—')}</select>`}
+function ttGrid(cls,days,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;',multi=days.length>1;
  let head=`<tr><th style="${hs}">${ttW('Class')}</th>${multi?`<th style="${hs}">${ttW('Day')}</th>`:''}`;
  for(let p=1;p<=np;p++){head+=`<th style="${hs}">${ttN(p)}${tm[p]?`<br><small>${esc(ttN(tm[p]))}</small>`:''}</th>`;if(brk&&brk.after==p)head+=`<th style="${bg}font-weight:700"><small>${ttW('Break')}${brk.time?`<br>${esc(ttN(brk.time))}`:''}</small></th>`}
  head+='</tr>';
  const blocks=cls.map(cl=>days.map((d,i)=>{let r='<tr>';if(i==0)r+=`<td rowspan="${days.length}" style="${hs}">${esc(cl)}</td>`;if(multi)r+=`<td style="${hs}">${ttD(d)}</td>`;
-  for(let p=1;p<=np;p++){const e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p),cx=edit&&e&&cn(e.teacher)&&busy[d+'|'+p+'|'+cn(e.teacher)]>1;
-   r+=`<td${edit?` data-c="${esc(cl)}" data-d="${d}" data-p="${p}" onclick="ttCell(this)" style="cursor:pointer;`:` style="`}${bs}min-width:64px;${cx?'background:#FBE9E7;':''}">${e?`<b>${esc(e.subject)}</b><br><small>${esc(e.teacher)}</small>`:(edit?'<span style="opacity:.3">+</span>':'')}</td>`;
+  for(let p=1;p<=np;p++){const e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p);
+   r+=`<td${edit?` data-c="${esc(cl)}" data-d="${d}" data-p="${p}"`:''} style="${bs}min-width:${edit?84:64}px">${ttCellH(cl,d,p,e,edit,'')}</td>`;
    if(brk&&brk.after==p)r+=`<td style="${bg}"></td>`}
   return r+'</tr>'}).join(''));
  return{head,blocks}}
-function ttMTable(cls,dy,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;',busy={};
- if(edit)D.tt.forEach(e=>{if(e.day==dy&&cn(e.teacher)){const k=e.period+'|'+cn(e.teacher);busy[k]=(busy[k]||0)+1}});
+function ttMTable(cls,dy,np,edit){const c=ttCfg(),tm=c.times||{},brk=c.brk&&c.brk.after>0&&c.brk.after<=np?c.brk:null,bs='border:1px solid #555;padding:4px;text-align:center;font-size:13px;',hs=bs+'background:#e9efe9;font-weight:700;',bg=bs+'background:#f1f1f1;';
  let r=`<tr><th style="${hs}">${ttW('Period')}</th>${cls.map(cl=>`<th style="${hs}">${esc(cl)}</th>`).join('')}</tr>`;
- for(let p=1;p<=np;p++){r+=`<tr><td style="${hs}">${ttN(p)}${tm[p]?`<br><small>${esc(ttN(tm[p]))}</small>`:''}</td>`+cls.map(cl=>{const e=D.tt.find(x=>x.class==cl&&x.day==dy&&+x.period==p),cx=edit&&e&&cn(e.teacher)&&busy[p+'|'+cn(e.teacher)]>1;
-   return`<td${edit?` data-c="${esc(cl)}" data-d="${dy}" data-p="${p}" onclick="ttCell(this)" style="cursor:pointer;`:` style="`}${bs}min-width:84px;${cx?'background:#FBE9E7;':''}">${e?`<b>${esc(e.subject)}</b><br><i style="font-weight:400;font-size:12px">${esc(e.teacher)}</i>`:(edit?'<span style="opacity:.3">+</span>':'')}</td>`}).join('')+'</tr>';
+ for(let p=1;p<=np;p++){r+=`<tr><td style="${hs}">${ttN(p)}${tm[p]?`<br><small>${esc(ttN(tm[p]))}</small>`:''}</td>`+cls.map(cl=>{const e=D.tt.find(x=>x.class==cl&&x.day==dy&&+x.period==p);
+   return`<td${edit?` data-c="${esc(cl)}" data-d="${dy}" data-p="${p}"`:''} style="${bs}min-width:${edit?96:84}px">${ttCellH(cl,dy,p,e,edit,'m')}</td>`}).join('')+'</tr>';
   if(brk&&brk.after==p)r+=`<tr><td colspan="${cls.length+1}" style="${bg}"><small>${ttW('Break')} ${esc(ttN(brk.time||''))}</small></td></tr>`}
  return`<table style="border-collapse:collapse;width:100%">${r}</table>`}
 function ttTable(edit){const np=ttNP();if(TTM=='master')return ttMTable(ttAllCls(),TTDAY,np,edit);const g=ttGrid([TTC],ttDays(),np,edit);return`<table style="border-collapse:collapse;width:100%">${g.head}${g.blocks.join('')}</table>`}
-V.timetable=async function(){const adm=ROLE=='admin',c=ttCfg(),cls=ttAllCls(),days=ttDays(),np=ttNP();
+function ttHi(){document.querySelectorAll('#ttg td[data-c]').forEach(td=>{const cl=td.dataset.c,d=td.dataset.d,p=+td.dataset.p,e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p);td.style.background=e&&e.teacher&&ttClash(cl,d,p,e.teacher)?'#FBE9E7':''})}
+function ttSet(el,w){const td=el.closest('td'),cl=td.dataset.c,d=td.dataset.d,p=+td.dataset.p,[sb,tc]=td.querySelectorAll('select');let e=D.tt.find(x=>x.class==cl&&x.day==d&&+x.period==p);
+ if(w=='s'){let v=sb.value;
+  if(v=='__n'){v=(prompt(t('Subject'))||'').trim();if(!v){sb.value=e?e.subject:'';return}
+   if(![...sb.options].some(o=>o.value==v))sb.add(new Option(v,v),sb.options[sb.options.length-1]);sb.value=v}
+  if(!v){D.tt=D.tt.filter(x=>x!==e);e=null;tc.style.display='none';tc.value='';sb.style.opacity=.35}
+  else{const SB=ttSubs(cl);let f=SB.find(x=>x.s==v);if(!f){f={s:v,t:''};SB.push(f)}const tv=f.t||'';
+   if(!e){e={id:D.seq++,class:cl,day:d,period:p,subject:v,teacher:''};D.tt.push(e)}
+   e.subject=v;e.teacher=tv;if(tv&&![...tc.options].some(o=>o.value==tv))tc.add(new Option(tv,tv));tc.value=tv;tc.style.display='';sb.style.opacity=1}}
+ else{if(!e){tc.value='';return}e.teacher=tc.value;const f=ttSubs(cl).find(x=>x.s==e.subject);if(f&&!f.t&&tc.value)f.t=tc.value}
+ save();ttHi();if(e&&e.teacher&&ttClash(cl,d,p,e.teacher))toast('Teacher clash')}
+V.timetable=async function(){const adm=ROLE=='admin',c=ttCfg(),cls=ttAllCls(),days=ttDays(),np=ttNP();ttTN=ttTeachers();
  if(!adm&&TTM=='setup')TTM='master';if(!TTC||!cls.includes(TTC))TTC=cls[0]||'';if(!days.includes(TTDAY))TTDAY=days[0]||'Sat';
  const chips=`<div class="card"><div class="row">${cls.map(x=>`<button class="${x==TTC?'on':'o'} sm" data-c="${esc(x)}" onclick="TTC=this.dataset.c;boot()">${esc(x)}</button>`).join('')}</div></div>`;
  let h=ttToggle();
@@ -960,7 +928,7 @@ V.timetable=async function(){const adm=ROLE=='admin',c=ttCfg(),cls=ttAllCls(),da
   if(cls.length){
    h+=`<div class="card">${adm?`<small>${t('Tap a box to fill it')}</small>`:''}<div style="overflow-x:auto">${ttWrap(ttTitle(),ttTable(adm),'ttg')}</div><div class="row"><button class="o" onclick="ttPdf()">${t('Print / PDF')}</button></div></div>`}
   else h+=`<div class="card">${t('Add classes and subjects in Setup first')}</div>`;}
- app.innerHTML=h};
+ app.innerHTML=h;ttHi()};
 async function ttGen(){if(!await ask('Fill empty boxes of the whole week automatically?'))return;const ds=ttDays(),cls=ttAllCls();
  if(!cls.some(x=>ttSubs(x).length)){alert(t('Add classes and subjects in Setup first'));return}
  const np=ttNP();let n=0;
@@ -976,13 +944,154 @@ function ttPages(){const np=ttNP();if(TTM=='master'){const cls=ttAllCls(),P=[];f
 async function ttPdf(){try{if(!ttAllCls().length)return;const pages=ttPages();toast('Working...');const J=[],prev=[];
   for(const h of pages){const c=await dmcCanvas(h,1123,794);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.85))}
   window.TTB={blob:pdfOf(J,true),name:dmcName(TTM=='class'?'Timetable-'+TTC:'Master-Timetable-'+TTDAY,'tt')+'.pdf',prev};
-  modal(`<div id="rc" style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="overflow-x:auto;margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;min-width:720px;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="ttPrintImg()">${t('Print')}</button><button class="eb sec" onclick="dmcGet(TTB.blob,TTB.name)">${t('Download again')} (PDF)</button><span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);
+  modal(`<div id="rc" style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="overflow-x:auto;margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;min-width:720px;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="ttPrintImg()">${t('Print')}</button><button class="eb sec" onclick="dmcGet(TTB.blob,TTB.name)">${t('Download again')} (PDF)</button><button class="eb sec" onclick="ttOpen()">${t('Open PDF')}</button>${navigator.canShare?`<button class="eb sec" onclick="dmcGet(TTB.blob,TTB.name,1)">${t('Share')}</button>`:''}<span id="dst" style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);
   $('#md .card').style.maxWidth='820px';await new Promise(r=>setTimeout(r,250));await dmcGet(TTB.blob,TTB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}}
+function ttOpen(){const u=URL.createObjectURL(new Blob([TTB.blob],{type:'application/pdf'}));if(!window.open(u,'_blank'))location.href=u;setTimeout(()=>URL.revokeObjectURL(u),180000)}
 async function ttPrintImg(){await Promise.all(TTB.prev.map(u=>{const i=new Image();i.src=u;return i.decode?i.decode().catch(()=>0):0}));
  printDoc(TTB.prev.map((u,i)=>`<img src="${u}" style="display:block;margin:0 auto;max-width:100%;max-height:186mm;${i?'break-before:page;page-break-before:always;':''}">`).join(''),true)}
 
 async function ttAllDays(){const c=ttCfg(),dy=TTDAY,targets=c.days.filter(d=>d!=dy),src=D.tt.filter(x=>x.day==dy);if(!src.length||!targets.length)return;
  if(!await ask('Copy this day to all other days (all classes)?'))return;
  D.tt=D.tt.filter(x=>!targets.includes(x.day));for(const d of targets)for(const e of src)D.tt.push({id:D.seq++,class:e.class,day:d,period:+e.period,subject:e.subject,teacher:e.teacher||''});save();toast('Copied');boot()}
+// ===== Papers: question paper maker (A4, logo + school name, 3 languages, answer key, question bank) =====
+const PT=['mcq','short','long','fill','tf','match','custom'];
+const PL={en:{cls:'Class',sub:'Subject',time:'Time',date:'Date',tm:'Total Marks',name:'Name',roll:'Roll No.',key:'Answer Key',page:'Page',att:'Attempt any {n} of {m} questions.',lab:['a','b','c','d','e','f','g','h','i','j'],colA:'A',colB:'B',
+  ty:{mcq:['MCQs','Choose the correct option.'],short:['Short Questions','Answer the following questions briefly.'],long:['Long Questions','Answer the following questions in detail.'],fill:['Fill in the Blanks','Fill in the blanks.'],tf:['True / False','Write True or False.'],match:['Match the Columns','Match column A with column B.'],custom:['Section','']}},
+ ur:{cls:'جماعت',sub:'مضمون',time:'وقت',date:'تاریخ',tm:'کل نمبر',name:'نام',roll:'رول نمبر',key:'جوابات کی کنجی',page:'صفحہ',att:'{m} میں سے کوئی {n} سوالات حل کریں۔',lab:['الف','ب','ج','د','ہ','و','ز','ح','ط','ی'],colA:'الف',colB:'ب',
+  ty:{mcq:['کثیر الانتخابی سوالات','درست جواب کا انتخاب کریں۔'],short:['مختصر سوالات','مندرجہ ذیل سوالات کے مختصر جوابات لکھیں۔'],long:['تفصیلی سوالات','مندرجہ ذیل سوالات کے تفصیلی جوابات لکھیں۔'],fill:['خالی جگہیں پر کریں','خالی جگہیں پر کریں۔'],tf:['درست / غلط','درست یا غلط لکھیں۔'],match:['جوڑے ملائیں','کالم الف کو کالم ب سے ملائیں۔'],custom:['حصہ','']}},
+ ar:{cls:'الصف',sub:'المادة',time:'الزمن',date:'التاريخ',tm:'الدرجة الكلية',name:'الاسم',roll:'رقم الجلوس',key:'مفتاح الإجابة',page:'صفحة',att:'أجب عن {n} أسئلة فقط من أصل {m}.',lab:['أ','ب','ج','د','هـ','و','ز','ح','ط','ي'],colA:'أ',colB:'ب',
+  ty:{mcq:['أسئلة الاختيار من متعدد','اختر الإجابة الصحيحة.'],short:['أسئلة قصيرة','أجب عن الأسئلة التالية باختصار.'],long:['أسئلة مقالية','أجب عن الأسئلة التالية بالتفصيل.'],fill:['أكمل الفراغات','أكمل الفراغات.'],tf:['صح / خطأ','اكتب صح أو خطأ.'],match:['صل بين العمودين','صل العمود (أ) بالعمود (ب).'],custom:['القسم','']}}};
+PT.forEach(x=>{UR[PL.en.ty[x][0]]=PL.ur.ty[x][0]});
+Object.assign(UR,{"Papers":"پیپر","New paper":"نیا پیپر","Exam name":"امتحان کا نام","Total marks":"کل نمبر","Marks each":"ہر سوال کے نمبر","Attempt":"حل کرنے ہیں","From bank":"ذخیرے سے","Save to bank":"ذخیرے میں رکھیں","Preview / Print PDF":"دیکھیں / پرنٹ PDF","Answer key":"جوابات کی کنجی","Add section":"حصہ شامل کریں","Name and roll lines":"نام اور رول نمبر کی لائن","Logo background":"پیچھے لوگو","Add selected":"منتخب شامل کریں","Marks do not match the total you entered":"نمبر آپ کے لکھے کل نمبروں سے نہیں ملتے","Delete this paper?":"یہ پیپر حذف کریں؟","Nothing saved in the bank for this class and subject":"اس جماعت اور مضمون کے لیے ذخیرے میں کچھ نہیں","Edit":"تبدیل کریں","Q":"سوال","marks":"نمبر","Paper language":"پیپر کی زبان","Instruction":"ہدایت","Section title":"حصے کا عنوان","Duration":"دورانیہ","Show answers":"جوابات","No papers yet":"ابھی کوئی پیپر نہیں","Writing size":"لکھائی کا سائز","Blank options":"خالی آپشن (صرف الف ب ج د)","Options":"آپشن","Add row":"لائن شامل کریں","Write the right answer in B on the same line. B is mixed automatically in the printed paper.":"ب میں اسی لائن پر صحیح جواب لکھیں۔ پرنٹ میں ب خود بخود ملا دیا جاتا ہے۔"});
+{const a=TABS.admin;delete TABS.admin;TABS.papers=['Papers',['admin','teacher']];TABS.admin=a}
+let PE=null;
+const pN=(x,lg)=>lg=='ar'?String(x).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]):String(x);
+const pNew=()=>({id:0,title:'',class:'',subject:'',time:'',date:'',total:'',lang:'en',fs:14,bg:false,nr:true,secs:[]});
+const pSec=ty=>({type:ty,title:'',inst:'',mpq:'',att:'',text:''});
+function pParse(sc){const lines=(sc.text||'').split('\n').map(x=>x.trim()),out=[];
+ if(sc.type=='mcq'&&!sc.blank){let b=[];const fl=()=>{if(b.length){const o=[];let ans=-1;b.slice(1).forEach(l=>{if(l[0]=='*'){ans=o.length;l=l.slice(1).trim()}o.push(l)});out.push({q:b[0],o,ans,raw:b.join('\n')})}b=[]};lines.forEach(l=>l?b.push(l):fl());fl()}
+ else lines.filter(Boolean).forEach(l=>{if(sc.type=='match'){const p=l.split('|').map(x=>x.trim());out.push({q:p[0]||'',r:p[1]||'',raw:l});return}
+  const k=l.indexOf('=>');out.push(k<0?{q:l,a:'',raw:l}:{q:l.slice(0,k).trim(),a:l.slice(k+2).trim(),raw:l})});
+ return out}
+const pUsed=sc=>{const n=pParse(sc).length,a=+sc.att||0;return a&&a<n?a:n};
+const pMarks=sc=>(+sc.mpq||0)*pUsed(sc);
+const pTotal=P=>P.secs.reduce((s,x)=>s+pMarks(x),0);
+function pBlocks(P,key){const lg=P.lang||'en',W=PL[lg],FS=+P.fs||14,n=x=>pN(x,lg),H=[],nm=D.settings&&D.settings.school||'',LG=D.settings&&D.settings.logo,bd='border:1px solid #444;padding:4px 8px;',tot=P.total||pTotal(P);
+ const cell=(l,v,cs)=>`<td${cs?` colspan="${cs}"`:''} style="${bd}"><b>${l}:</b> ${esc(v)}</td>`;
+ H.push(`<div style="text-align:center;padding-bottom:6px"><div style="display:flex;align-items:center;justify-content:center;gap:12px">${LG?`<img src="${LG}" style="height:60px;max-width:130px;object-fit:contain">`:''}<div style="font-size:24px;font-weight:700">${esc(nm)}</div></div><div style="font-size:16px;font-weight:700;margin-top:4px">${esc(P.title)}${key?' — '+W.key:''}</div></div><table style="width:100%;border-collapse:collapse"><tr>${cell(W.cls,P.class)}${cell(W.sub,P.subject)}${cell(W.time,n(P.time))}</tr><tr>${cell(W.date,n(P.date))}${cell(W.tm,n(tot),2)}</tr></table>${P.nr&&!key?`<div style="display:flex;gap:16px;padding:8px 0 4px"><div style="flex:2">${W.name}: ____________________</div><div style="flex:1">${W.roll}: __________</div></div>`:'<div style="height:6px"></div>'}`);
+ const bar=(t,r)=>`<div style="display:flex;justify-content:space-between;align-items:center;background:#e9efe9;border:1px solid #444;padding:4px 10px;font-weight:700;margin-top:6px"><span>${esc(t)}</span>${r?`<span dir="ltr" style="font-size:.93em">${r}</span>`:''}</div>`;
+ const hsh=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return h};
+ P.secs.forEach(sc=>{const qs=pParse(sc),def=W.ty[sc.type],title=sc.title||def[0],inst=sc.inst||def[1],cnt=qs.length,used=pUsed(sc),mk=(+sc.mpq||0)*used,qb=[];
+  const ord=sc.type=='match'?[...qs.keys()].sort((a,b)=>hsh(qs[a].r+a)-hsh(qs[b].r+b)):[];
+  if(ord.length>1&&ord.every((v,i)=>v==i))ord.push(ord.shift());
+  if(!key){
+   const sh=bar(title,mk?`${n(used)} × ${n(sc.mpq)} = ${n(mk)}`:'')+`<div style="font-style:italic;padding:3px 2px 4px;font-size:.93em">${esc(inst)}${(+sc.att&&+sc.att<cnt)?' '+W.att.replace('{n}',n(sc.att)).replace('{m}',n(cnt)):''}</div>`;
+   const row=(i,body)=>`<div style="display:flex;gap:8px;padding:3px 0 5px"><b>${n(i+1)}.</b><div dir="auto" style="flex:1">${body}</div></div>`;
+   if(sc.type=='match'){const tr=r=>`<tr><td style="${bd}">${r<cnt?n(r+1)+'. '+esc(qs[r].q):''}</td><td style="${bd}">${r<cnt?W.lab[r]+'. '+esc(qs[ord[r]].r):''}</td></tr>`;
+    for(let s=0;s<cnt;s+=8){let h=`<table style="width:100%;border-collapse:collapse;margin-bottom:4px">`+(s?'':`<tr><th style="${bd}">${W.colA}</th><th style="${bd}">${W.colB}</th></tr>`);for(let r=s;r<Math.min(cnt,s+8);r++)h+=tr(r);qb.push(h+'</table>')}}
+   else qs.forEach((q,i)=>{let b;
+    if(sc.type=='mcq'&&sc.blank){const no=Math.max(2,Math.min(8,+sc.nopt||4)),cols=no<=4?(FS>16?2:no):3;b=row(i,`<div>${esc(q.q)}</div><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:6px 16px;margin-top:6px;font-size:.96em">${Array.from({length:no},(_,j)=>`<div style="display:flex;gap:4px;align-items:flex-end"><span>(${W.lab[j]||n(j+1)})</span><span style="flex:1;border-bottom:1px solid #444;height:1.2em"></span></div>`).join('')}</div>`)}
+    else if(sc.type=='mcq'){const mx=Math.max(0,...q.o.map(o=>o.length))*FS/14,cols=mx<=14?4:mx<=34?2:1;b=row(i,`<div>${esc(q.q)}</div><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:2px 10px;margin-top:3px;font-size:.96em">${q.o.map((o,j)=>`<div dir="auto">(${W.lab[j]||n(j+1)}) ${esc(o)}</div>`).join('')}</div>`)}
+    else if(sc.type=='fill')b=row(i,esc(q.q)+(q.q.includes('_')?'':' ________'));
+    else if(sc.type=='tf')b=row(i,esc(q.q)+' <span style="white-space:nowrap">( ______ )</span>');
+    else b=row(i,esc(q.q));qb.push(b)});
+   if(qb.length){qb[0]=sh+qb[0]}else qb.push(sh);qb.forEach(b=>H.push(b))}
+  else{
+   const items=qs.map((q,i)=>`${n(i+1)}. `+(sc.type=='mcq'?(sc.blank?(q.a?`(${esc(q.a)})`:'—'):q.ans>=0?`(${W.lab[q.ans]})`:'—'):sc.type=='match'?`(${W.lab[ord.indexOf(i)]})`:(esc(q.a)||'—')));
+   const short=items.every(x=>x.length<18);
+   if(short)H.push(bar(title)+`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px 8px;padding:5px 2px">${items.map(x=>`<div>${x}</div>`).join('')}</div>`);
+   else items.forEach((x,i)=>H.push((i?'':bar(title))+`<div style="padding:3px 2px">${x}</div>`))}});
+ return H}
+function pPages(P,key){const lg=P.lang||'en',W=PL[lg],FS=+P.fs||14,n=x=>pN(x,lg),blocks=pBlocks(P,key),LG=D.settings&&D.settings.logo,
+ rh=`<div style="font-size:12px;border-bottom:1px solid #999;padding-bottom:3px;margin-bottom:8px;display:flex;justify-content:space-between"><span>${esc(D.settings&&D.settings.school||'')}</span><span>${esc(P.title)} — ${esc(P.subject)}${key?' — '+W.key:''}</span></div>`,
+ m=document.createElement('div');m.style.cssText=`position:fixed;left:-9999px;top:0;width:694px;font-family:${ttFont};font-size:${FS}px;line-height:1.5`;m.dir=lg=='en'?'ltr':'rtl';
+ m.innerHTML=[rh,...blocks].map(b=>`<div>${b}</div>`).join('');document.body.appendChild(m);const hs=[...m.children].map(e=>e.getBoundingClientRect().height);m.remove();
+ const AV=1000,rhH=hs[0],pg=[];let cur=[],used=0;
+ blocks.forEach((b,i)=>{const h=hs[i+1];if(cur.length&&used+h>AV){pg.push(cur);cur=[];used=rhH}cur.push(b);used+=h});if(cur.length)pg.push(cur);
+ return pg.map((bl,pi)=>`<div style="margin:6px;height:1111px;position:relative;box-sizing:border-box;padding:36px 44px 44px;background:#fff;color:#111;font-family:${ttFont};font-size:${FS}px;line-height:1.5;overflow:hidden" dir="${lg=='en'?'ltr':'rtl'}">${P.bg&&LG?`<img src="${LG}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60%;max-height:60%;object-fit:contain;opacity:.1">`:''}<div style="position:relative">${pi?rh:''}${bl.join('')}</div><div style="position:absolute;left:0;right:0;bottom:16px;text-align:center;font-size:11px;color:#555">${W.page} ${n(pi+1)} / ${n(pg.length)}</div></div>`)}
+async function pPdf(P,key){try{toast('Working...');const pages=pPages(P,key),J=[],prev=[];
+  for(const h of pages){const c=await dmcCanvas(h);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.85))}
+  window.PB={blob:pdfOf(J),name:dmcName('Paper-'+(P.subject||'paper')+(key?'-key':''),'pp')+'.pdf',prev};
+  modal(`<div style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;display:block"></div>`).join('')}</div><div class="eg" style="margin-top:10px"><button class="eb pri" onclick="pPrint()">${t('Print')}</button><button class="eb sec" onclick="dmcGet(PB.blob,PB.name)">${t('Download again')} (PDF)</button><button class="eb sec" onclick="pOpenPdf()">${t('Open PDF')}</button>${navigator.canShare?`<button class="eb sec" onclick="dmcGet(PB.blob,PB.name,1)">${t('Share')}</button>`:''}<span style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);
+  $('#md .card').style.maxWidth='620px';await new Promise(r=>setTimeout(r,250));await dmcGet(PB.blob,PB.name)}catch(x){alert(t('Could not save the PDF. Please try again.'))}}
+function pOpenPdf(){const u=URL.createObjectURL(new Blob([PB.blob],{type:'application/pdf'}));if(!window.open(u,'_blank'))location.href=u;setTimeout(()=>URL.revokeObjectURL(u),180000)}
+async function pPrint(){await Promise.all(PB.prev.map(u=>{const i=new Image();i.src=u;return i.decode?i.decode().catch(()=>0):0}));
+ printDoc(PB.prev.map((u,i)=>`<img src="${u}" style="display:block;margin:0 auto;max-width:100%;max-height:277mm;${i?'break-before:page;page-break-before:always;':''}">`).join(''),false)}
+function pSave(q){if(!PE.id)PE.id=D.seq++;PE.by=PE.by||NAME;const i=D.papers.findIndex(x=>x.id==PE.id);if(i<0)D.papers.push(JSON.parse(JSON.stringify(PE)));else D.papers[i]=JSON.parse(JSON.stringify(PE));save();if(!q)toast('Saved')}
+function pOpen(id){PE=id?JSON.parse(JSON.stringify(D.papers.find(x=>x.id==id))):pNew();boot();window.scrollTo(0,0)}
+function pClose(){PE=null;boot();window.scrollTo(0,0)}
+function pAdd(x){PE.secs.push(pSec(x));boot()}
+function pTy(i,v){const sc=PE.secs[i];sc.type=v;delete sc.mrows;boot()}
+function pFs(d){const L=[11,12,13,14,15,16,18,20];let i=L.indexOf(+PE.fs||14);if(i<0)i=3;PE.fs=L[Math.max(0,Math.min(L.length-1,i+d))];const e=document.getElementById('pFs');if(e)e.textContent=PE.fs}
+function pBlk(i,on){const sc=PE.secs[i],Q=pParse(sc);sc.blank=on?1:0;sc.text=on?Q.map(q=>q.q+(q.ans>=0?' => '+PL.en.lab[q.ans]:'')).join('\n'):(sc.text||'').split('\n').map(l=>l.replace(/\s*=>.*$/,'').trim()).filter(Boolean).join('\n\n');boot()}
+const pMRows=sc=>{if(!sc.mrows)sc.mrows=pParse({type:'match',text:sc.text}).map(q=>[q.q,q.r]);if(!sc.mrows.length)sc.mrows=[['','']];return sc.mrows};
+function pMSync(i){const sc=PE.secs[i];sc.text=sc.mrows.filter(r=>r[0].trim()||r[1].trim()).map(r=>r.map(x=>x.replace(/[|\n]/g,' ').trim()).join(' | ')).join('\n')}
+function pMSet(i,r,c,v){PE.secs[i].mrows[r][c]=v;pMSync(i);pTot()}
+function pMAdd(i){const R=PE.secs[i].mrows;R.push(['','']);boot();setTimeout(()=>{const e=document.getElementById('m'+i+'_'+(R.length-1)+'_0');if(e)e.focus()},60)}
+function pMDel(i,r){const sc=PE.secs[i];sc.mrows.splice(r,1);pMSync(i);boot()}
+function pMKey(e,i,r){if(e.key!='Enter')return;e.preventDefault();if(r==PE.secs[i].mrows.length-1)pMAdd(i);else{const n=document.getElementById('m'+i+'_'+(r+1)+'_0');if(n)n.focus()}}
+const pMGrid=(sc,i)=>{const g='display:grid;grid-template-columns:22px 1fr 14px 1fr 38px;gap:4px;align-items:center;margin-bottom:4px';return `<div style="${g}"><span></span><b style="text-align:center">A</b><span></span><b style="text-align:center">B</b><span></span></div>`+pMRows(sc).map((r,k)=>`<div style="${g}"><span style="text-align:center">${k+1}</span><input id="m${i}_${k}_0" dir="auto" placeholder="A" value="${esc(r[0])}" oninput="pMSet(${i},${k},0,this.value)" style="min-width:0"><span>↔</span><input id="m${i}_${k}_1" dir="auto" placeholder="B" value="${esc(r[1])}" oninput="pMSet(${i},${k},1,this.value)" onkeydown="pMKey(event,${i},${k})" style="min-width:0"><button class="r sm" onclick="pMDel(${i},${k})">X</button></div>`).join('')+`<div class="row"><button class="o sm" onclick="pMAdd(${i})">+ ${t('Add row')}</button></div><small>${t('Write the right answer in B on the same line. B is mixed automatically in the printed paper.')}</small>`}
+function pDel(i){PE.secs.splice(i,1);boot()}
+function pMove(i,d){const j=i+d,S=PE.secs;if(j<0||j>=S.length)return;[S[i],S[j]]=[S[j],S[i]];boot()}
+function pTot(){const P=PE;P.secs.forEach((sc,i)=>{const e=document.getElementById('pc'+i);if(e)e.textContent=`${pParse(sc).length} ${t('Q')} · ${pMarks(sc)} ${t('marks')}`});const tot=pTotal(P),e=document.getElementById('pTot');if(e){e.textContent=t('Total marks')+': '+tot;const w=document.getElementById('pWarn');if(w)w.textContent=P.total&&+P.total!=tot?'⚠ '+t('Marks do not match the total you entered'):''}}
+const pBT=sc=>sc.type=='mcq'&&sc.blank?'mcqb':sc.type,pSp=sc=>sc.type=='mcq'&&!sc.blank?'\n\n':'\n';
+function pToBank(i){const sc=PE.secs[i],qs=pParse(sc);let k=0;for(const q of qs)if(!D.qbank.some(b=>cn(b.class)==cn(PE.class)&&cn(b.subject)==cn(PE.subject)&&b.type==pBT(sc)&&b.raw==q.raw)){D.qbank.push({id:D.seq++,class:PE.class,subject:PE.subject,type:pBT(sc),raw:q.raw});k++}save();toast(k+' ✓')}
+function pBank(i){const sc=PE.secs[i],L=D.qbank.filter(b=>b.type==pBT(sc)&&cn(b.class)==cn(PE.class)&&cn(b.subject)==cn(PE.subject));
+ modal(L.length?`<div style="max-height:60vh;overflow:auto">${L.map(b=>`<div class="row" style="align-items:flex-start;border-bottom:1px solid #eee;padding:4px 0"><input type="checkbox" class="bk" value="${b.id}"><div style="flex:1;white-space:pre-line">${esc(b.raw)}</div><button class="r sm" onclick="pBDel(${b.id},${i})">X</button></div>`).join('')}</div><div class="row"><button onclick="pBAdd(${i})">${t('Add selected')}</button><button class="o" onclick="closeM()">${t('Close')}</button></div>`:`<p>${t('Nothing saved in the bank for this class and subject')}</p><button class="o" onclick="closeM()">${t('Close')}</button>`)}
+function pBDel(id,i){D.qbank=D.qbank.filter(b=>b.id!=id);save();pBank(i)}
+function pBAdd(i){const ids=[...document.querySelectorAll('#md .bk:checked')].map(x=>+x.value),sc=PE.secs[i],add=D.qbank.filter(b=>ids.includes(b.id)).map(b=>b.raw);if(add.length)sc.text=(sc.text?sc.text.replace(/\s+$/,'')+pSp(sc):'')+add.join(pSp(sc));delete sc.mrows;closeM();boot()}
+async function pDelP(id){if(!await ask('Delete this paper?'))return;D.papers=D.papers.filter(x=>x.id!=id);save();boot()}
+function pCopyP(id){const c=JSON.parse(JSON.stringify(D.papers.find(x=>x.id==id)));c.id=D.seq++;c.by=NAME;c.title=(c.title||'')+' (copy)';D.papers.push(c);save();boot()}
+const pHint={mcq:'Question\nOption 1\n*Correct option\nOption 3\nOption 4\n\nNext question…',short:'One question per line\n(answer after =>, optional)',long:'One question per line',fill:'The capital is ____ => Islamabad',tf:'Statement => True',match:'Left item | Right item',custom:'One line per question'};
+V.papers=async function(){D.papers=D.papers||[];D.qbank=D.qbank||[];
+ if(!PE){const L=D.papers.filter(p=>ROLE=='admin'||p.by==NAME).sort((a,b)=>b.id-a.id);
+  app.innerHTML=`<div class="card"><div class="row"><button onclick="pOpen(0)">+ ${t('New paper')}</button></div></div>`+(L.length?L.map(p=>`<div class="card"><b>${esc(p.title||'—')}</b><br><small>${esc(p.class)} · ${esc(p.subject)} · ${pTotal(p)} ${t('marks')}</small><div class="row"><button class="sm" onclick="pOpen(${p.id})">${t('Edit')}</button><button class="o sm" onclick="pPdf(D.papers.find(x=>x.id==${p.id}))">PDF</button><button class="o sm" onclick="pPdf(D.papers.find(x=>x.id==${p.id}),1)">${t('Answer key')}</button><button class="o sm" onclick="pCopyP(${p.id})">${t('Copy')}</button><button class="r sm" onclick="pDelP(${p.id})">X</button></div></div>`).join(''):`<div class="card">${t('No papers yet')}</div>`);return}
+ const P=PE,cls=ttAllCls(),subs=[...new Set(Object.values(D.ttsubs||{}).flat().map(x=>x.s))],W=PL[P.lang||'en'],inp=(k,ph,ty,st,ls)=>`<input ${ty?`type="${ty}" `:''}${ls?`list="${ls}" `:''}placeholder="${esc(ph)}" value="${esc(P[k])}" oninput="PE.${k}=this.value;${k=='total'?'pTot()':''}" style="${st||''}">`;
+ let h=`<div class="card"><div class="row"><b>${t('Exam name')}</b></div><div class="row">${inp('title',t('Exam name'),'','width:100%')}</div><div class="row">${inp('class',t('Class'),'','','pcl')}<datalist id="pcl">${cls.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>${inp('subject',t('Subject'),'','','psb')}<datalist id="psb">${subs.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div><div class="row">${inp('time',t('Duration')+' (2 hrs)')}${inp('date','','date')}${inp('total',t('Total marks'),'number','width:110px')}</div><div class="row"><small>${t('Paper language')}:</small>${[['en','English'],['ur','اردو'],['ar','العربية']].map(([k,l])=>`<button class="${P.lang==k?'on':'o'} sm" onclick="PE.lang='${k}';boot()">${l}</button>`).join('')}</div><div class="row"><small>${t('Writing size')}:</small><button class="o sm" onclick="pFs(-1)">A−</button><b id="pFs">${+P.fs||14}</b><button class="o sm" onclick="pFs(1)">A+</button></div><div class="row"><label><input type="checkbox" ${P.nr?'checked':''} onchange="PE.nr=this.checked"> ${t('Name and roll lines')}</label><label><input type="checkbox" ${P.bg?'checked':''} onchange="PE.bg=this.checked"> ${t('Logo background')}</label></div></div>`;
+ P.secs.forEach((sc,i)=>{const def=W.ty[sc.type];h+=`<div class="card" style="border-left:4px solid #b4884a"><div class="row"><b>${i+1}.</b><select onchange="pTy(${i},this.value)">${PT.map(x=>`<option value="${x}"${sc.type==x?' selected':''}>${t(PL.en.ty[x][0])}</option>`).join('')}</select><input placeholder="${esc(def[0])}" value="${esc(sc.title)}" oninput="PE.secs[${i}].title=this.value"></div><div class="row"><input placeholder="${esc(def[1]||t('Instruction'))}" value="${esc(sc.inst)}" oninput="PE.secs[${i}].inst=this.value" style="width:100%"></div><div class="row"><label>${t('Marks each')} <input type="number" value="${esc(sc.mpq)}" oninput="PE.secs[${i}].mpq=this.value;pTot()" style="width:64px"></label><label>${t('Attempt')} <input type="number" value="${esc(sc.att)}" oninput="PE.secs[${i}].att=this.value;pTot()" style="width:64px"></label></div>${sc.type=='mcq'?`<div class="row"><label><input type="checkbox" ${sc.blank?'checked':''} onchange="pBlk(${i},this.checked)"> ${t('Blank options')}</label>${sc.blank?`<label>${t('Options')} <input type="number" min="2" max="8" value="${+sc.nopt||4}" oninput="PE.secs[${i}].nopt=this.value" style="width:64px"></label>`:''}</div>`:''}${sc.type=='match'?pMGrid(sc,i):`<textarea rows="6" style="width:100%" placeholder="${esc(sc.type=='mcq'&&sc.blank?'One question per line\n(answer letter after =>, optional)':pHint[sc.type])}" oninput="PE.secs[${i}].text=this.value;pTot()">${esc(sc.text)}</textarea>`}<div class="row"><small id="pc${i}"></small></div><div class="row"><button class="o sm" onclick="pBank(${i})">${t('From bank')}</button><button class="o sm" onclick="pToBank(${i})">${t('Save to bank')}</button><button class="o sm" onclick="pMove(${i},-1)">↑</button><button class="o sm" onclick="pMove(${i},1)">↓</button><button class="r sm" onclick="pDel(${i})">X</button></div></div>`});
+ h+=`<div class="card"><b>${t('Add section')}</b><div class="row">${PT.map(x=>`<button class="o sm" onclick="pAdd('${x}')">+ ${t(PL.en.ty[x][0])}</button>`).join('')}</div></div><div class="card"><div><b id="pTot"></b></div><div id="pWarn" style="color:#B3261E;min-height:18px"></div><div class="row"><button onclick="pSave()">${t('Save')}</button><button onclick="pSave(1);pPdf(PE)">${t('Preview / Print PDF')}</button><button class="o" onclick="pSave(1);pPdf(PE,1)">${t('Answer key')}</button><button class="o" onclick="pSave(1);pClose()">${t('Close')}</button></div></div>`;
+ app.innerHTML=h;pTot()};
+// ===== Portal home: all portals in one place with icons =====
+{
+const I={
+home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+students:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.7 0 4.5 1.8 4.5 4.5"/>',
+att:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+myclass:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20l4-4 4 4M7 9h6M7 12h9"/>',
+diary:'<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6z"/><path d="M6 3v18M10 8h5M10 12h5"/>',
+exams:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>',
+papers:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+timetable:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+hifz:'<path d="M12 6c-2-1.5-5-2-9-2v14c4 0 7 .5 9 2 2-1.5 5-2 9-2V4c-4 0-7 .5-9 2z"/><path d="M12 6v14"/>',
+lib:'<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="M16 6l4 1-3.5 13-4-1z"/>',
+dash:'<path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/>',
+fees:'<circle cx="12" cy="12" r="9"/><path d="M8.5 8h7M8.5 11.5h7M9 8c3.5 0 5 1.5 5 3.5S12 15 9 15l5 4"/>',
+vouch:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+acct:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><rect x="8" y="6" width="8" height="3"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 17h.01M12 17h.01M15.5 17h.01"/>',
+don:'<path d="M12 20s-8-4.8-8-10.5A4.5 4.5 0 0112 7a4.5 4.5 0 018 2.5C20 15.2 12 20 12 20z"/>',
+teachers:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5M22 9v6"/>',
+notices:'<path d="M6 16v-5a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 21h4"/>',
+cert:'<circle cx="12" cy="9" r="6"/><path d="M8.5 14l-1.5 7 5-3 5 3-1.5-7"/>',
+admin:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>'};
+const C={home:['#B4884A','#8A6330'],students:['#4FB286','#1F7A58'],att:['#5B9BE6','#2F63B8'],myclass:['#F0A04B','#C26A1B'],diary:['#B58BE0','#7B4DB3'],exams:['#EF7B7B','#C2403F'],papers:['#F3B04C','#C4801A'],timetable:['#4CC3C9','#1E8A93'],hifz:['#2F8F6B','#14543E'],lib:['#9B7653','#6A4A2E'],dash:['#5E86E8','#3A55B8'],fees:['#5CC06B','#2C8A3E'],vouch:['#E99A5A','#B8641F'],acct:['#6C7A92','#3E4A60'],don:['#EE6F8B','#BE3A5B'],teachers:['#8A78E0','#5A47B5'],notices:['#F2C14E','#C48C14'],cert:['#D9A441','#A87115'],admin:['#58656F','#2F3A42']};
+const G=[['Academics',['students','att','myclass','diary','exams','papers','timetable']],['Hifz & Library',['hifz','lib']],['Finance',['dash','fees','vouch','acct','don']],['Staff & Notices',['teachers','notices','cert']],['System',['admin']]];
+const ico=(k,s)=>{const c=C[k]||C.admin;return`<span class="pi" style="--c1:${c[0]};--c2:${c[1]};width:${s}px;height:${s}px"><svg viewBox="0 0 24 24">${I[k]||I.admin}</svg></span>`};
+Object.assign(UR,{"Home":"ہوم","Academics":"تعلیمی","Hifz & Library":"حفظ اور لائبریری","Finance":"مالیات","Staff & Notices":"عملہ اور اعلانات","System":"سسٹم","More":"مزید","Papers":UR.Papers||"پرچے","Diary":UR.Diary||"ڈائری","My Class":UR["My Class"]||"میری جماعت"});
+window.goTab=k=>{tab=k;boot()};
+{const old={...TABS};for(const k in TABS)delete TABS[k];TABS.home=['Home',['admin','teacher','accountant']];Object.assign(TABS,old)}
+V.home=function(){
+ const av=Object.entries(TABS).filter(([k,v])=>k!='home'&&v[1].includes(ROLE)).map(x=>x[0]),have=new Set(av),seen=new Set();
+ const gs=G.map(([g,ks])=>{const f=ks.filter(k=>have.has(k));f.forEach(k=>seen.add(k));return[g,f]});
+ const rest=av.filter(k=>!seen.has(k));if(rest.length)gs.push(['More',rest]);
+ app.innerHTML=`<div class="phd">${logoImg(56)}<div><h2>${esc(brandName()||'School Portal')}</h2><small>${esc(NAME)} (${esc(ROLE)})</small></div></div>`+
+ gs.filter(g=>g[1].length).map(([g,ks])=>`<div class="pgh">${g}</div><div class="pgrid">${ks.map(k=>`<button class="ptile" onclick="goTab('${k}')">${ico(k,54)}<span>${TABS[k][0]}</span></button>`).join('')}</div>`).join('')};
+const bp=boot;
+boot=function(){
+ if(!T)window.HS=0;else if(!window.HS){window.HS=1;window.TS=1;window._mcN=NAME+'|'+localStorage.un;tab='home'}
+ bp.apply(this,arguments);
+ if(T){$('#nav').innerHTML=tab=='home'?'':`<button class="hb" onclick="goTab('home')">${ico('home',26)}<span>Home</span></button><span class="pt">${ico(tab,30)}<span>${TABS[tab][0]}</span></span>`}
+};
+}
+
 apply();boot();
 </script></body></html>

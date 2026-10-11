@@ -1192,9 +1192,10 @@ leaves:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h
 tport:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
 audit:'<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
 perm:'<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 018 0v3"/>',
-parents:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/>'};
-const C={syl:['#4CAF9C','#237A6B'],pl:['#7E9BE8','#4A63B8'],pp:['#3DBB6B','#1D8A47'],audit:['#8E9AA6','#4F5D6B'],perm:['#E0A63C','#A8741B'],parents:['#3DBB6B','#1D8A47'],dk:['#C0504D','#8E2F2C'],home:['#B4884A','#8A6330'],students:['#4FB286','#1F7A58'],att:['#5B9BE6','#2F63B8'],myclass:['#F0A04B','#C26A1B'],diary:['#B58BE0','#7B4DB3'],exams:['#EF7B7B','#C2403F'],papers:['#F3B04C','#C4801A'],timetable:['#4CC3C9','#1E8A93'],hifz:['#2F8F6B','#14543E'],lib:['#9B7653','#6A4A2E'],dash:['#5E86E8','#3A55B8'],fees:['#5CC06B','#2C8A3E'],vouch:['#E99A5A','#B8641F'],acct:['#6C7A92','#3E4A60'],don:['#EE6F8B','#BE3A5B'],teachers:['#8A78E0','#5A47B5'],notices:['#F2C14E','#C48C14'],cert:['#D9A441','#A87115'],admin:['#58656F','#2F3A42'],payroll:['#2FA88A','#14705A'],leaves:['#E9806E','#B84A3A'],tport:['#5BA7D9','#2D6FA3']};
-const G=[['Students & Parents',['students','dk','pl','parents','cert']],['Classroom',['att','myclass','diary','timetable','syl','notices']],['Exams & Papers',['exams','papers']],['Hifz & Library',['hifz','lib']],['Finance',['dash','fees','vouch','acct','don']],['Staff',['tport','teachers','payroll','leaves']],['System',['admin','audit','perm']]];
+parents:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/>',
+idcards:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M5.8 16.2c.5-1.6 1.8-2.4 3.2-2.4s2.7.8 3.2 2.4M14.5 10h3.5M14.5 13h2.5"/>'};
+const C={syl:['#4CAF9C','#237A6B'],pl:['#7E9BE8','#4A63B8'],pp:['#3DBB6B','#1D8A47'],audit:['#8E9AA6','#4F5D6B'],perm:['#E0A63C','#A8741B'],parents:['#3DBB6B','#1D8A47'],idcards:['#4A8FE0','#1F55A8'],dk:['#C0504D','#8E2F2C'],home:['#B4884A','#8A6330'],students:['#4FB286','#1F7A58'],att:['#5B9BE6','#2F63B8'],myclass:['#F0A04B','#C26A1B'],diary:['#B58BE0','#7B4DB3'],exams:['#EF7B7B','#C2403F'],papers:['#F3B04C','#C4801A'],timetable:['#4CC3C9','#1E8A93'],hifz:['#2F8F6B','#14543E'],lib:['#9B7653','#6A4A2E'],dash:['#5E86E8','#3A55B8'],fees:['#5CC06B','#2C8A3E'],vouch:['#E99A5A','#B8641F'],acct:['#6C7A92','#3E4A60'],don:['#EE6F8B','#BE3A5B'],teachers:['#8A78E0','#5A47B5'],notices:['#F2C14E','#C48C14'],cert:['#D9A441','#A87115'],admin:['#58656F','#2F3A42'],payroll:['#2FA88A','#14705A'],leaves:['#E9806E','#B84A3A'],tport:['#5BA7D9','#2D6FA3']};
+const G=[['Students & Parents',['students','dk','pl','parents','cert','idcards']],['Classroom',['att','myclass','diary','timetable','syl','notices']],['Exams & Papers',['exams','papers']],['Hifz & Library',['hifz','lib']],['Finance',['dash','fees','vouch','acct','don']],['Staff',['tport','teachers','payroll','leaves']],['System',['admin','audit','perm']]];
 const ico=(k,s)=>{const c=C[k]||C.admin;return`<span class="pi" style="--c1:${c[0]};--c2:${c[1]};width:${s}px;height:${s}px"><svg viewBox="0 0 24 24">${I[k]||I.admin}</svg></span>`};
 Object.assign(UR,{"Home":"ہوم","Academics":"تعلیمی","Hifz & Library":"حفظ اور لائبریری","Finance":"مالیات","Staff & Notices":"عملہ اور اعلانات","System":"سسٹم","More":"مزید","Papers":UR.Papers||"پرچے","Diary":UR.Diary||"ڈائری","My Class":UR["My Class"]||"میری جماعت"});
 window.goTab=k=>{tab=k;boot()};
@@ -2078,6 +2079,10 @@ r:`Users & Backup → Username, Full name, Password likhein → role chunein (te
 Permissions portal mein har role ki ijazat set hoti hai, aur Audit log mein dekh sakte hain kisne kya kiya.`,
 u:`Users & Backup کھولیں ← Username، Full name، Password لکھیں ← role چنیں (teacher / accountant / admin) ← Save user۔ وہی username دوبارہ لکھیں تو پاس ورڈ نیا ہو جاتا ہے۔
 Permissions پورٹل میں ہر role کی اجازتیں طے ہوتی ہیں، اور Audit log میں دیکھ سکتے ہیں کس نے کیا کیا۔`},
+{k:'id card|idcard|student card|teacher card|staff card|service card|identity|qr|signature|sign|دستخط|شناختی|आईडी कार्ड|id کارڈ|dastkhat',
+e:`ID Cards (Home → Students & Parents → ID Cards). Easiest way: 1) tap a student's name, 2) the whole card (front + back) opens, 3) tap Download PDF (or Print). In the card window you can also tap Edit details, or Change photo (camera or gallery).\n• Edit details: type name, father, class, phone, date of birth, blood group, emergency phone, address, and extra lines for the QR code (one per line). Save shows the card again.\n• Import from Excel/CSV: open 'Import card data', Download template, fill it in Excel, choose the file; people are matched by ID or name and their date of birth, blood group, emergency phone, address and QR note are added. Check the list, then Apply to cards.\n• Card language: English / اردو / العربية at the top (for Urdu/Arabic type the school name, address and principal name in Card settings). Principal signature: Card settings → Choose signature file; it is cropped and fitted automatically.\n• The QR code (back of the card only) also holds the last exam: marks, percentage and class position. Many cards at once: tick people (or pick a class), choose Front / Back / Pairs, Save PDF. Cards print in real size (85.6 × 54 mm): one A4 page holds 9 student cards or 10 teacher cards (3 pairs / 5 pairs in Pairs mode) and the rest go to the next page; the bar shows how many pages. Print on A4 with Scale 100% / Actual size, margins none, headers and footers off. Use the 📏 Print size test page first: its ruler must measure exactly 100 mm.`,
+r:`ID Cards (Home → Students & Parents → ID Cards). Sab se aasan tareeqa: 1) student ka naam dabayen, 2) poora card (front + back) khul jata hai, 3) Download PDF (ya Print) dabayen. Card ki window mein Edit details aur Change photo (camera ya gallery) bhi hain.\n• Edit details: naam, walid ka naam, class, phone, tareekh-e-paidaish, blood group, emergency phone, pata aur QR ke liye extra lines (har line alag) likhein. Save karne par card dobara nazar aata hai.\n• Excel/CSV se import: 'Import card data' kholein, Download template, Excel mein bharein, file chunein; log ID ya naam se milte hain aur unki tareekh-e-paidaish, blood group, emergency phone, pata aur QR note shamil ho jate hain. List dekh kar Apply to cards dabayen.\n• Card ki zaban: upar English / اردو / العربية (Urdu/Arabic ke liye Card settings mein school ka naam, pata aur principal ka naam likhein). Principal ke dastkhat: Card settings → Choose signature file; khud kat kar munasib size mein aate hain.\n• QR code (sirf card ke peeche) mein aakhri exam ke marks, percentage aur class position bhi hoti hai. Bohat se cards ek saath: log tick karein (ya class chunein), Front / Back / Pairs chunein, Save PDF. Cards asli size (85.6 × 54 mm) mein print hote hain: ek A4 page par 9 student cards ya 10 teacher cards (Pairs mein 3 / 5 jode) aate hain aur baqi agle page par chale jate hain; neeche bar mein pages ki tadad nazar aati hai. A4 par Scale 100% / Actual size, margins none aur headers-footers band rakh kar print karein. Pehle 📏 Print size test page nikalein: us ka ruler theek 100 mm ana chahiye.`,
+u:`ID Cards (Home ← Students & Parents ← ID Cards)۔ سب سے آسان طریقہ: 1) طالب علم کا نام دبائیں، 2) پورا کارڈ (آگے + پیچھے) کھل جاتا ہے، 3) Download PDF (یا Print) دبائیں۔ کارڈ کی ونڈو میں Edit details اور Change photo (کیمرہ یا گیلری) بھی ہیں۔\n• Edit details: نام، والد کا نام، کلاس، فون، تاریخ پیدائش، بلڈ گروپ، ایمرجنسی فون، پتہ اور QR کے لیے اضافی سطریں (ہر سطر الگ) لکھیں۔ Save کرنے پر کارڈ دوبارہ نظر آتا ہے۔\n• ایکسل/CSV سے امپورٹ: 'Import card data' کھولیں، Download template، ایکسل میں بھریں، فائل چنیں؛ لوگ ID یا نام سے ملتے ہیں اور ان کی تاریخ پیدائش، بلڈ گروپ، ایمرجنسی فون، پتہ اور QR نوٹ شامل ہو جاتے ہیں۔ فہرست دیکھ کر Apply to cards دبائیں۔\n• کارڈ کی زبان: اوپر English / اردو / العربية (اردو/عربی کے لیے Card settings میں اسکول کا نام، پتہ اور پرنسپل کا نام لکھیں)۔ پرنسپل کے دستخط: Card settings ← Choose signature file؛ خود کٹ کر مناسب سائز میں آتے ہیں۔\n• QR کوڈ (صرف کارڈ کی پچھلی طرف) میں آخری امتحان کے نمبر، فیصد اور کلاس پوزیشن بھی ہوتی ہے۔ کئی کارڈ ایک ساتھ: لوگوں پر ٹک لگائیں (یا کلاس چنیں)، Front / Back / Pairs چنیں، Save PDF۔ کارڈ اصل سائز (85.6 × 54 ملی میٹر) میں پرنٹ ہوتے ہیں: ایک A4 صفحے پر 9 طلبہ کارڈ یا 10 اساتذہ کارڈ (Pairs میں 3 / 5 جوڑے) آتے ہیں اور باقی اگلے صفحے پر چلے جاتے ہیں؛ نیچے بار میں صفحات کی تعداد نظر آتی ہے۔ A4 پر Scale 100% / Actual size، مارجن نہیں اور ہیڈر فوٹر بند رکھ کر پرنٹ کریں۔ پہلے 📏 Print size test صفحہ نکالیں: اس کا رولر ٹھیک 100 ملی میٹر آنا چاہیے۔`},
 {k:'student|طلبہ|طالب|طلباء|विद्यार्थी|छात्र|bacha|bache|بچ|admission|داخلہ|dakhla|promote|jamaat|جماعت|excel',
 e:`Students portal → Add student: name, father name, phone, class, monthly fee, discount, old dues, photo → Save. Use Search to find a student and edit from the row. At year end use Promote classes to move everyone up.`,
 r:`Students portal → Add student: naam, walid ka naam, phone, class, mahana fee, discount, purana baqaya, photo → Save. Search se student dhoondein aur uski row se edit karein. Saal ke aakhir mein Promote classes se sab ki jamaat aage barhayen.`,
@@ -2153,6 +2158,602 @@ const b0=boot;boot=function(){const r=b0.apply(this,arguments);fab();return r};
 fab();
 })();
 
+
+// ===== v8: Home categories (category -> portals), sibling bar, in-portal section tabs =====
+(()=>{
+const A=o=>{for(const k in o)if(!(k in UR))UR[k]=o[k]};
+A({"All categories":"تمام کیٹیگریز","portals":"پورٹلز","Students list":"طلبہ کی فہرست","Users":"صارفین","School":"اسکول","Summary":"خلاصہ","Books":"کتابیں","On loan":"جاری شدہ","Records":"ریکارڈ","New donation":"نیا عطیہ","Paras":"پارے","Daily record":"روزانہ ریکارڈ","Staff":"عملہ","Students & Parents":"طلبہ اور والدین","Classroom":"کلاس روم","Exams & Papers":"امتحان اور پرچے","Hifz & Library":"حفظ اور لائبریری","Finance":"مالیات","System":"سسٹم","More":"مزید","Add donation":"عطیہ شامل کریں"});
+const CAT=[
+ ['Students & Parents',['students','dk','pl','parents','cert','idcards'],'🎓',['#4FB286','#1F7A58']],
+ ['Classroom',['att','myclass','diary','timetable','syl','notices'],'🏫',['#5B9BE6','#2F63B8']],
+ ['Exams & Papers',['exams','papers'],'📝',['#EF7B7B','#C2403F']],
+ ['Hifz & Library',['hifz','lib'],'📖',['#2F8F6B','#14543E']],
+ ['Finance',['dash','fees','vouch','acct','don'],'💰',['#5CC06B','#2C8A3E']],
+ ['Staff',['tport','teachers','payroll','leaves'],'👥',['#8A78E0','#5A47B5']],
+ ['System',['admin','audit','perm'],'⚙️',['#58656F','#2F3A42']]];
+window.ST=window.ST||{};window.HC=window.HC||'';window.HQ='';
+const css=document.createElement('style');
+css.textContent='.hcat{position:relative;min-height:120px}.hcat small{color:#7a705c;font-weight:400}#sib::-webkit-scrollbar,#stb::-webkit-scrollbar{display:none}';
+document.head.appendChild(css);
+
+// ---------- Home: category cards -> open a category -> its portals ----------
+function homeCats(){
+ const pairs=[...app.querySelectorAll('.pgh')].map(h=>({n:h.textContent.trim(),h,g:h.nextElementSibling})).filter(p=>p.g&&p.g.classList.contains('pgrid'));
+ if(!pairs.length)return;
+ pairs.forEach(p=>{p.h.remove();p.g.remove()});
+ window.HP=pairs;
+ if(HC&&!pairs.some(p=>p.n==HC))HC='';
+ const box=document.createElement('div');
+ box.innerHTML=`<input id="hsq" placeholder="${esc(t('Search portal'))}" oninput="hcQ(this.value)" autocomplete="off" style="width:100%;margin:8px 0"><div id="hcb"></div>`;
+ app.appendChild(box);hcDraw();
+}
+const meta=n=>CAT.find(c=>c[0]==n)||[n,[],'📂',['#8E9AA6','#4F5D6B']];
+const bdg=g=>[...g.querySelectorAll('.bdg')].reduce((a,b)=>a+(+b.textContent||0),0);
+function hcDraw(){
+ const b=document.getElementById('hcb');if(!b||!window.HP)return;b.innerHTML='';
+ const q=(window.HQ||'').trim().toLowerCase();
+ if(q){const g=document.createElement('div');g.className='pgrid';
+  HP.forEach(p=>[...p.g.children].forEach(x=>{if(x.textContent.toLowerCase().includes(q))g.appendChild(x.cloneNode(true))}));
+  if(!g.children.length)g.innerHTML='<div class="card" style="grid-column:1/-1">-</div>';b.appendChild(g);return}
+ if(HC){const p=HP.find(x=>x.n==HC),m=meta(HC);
+  b.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px"><button class="hb" onclick="hcOpen('')">← ${t('All categories')}</button><span class="pt"><span class="pi" style="--c1:${m[3][0]};--c2:${m[3][1]};width:30px;height:30px"><span style="font-size:15px">${m[2]}</span></span><span>${t(HC)}</span></span></div>`);
+  b.appendChild(p.g);return}
+ const g=document.createElement('div');g.className='pgrid';g.style.gridTemplateColumns='repeat(auto-fill,minmax(150px,1fr))';
+ HP.forEach(p=>{const m=meta(p.n),n=p.g.children.length,bd=bdg(p.g);
+  g.insertAdjacentHTML('beforeend',`<button class="ptile hcat" onclick="hcOpen(this.dataset.c)" data-c="${esc(p.n)}" style="padding:18px 8px 14px"><span class="pi" style="--c1:${m[3][0]};--c2:${m[3][1]};width:64px;height:64px"><span style="font-size:30px;line-height:1">${m[2]}</span></span><span style="font-size:15px">${t(p.n)}</span><small>${n} ${t('portals')}</small>${bd?`<span class="bdg">${bd}</span>`:''}</button>`)});
+ b.appendChild(g)}
+window.hcOpen=c=>{HC=c;HQ='';const i=document.getElementById('hsq');if(i)i.value='';hcDraw();window.scrollTo(0,0)};
+window.hcQ=v=>{HQ=v;hcDraw()};
+{const vh=V.home;V.home=function(){const r=vh.apply(this,arguments);try{if(ROLE!='parent')homeCats()}catch(e){console.error(e)}return r}}
+
+// ---------- Inside a portal: bar with the other portals of the same category ----------
+function sibBar(){
+ const old=document.getElementById('sib');if(old)old.remove();
+ if(!T||tab=='home')return;const c=CAT.find(x=>x[1].includes(tab));if(!c)return;
+ const ks=c[1].filter(k=>TABS[k]&&TABS[k][1].includes(ROLE));if(ks.length<2)return;
+ const n=document.getElementById('nav');if(!n)return;
+ n.insertAdjacentHTML('afterend',`<div id="sib" style="display:flex;gap:6px;overflow-x:auto;padding:0 8px 6px;align-items:center"><small style="white-space:nowrap;opacity:.7">${t(c[0])}:</small>${ks.map(k=>`<button class="${k==tab?'on':'o'} sm" style="white-space:nowrap" onclick="goTab('${k}')">${t(TABS[k][0])}</button>`).join('')}</div>`)}
+{const b9=boot;boot=function(){const r=b9.apply(this,arguments);try{sibBar()}catch(e){}return r}}
+
+// ---------- Inside a portal: section tabs (cards are grouped, one group shown at a time) ----------
+window.secGo=(k,id)=>{ST[k]=id;boot()};
+function secTabs(k,defs){
+ const cards=[...app.children].filter(e=>e.classList&&e.classList.contains('card'));if(cards.length<2)return;
+ const fb=defs.findIndex(d=>!d.shared),g=cards.map((c,i)=>{const j=defs.findIndex(d=>d.test&&d.test(c,i));return j<0?fb:j});
+ const ids=defs.filter((d,i)=>!d.shared&&g.includes(i));if(ids.length<2)return;
+ const cur=ids.some(d=>d.id==ST[k])?ST[k]:ids[0].id;
+ cards.forEach((c,i)=>{const d=defs[g[i]];c.style.display=(d.shared||d.id==cur)?'':'none'});
+ app.insertAdjacentHTML('afterbegin',`<div id="stb" class="row" style="margin:0 0 8px;flex-wrap:nowrap;overflow-x:auto">${ids.map(d=>`<button class="${d.id==cur?'on':'o'} sm" style="white-space:nowrap" onclick="secGo('${k}','${d.id}')">${t(d.l)}</button>`).join('')}</div>`)}
+const q=s=>c=>!!c.querySelector(s);
+const SD={
+ students:{d:[{id:'list',l:'Students list',test:q('#q')},{id:'add',l:'Add student',test:q('#n')},{id:'imp',l:'Import from Excel',test:q('input[type=file][accept*=xlsx]')}]},
+ admin:{d:[{id:'users',l:'Users',test:q('#un')},{id:'school',l:'School',test:q('#bnm')},{id:'bk',l:'Backup',test:q('#bkdocs,#abs,[onclick="dl()"]')}]},
+ acct:{pre:()=>{const cs=[...app.children].filter(e=>e.classList.contains('card'));if(cs.length>1){const r=cs[0].querySelector('.row');if(r&&!cs[1].querySelector('input[type=month]'))cs[1].prepend(r.cloneNode(true))}},
+  d:[{id:'sum',l:'Summary'},{id:'exp',l:'Expenses',test:q('#xt')}]},
+ lib:{d:[{id:'books',l:'Books'},{id:'loan',l:'On loan',test:(c)=>!!c.querySelector('h4')&&!c.querySelector('#bt')},{id:'add',l:'Add book',test:q('#bt')}]},
+ don:{pre:()=>{const cs=[...app.children].filter(e=>e.classList.contains('card'));if(cs.length>1){const r=cs[0].querySelector('.row');if(r&&r.querySelector('input[type=month]'))cs[1].prepend(r)}},
+  d:[{id:'rec',l:'Records'},{id:'new',l:'New donation',test:q('#dn')}]},
+ hifz:{d:[{id:'sel',shared:1,test:q('#hs')},{id:'para',l:'Paras',test:q('[onclick^="togPara"]')},{id:'rec',l:'Daily record',test:q('#hd')}]},
+ notices:{d:[{id:'list',l:'Notices'},{id:'add',l:'Add notice',test:q('#nt')}]},
+ leaves:{d:[{id:'req',l:'Requests'},{id:'add',l:'Add leave',test:q('#lat')},{id:'bal',l:'Leave balance',test:q('#lvq')}]},
+ tport:{d:[{id:'pro',l:'Profile',test:(c,i)=>i==0},{id:'mon',l:'This month',test:(c,i)=>i==1},{id:'lv',l:'Apply for leave',test:q('#lvf')},{id:'my',l:'My leaves',test:(c,i)=>i==3},{id:'pay',l:'Payment history',test:(c,i)=>i==4}]}
+};
+Object.keys(SD).forEach(k=>{const o=V[k];if(!o)return;V[k]=async function(){const r=await o.apply(this,arguments);try{if(SD[k].pre)SD[k].pre();secTabs(k,SD[k].d)}catch(e){console.error(e)}return r}});
+})();
+
+
+
+/* ===================================================================
+   ID CARDS: Student ID card + Teacher service card
+   Credit-card size (CR80, 85.6 x 54 mm), front + back, QR code (offline)
+   =================================================================== */
+(function(){
+'use strict';
+
+/* ---------- tiny offline QR code encoder (byte mode, ECC M/L) ---------- */
+const QRG=(()=>{
+  const EC=[[-1,7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+            [-1,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28]];
+  const NB=[[-1,1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+            [-1,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49]];
+  const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const a=Math.floor(v/7)+2;r-=(25*a-10)*a-55;if(v>=7)r-=36}return r};
+  const dcw=(v,l)=>Math.floor(raw(v)/8)-EC[l][v]*NB[l][v];
+  const mul=(x,y)=>{let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x}return z};
+  const rsDiv=d=>{const r=new Array(d).fill(0);r[d-1]=1;let root=1;for(let i=0;i<d;i++){for(let j=0;j<d;j++){r[j]=mul(r[j],root);if(j+1<d)r[j]^=r[j+1]}root=mul(root,2)}return r};
+  const rsRem=(data,div)=>{const r=div.map(()=>0);for(const b of data){const f=b^r.shift();r.push(0);div.forEach((c,i)=>{r[i]^=mul(c,f)})}return r};
+  function fit(n){
+    const need=v=>4+(v<10?8:16)+8*n;
+    for(let v=1;v<=9;v++)if(need(v)<=dcw(v,1)*8)return[v,1];
+    for(let v=1;v<=40;v++)if(need(v)<=dcw(v,0)*8)return[v,0];
+    return null}
+  function build(text){
+    const bytes=Array.from(new TextEncoder().encode(text)),f=fit(bytes.length);if(!f)return null;
+    const ver=f[0],lvl=f[1],size=ver*4+17;
+    const bits=[],put=(v,len)=>{for(let i=len-1;i>=0;i--)bits.push((v>>>i)&1)};
+    put(4,4);put(bytes.length,ver<10?8:16);bytes.forEach(b=>put(b,8));
+    const cap=dcw(ver,lvl)*8;
+    put(0,Math.min(4,cap-bits.length));put(0,(8-bits.length%8)%8);
+    for(let p=0xEC;bits.length<cap;p^=0xEC^0x11)put(p,8);
+    const data=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=b<<1|bits[i+j];data.push(b)}
+    const nb=NB[lvl][ver],el=EC[lvl][ver],rc=Math.floor(raw(ver)/8),ns=nb-rc%nb,sl=Math.floor(rc/nb),div=rsDiv(el),blocks=[];
+    for(let i=0,k=0;i<nb;i++){const dat=data.slice(k,k+sl-el+(i<ns?0:1));k+=dat.length;const ecc=rsRem(dat,div);if(i<ns)dat.push(0);blocks.push(dat.concat(ecc))}
+    const all=[];for(let i=0;i<blocks[0].length;i++)blocks.forEach((b,j)=>{if(i!=sl-el||j>=ns)all.push(b[i])});
+    const m=Array.from({length:size},()=>new Array(size).fill(0)),fn=Array.from({length:size},()=>new Array(size).fill(false));
+    const set=(x,y,d)=>{m[y][x]=d?1:0;fn[y][x]=true};
+    for(let i=0;i<size;i++){set(6,i,i%2==0);set(i,6,i%2==0)}
+    const finder=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const d=Math.max(Math.abs(dx),Math.abs(dy)),x=cx+dx,y=cy+dy;if(x>=0&&x<size&&y>=0&&y<size)set(x,y,d!=2&&d!=4)}};
+    finder(3,3);finder(size-4,3);finder(3,size-4);
+    const al=[];
+    if(ver>1){const n=Math.floor(ver/7)+2,step=ver==32?26:Math.floor((ver*4+n*2+1)/(n*2-2))*2;al.push(6);for(let p=size-7;al.length<n;p-=step)al.splice(1,0,p)}
+    al.forEach((cy,i)=>al.forEach((cx,j)=>{
+      if((i==0&&j==0)||(i==0&&j==al.length-1)||(i==al.length-1&&j==0))return;
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!=1)}));
+    const fmt=mask=>{
+      const d=(lvl==1?0:1)<<3|mask;let r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);
+      const b=(d<<10|r)^0x5412,g=i=>((b>>>i)&1)!=0;
+      for(let i=0;i<=5;i++)set(8,i,g(i));set(8,7,g(6));set(8,8,g(7));set(7,8,g(8));
+      for(let i=9;i<15;i++)set(14-i,8,g(i));
+      for(let i=0;i<8;i++)set(size-1-i,8,g(i));
+      for(let i=8;i<15;i++)set(8,size-15+i,g(i));
+      set(8,size-8,true)};
+    if(ver>=7){let r=ver;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);const b=ver<<12|r;
+      for(let i=0;i<18;i++){const d=((b>>>i)&1)!=0,a=size-11+i%3,c=Math.floor(i/3);set(a,c,d);set(c,a,d)}}
+    fmt(0);
+    let k=0;
+    for(let right=size-1;right>=1;right-=2){if(right==6)right=5;
+      for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){
+        const x=right-j,up=((right+1)&2)==0,y=up?size-1-vert:vert;
+        if(!fn[y][x]&&k<all.length*8){m[y][x]=(all[k>>>3]>>>(7-(k&7)))&1;k++}}}
+    const mk=(mask,x,y)=>{switch(mask){
+      case 0:return(x+y)%2==0;case 1:return y%2==0;case 2:return x%3==0;case 3:return(x+y)%3==0;
+      case 4:return(Math.floor(x/3)+Math.floor(y/2))%2==0;case 5:return x*y%2+x*y%3==0;
+      case 6:return(x*y%2+x*y%3)%2==0;default:return((x+y)%2+x*y%3)%2==0}};
+    const apply=mask=>{for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!fn[y][x]&&mk(mask,x,y))m[y][x]^=1};
+    const pen=()=>{
+      let p=0;
+      for(let y=0;y<size;y++){let run=1;for(let x=1;x<=size;x++){if(x<size&&m[y][x]==m[y][x-1])run++;else{if(run>=5)p+=run-2;run=1}}}
+      for(let x=0;x<size;x++){let run=1;for(let y=1;y<=size;y++){if(y<size&&m[y][x]==m[y-1][x])run++;else{if(run>=5)p+=run-2;run=1}}}
+      for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){const c=m[y][x];if(c==m[y][x+1]&&c==m[y+1][x]&&c==m[y+1][x+1])p+=3}
+      const cnt=(s)=>{let n=0,i=-1;while((i=s.indexOf('10111010000',i+1))>=0)n++;i=-1;while((i=s.indexOf('00001011101',i+1))>=0)n++;return n};
+      for(let y=0;y<size;y++)p+=40*cnt(m[y].join(''));
+      for(let x=0;x<size;x++){let s='';for(let y=0;y<size;y++)s+=m[y][x];p+=40*cnt(s)}
+      let dark=0;for(let y=0;y<size;y++)for(let x=0;x<size;x++)dark+=m[y][x];
+      const tot=size*size;p+=(Math.ceil(Math.abs(dark*20-tot*10)/tot)-1)*10;
+      return p};
+    let best=0,bp=1e9;
+    for(let mask=0;mask<8;mask++){apply(mask);fmt(mask);const p=pen();if(p<bp){bp=p;best=mask}apply(mask)}
+    apply(best);fmt(best);
+    return{size,m,ver,lvl}}
+  function svg(text,mm){
+    const q=build(text);if(!q)return'';
+    const n=q.size,Q=2;let d='';
+    for(let y=0;y<n;y++){let x=0;while(x<n){if(q.m[y][x]){const s=x;while(x<n&&q.m[y][x])x++;d+='M'+(s+Q)+' '+(y+Q)+'h'+(x-s)+'v1h'+(s-x)+'z'}else x++}}
+    const w=n+2*Q;
+    return'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+w+'" width="'+mm+'mm" height="'+mm+'mm" shape-rendering="crispEdges" style="display:block"><rect width="'+w+'" height="'+w+'" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>'}
+  return{build,svg}})();
+window.QRG=QRG;
+
+/* ---------- translations ---------- */
+Object.assign(UR,{
+"ID Cards":"شناختی کارڈ","Student ID cards":"طلبہ کے کارڈ","Teacher service cards":"اساتذہ کے سروس کارڈ",
+"Credit-card size (85.6 × 54 mm), front and back, with QR code":"کریڈٹ کارڈ سائز (85.6 × 54 ملی میٹر)، آگے اور پیچھے، QR کوڈ کے ساتھ",
+"Card settings":"کارڈ کی ترتیبات","School address":"ادارے کا پتہ","School phone":"ادارے کا فون","Principal name":"پرنسپل کا نام",
+"Session":"سیشن","Valid up to":"میعاد","Card colour":"کارڈ کا رنگ","Different colour for each class":"ہر جماعت کا الگ رنگ",
+"All classes":"تمام جماعتیں","Select all":"سب منتخب کریں","Clear":"صاف کریں","selected":"منتخب","Preview":"دیکھیں",
+"Extra info":"مزید معلومات","Front":"آگے","Back":"پیچھے","Pairs (front + back)":"جوڑی (آگے + پیچھے)",
+"Save PDF":"PDF محفوظ کریں","Print":"پرنٹ","Select at least one card":"کم از کم ایک کارڈ منتخب کریں",
+"Blood group":"بلڈ گروپ","Date of birth":"تاریخ پیدائش","Emergency phone":"ہنگامی فون","Address":"پتہ",
+"This is stored inside the QR code, not printed on the card":"یہ QR کوڈ میں محفوظ ہوتا ہے، کارڈ پر نہیں چھپتا",
+"Photo":"تصویر","no photo":"تصویر نہیں","Include last exam result in QR code":"QR کوڈ میں آخری امتحان کا نتیجہ شامل کریں","The latest locked exam of the student's class is used (marks, percentage, position)":"طالب علم کی جماعت کا تازہ لاک شدہ امتحان استعمال ہوتا ہے (نمبر، فیصد، پوزیشن)","Change photo":"تصویر بدلیں","No students yet":"ابھی کوئی طالب علم نہیں","No teachers yet":"ابھی کوئی استاد نہیں","Print on A4":"A4 پر پرنٹ",
+"Card language":"کارڈ کی زبان","Download PDF":"PDF ڈاؤنلوڈ کریں","A4 pages":"A4 صفحات","cards per page":"کارڈ فی صفحہ","Print size test":"پرنٹ سائز ٹیسٹ",
+"Print on A4 at 100% (Actual size), margins none, headers and footers off":"A4 پر 100% (Actual size) پر پرنٹ کریں، مارجن نہیں، ہیڈر فوٹر بند",
+"The ruler below must measure exactly 100 mm (10 cm) and each box must match its size. If it does not: set Scale to 100% / Actual size, turn off Fit to page, and turn off Headers and footers.":"نیچے کا اسکیل ٹھیک 100 ملی میٹر (10 سینٹی میٹر) ناپے اور ہر ڈبہ اپنے سائز کا ہو۔ ایسا نہ ہو تو Scale کو 100% / Actual size کریں، Fit to page بند کریں اور Headers and footers بند کریں۔","Edit details":"تفصیل بدلیں","Card":"کارڈ","Tap a name":"نام دبائیں","Check the card":"کارڈ دیکھیں",
+"Name is required":"نام ضروری ہے","Father name":"والد کا نام","Designation":"عہدہ","Joining date":"تاریخ تقرری","Extra lines for the QR code (one per line)":"QR کوڈ کے لیے اضافی سطریں (ہر سطر الگ)",
+"Import card data from Excel / CSV":"ایکسل / CSV سے کارڈ کی معلومات شامل کریں","Choose file":"فائل چنیں","Could not read this file":"یہ فائل پڑھی نہیں جا سکی",
+"The file needs an ID or Name column in the first row":"فائل کی پہلی قطار میں ID یا Name کا کالم ضروری ہے","cards will be updated":"کارڈ اپ ڈیٹ ہوں گے","not found":"نہیں ملے","Apply to cards":"کارڈز پر لاگو کریں",
+"Download the template, fill it in Excel, then choose the file. It matches people by ID or name and adds date of birth, blood group, emergency phone, address and an extra note for the QR code.":"ٹیمپلیٹ ڈاؤنلوڈ کریں، ایکسل میں بھریں، پھر فائل چنیں۔ یہ ID یا نام سے لوگوں کو ملاتا ہے اور تاریخ پیدائش، بلڈ گروپ، ایمرجنسی فون، پتہ اور QR کے لیے اضافی نوٹ شامل کرتا ہے۔","School name on card":"کارڈ پر اسکول کا نام","School address on card":"کارڈ پر اسکول کا پتہ","Principal name on card":"کارڈ پر پرنسپل کا نام",
+"Principal signature":"پرنسپل کے دستخط","Choose signature file":"دستخط کی فائل چنیں","Change signature":"دستخط بدلیں","Remove":"ہٹائیں",
+"Choose a photo or scan of the signature; it is cropped and resized automatically":"دستخط کی تصویر یا اسکین چنیں؛ یہ خود بخود کاٹ کر مناسب سائز میں آ جاتی ہے",
+"Could not find a signature in this image":"اس تصویر میں دستخط نہیں ملے",
+"Blood group, date of birth and emergency phone are printed on the back of the card; everything here is also stored in the QR code":"بلڈ گروپ، تاریخ پیدائش اور ایمرجنسی فون کارڈ کی پچھلی طرف چھپتے ہیں؛ یہاں کی ساری معلومات QR کوڈ میں بھی محفوظ ہوتی ہیں"});
+
+/* ---------- data helpers ---------- */
+const IDS=window.IDS=window.IDS||{k:'s',cls:'',mode:'front',sel:{s:{},t:{}}};
+const IDCD=()=>{D.idc=D.idc||{};D.idc.cfg=D.idc.cfg||{};D.idc.ex=D.idc.ex||{};return D.idc};
+const SW=['#1F6B4F','#1F4E9B','#8A1C2B','#5B3A9B','#C2570C','#0F766E','#14213D','#3A3A3A'];
+function cfg(){const y=new Date().getFullYear();
+  return Object.assign({addr:'',phone:'',principal:'',session:y+'-'+String(y+1).slice(2),valid:'',stc:SW[0],tcc:'#14213D',cw:false,exam:true,lang:'en'},IDCD().cfg)}
+const exI=(k,id)=>IDCD().ex[k+id]||{};
+const pad=n=>String(n).padStart(4,'0');
+const cap=(v,n)=>String(v||'').trim().slice(0,n);
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fd=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');return m?m[3]+'-'+MON[+m[2]-1]+'-'+m[1]:String(d||'')};
+function shade(hex,p){const n=parseInt(hex.slice(1),16),f=c=>Math.max(0,Math.min(255,Math.round(p<0?c*(1+p):c+(255-c)*p)));
+  return'#'+[(n>>16)&255,(n>>8)&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')}
+const GOLD='#C9A24B';
+const classes=()=>[...new Set(D.students.filter(s=>s.active).map(s=>s.class||''))].sort();
+function accFor(kind,x){const c=cfg();
+  if(kind=='t')return c.tcc;
+  if(c.cw){const i=classes().indexOf(x.class||'');return SW.slice(0,6)[(i<0?0:i)%6]}
+  return c.stc}
+const lg=mm=>(D.settings&&D.settings.logo)?`<img src="${D.settings.logo}" style="display:block;height:${mm}mm;max-width:${mm*2.4}mm;object-fit:contain;margin:0 auto">`:'';
+const sil='<svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block"><rect width="24" height="24" fill="#e4e8ee"/><circle cx="12" cy="9.5" r="4" fill="#b3bcc9"/><path d="M3.5 24c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z" fill="#b3bcc9"/></svg>';
+const photo=(x,css)=>`<div class="ab" style="${css};overflow:hidden;background:#e4e8ee">${x.photo?`<img src="${x.photo}" style="width:100%;height:100%;object-fit:cover;display:block">`:sil}</div>`;
+const L_=(txt)=>`<div style="font-size:1.8mm;letter-spacing:.25mm;text-transform:uppercase;color:#7b8088">${txt}</div>`;
+
+/* ---------- last exam result of a student (marks, %, class position) ---------- */
+function lastResult(s){
+  try{
+    const has=e=>{const m=(D.marks||{})[e.id]&&D.marks[e.id][s.id];return !!m&&Array.from(m).some(v=>v!==''&&v!==null&&v!==undefined&&!isNaN(+v))};
+    const ok=(D.exams||[]).filter(e=>(!e.class||e.class==s.class)&&has(e));
+    if(!ok.length)return null;
+    const lk=ok.filter(e=>e.locked),pool=lk.length?lk:ok,e=pool.reduce((a,b)=>b.id>a.id?b:a);
+    const mk=D.marks[e.id]||{};
+    const rows=D.students.filter(x=>x.active&&(!e.class||x.class==e.class)).map(x=>{const m=Array.from(mk[x.id]||[]);return{id:x.id,class:x.class,m,t:m.reduce((a,v)=>a+(+v||0),0)}});
+    const oE=window.RE,oS=window.RS;let g;window.RE=e;window.RS=rows;try{g=dmcData()}finally{window.RE=oE;window.RS=oS}
+    const grp=g.groups.find(z=>z.c==(s.class||'')),r=grp&&grp.L.find(z=>z.id==s.id);if(!r)return null;
+    const mm=Array.from(mk[s.id]||[]);
+    const subs=e.subjects.map((n,j)=>({n:String(n).slice(0,14),v:(mm[j]===''||mm[j]==null)?'-':mm[j],mx:maxOf(e,j)}));
+    return{e,t:r.t,tot:totOf(e),pct:r.pct,pos:r.cp,of:grp.L.length,pass:r.pass,grade:grade(r.pct),subs}
+  }catch(err){return null}}
+
+/* ---------- QR text (the "rest" of the information) ---------- */
+function qrStudent(s){const c=cfg(),e=exI('s',s.id),L=[brandName()||'School','STUDENT ID'];
+  const a=(k,v)=>{v=cap(v,70);if(v)L.push(k+': '+v)};
+  a('Name',s.name);a('Father',s.father);a('Class',s.class);a('ID','S-'+pad(s.id));a('Phone',s.phone);
+  a('Emergency',e.emerg);a('DOB',fd(e.dob));a('Blood',e.blood);a('Address',e.addr);a('Session',c.session);
+  String(e.note||'').split(/\n/).map(x=>cap(x,60)).filter(Boolean).slice(0,3).forEach(x=>L.push(x));
+  const r=c.exam!==false?lastResult(s):null;
+  if(r){const bl=x=>new TextEncoder().encode(x).length;
+    L.push('--- '+cap(r.e.name,30)+' ---','Marks: '+r.t+'/'+r.tot,'Percentage: '+r.pct+'%','Position: '+r.pos+' of '+r.of,'Grade: '+r.grade+' ('+(r.pass?'Pass':'Fail')+')');
+    const sub='Subjects: '+r.subs.slice(0,12).map(z=>z.n+' '+z.v+'/'+z.mx).join(', ');
+    if(bl(L.join('\n')+'\n'+sub)<=340)L.push(sub)}
+  return L.join('\n')}
+function qrTeacher(x){const c=cfg(),e=exI('t',x.id),L=[brandName()||'School','STAFF ID'];
+  const a=(k,v)=>{v=cap(v,70);if(v)L.push(k+': '+v)};
+  a('Name',x.name);a('Designation',x.desig);a('Subject',x.subject);a('ID','T-'+pad(x.id));a('CNIC',x.cnic);
+  a('Phone',x.phone);a('Emergency',x.emerg);a('Blood',e.blood);a('Joined',fd(x.join));a('Address',x.addr);a('Valid',c.valid);
+  String(e.note||'').split(/\n/).map(z=>cap(z,60)).filter(Boolean).slice(0,3).forEach(z=>L.push(z));
+  return L.join('\n')}
+
+/* ---------- card CSS ---------- */
+const CSS=`.idc{position:relative;overflow:hidden;box-sizing:border-box;font-family:Arial,'Noto Naskh Arabic','Noto Nastaliq Urdu',Tahoma,sans-serif;color:#1a1a1a;background:#fff;border-radius:3.2mm;box-shadow:0 0 0 .2mm #c6c6c6;-webkit-print-color-adjust:exact;print-color-adjust:exact}.idc *{box-sizing:border-box}.idc.p{width:54mm;height:85.6mm}.idc.l{width:85.6mm;height:54mm}.idc .ab{position:absolute}.idc.sc{box-shadow:0 1.2mm 4mm rgba(0,0,0,.3),0 0 0 .2mm #c6c6c6}.idc .al{font-size:1.15em;line-height:1.35}.idc[dir=rtl]{font-family:'Noto Naskh Arabic','Noto Nastaliq Urdu','Segoe UI',Tahoma,Arial,sans-serif}.idc[dir=rtl] *{letter-spacing:0!important;text-transform:none!important}#pr .wm{display:none!important}`;
+
+/* ---------- STUDENT card (portrait, curved header) ---------- */
+/* ---------- card language: English / Urdu / Arabic (labels + layout direction) ---------- */
+const TR={
+'STUDENT ID CARD':['STUDENT ID CARD','طالب علم کارڈ','بطاقة الطالب'],
+'Class':['Class','جماعت','الصف'],
+'ID No.':['ID No.','آئی ڈی نمبر','رقم الهوية'],
+'S/O':['S/O','ولد','ابن'],
+'SCAN QR':['SCAN QR CODE FOR DETAILS','تفصیل کے لیے QR کوڈ اسکین کریں','امسح رمز QR للتفاصيل'],
+'Tel':['Tel','فون','هاتف'],
+'Found':['If found, please return this card to the school.','یہ کارڈ ملے تو براہِ کرم ادارے کو واپس کر دیں۔','إذا وجدت هذه البطاقة فيرجى إعادتها إلى المدرسة.'],
+'Principal':['Principal','پرنسپل','المدير'],
+'Valid':['Valid up to','میعاد','صالحة حتى'],
+'Session':['Session','سیشن','العام الدراسي'],
+'DOB':['Date of birth','تاریخ پیدائش','تاريخ الميلاد'],
+'Blood':['Blood group','بلڈ گروپ','فصيلة الدم'],
+'Emerg':['Emergency','ایمرجنسی فون','هاتف الطوارئ'],
+'CNIC':['CNIC','شناختی کارڈ نمبر','رقم الهوية الوطنية'],
+'STAFF':['STAFF SERVICE CARD','اسٹاف سروس کارڈ','بطاقة خدمة الموظف'],
+'EMP':['EMPLOYEE ID','ملازم نمبر','رقم الموظف'],
+'Subject':['Subject','مضمون','المادة'],
+'Joined':['Joined','تاریخ شمولیت','تاريخ الانضمام'],
+'Teacher':['Teacher','استاد','مدرّس'],
+'SCAN':['SCAN FOR DETAILS','تفصیل کے لیے اسکین کریں','امسح للتفاصيل']};
+const LI=()=>{const l=cfg().lang;return l=='ur'?1:l=='ar'?2:0};
+const tx=k=>{const i=LI(),v=TR[k][i];return i?`<span class="al">${v}</span>`:v};
+const dirA=()=>LI()?' dir="rtl"':'';
+const cfl=k=>{const c=cfg(),l=c.lang;return LI()?(c[k+'_'+l]||''):''};
+const cName=()=>esc(cfl('nm')||brandName()||'School');
+const cAddr=()=>esc(cfl('ad')||cfg().addr||'');
+const cPrin=()=>esc(cfl('pr')||cfg().principal||'');
+const fdl=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');return LI()&&m?m[3]+'-'+m[2]+'-'+m[1]:fd(d)};
+const sess=()=>`<bdi dir="ltr">${esc(cfg().session)}</bdi>`;
+const validTxt=()=>{const c=cfg();return c.valid?`${tx('Valid')}: <bdi dir="ltr">${esc(c.valid)}</bdi>`:''};
+/* principal signature (chosen from a file) in a fixed box, so it is never too big or too small */
+const signBlock=w=>{const c=cfg(),pn=cPrin();
+  return`<div style="flex:none;width:${w}mm;text-align:center"><div style="height:7mm;display:flex;align-items:flex-end;justify-content:center;overflow:hidden">${c.sign?`<img src="${c.sign}" style="display:block;max-width:100%;max-height:100%;object-fit:contain">`:''}</div><div style="border-top:.25mm solid #222;padding-top:.4mm;font-size:1.9mm;line-height:1.25">${pn?pn+'<br>':''}${tx('Principal')}</div></div>`};
+const infoRow=(k,v,fs)=>{v=String(v||'').trim();return v?`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;font-size:${fs}mm;line-height:1.35;border-bottom:.15mm dotted #bbb;padding:.1mm 0"><span style="color:#666;white-space:nowrap">${tx(k)}</span><b><bdi dir="ltr">${esc(v)}</bdi></b></div>`:''};
+
+/* ---------- STUDENT card (portrait, curved header) ---------- */
+function stFront(s,acc){
+  const a2=shade(acc,-.3),nm=cName(),n=String(s.name||''),
+    fs=n.length>28?3.1:n.length>20?3.6:4.2,sfs=nm.length>34?2.5:3;
+  return`<div class="idc p"${dirA()}>
+<div class="ab" style="left:0;right:0;top:0;height:31mm;background:linear-gradient(155deg,${acc},${a2});border-radius:0 0 50% 50%/0 0 7mm 7mm;box-shadow:0 .9mm 0 ${GOLD}"></div>
+<div class="ab" style="top:2.4mm;left:50%;margin-left:-6mm;width:12mm;height:2.4mm;border-radius:1.2mm;background:#fff;box-shadow:inset 0 .35mm .7mm rgba(0,0,0,.55)"></div>
+<div class="ab" style="top:6.4mm;left:2mm;right:2mm;text-align:center;color:#fff">${lg(7)}<div style="margin-top:1mm;font-size:${sfs}mm;font-weight:bold;line-height:1.15;letter-spacing:.1mm">${nm}</div></div>
+${photo(s,`left:50%;margin-left:-12mm;top:21.5mm;width:24mm;height:28mm;border:.9mm solid #fff;border-radius:2.4mm;box-shadow:0 0 0 .45mm ${GOLD},0 1mm 2mm rgba(0,0,0,.3)`)}
+<div class="ab" style="left:2mm;right:2mm;top:51mm;height:9mm;display:flex;align-items:center;justify-content:center;text-align:center"><bdi style="font-size:${fs}mm;font-weight:bold;line-height:1.1;color:${acc}">${esc(n)}</bdi></div>
+<div class="ab" style="left:2mm;right:2mm;top:60.2mm;text-align:center;font-size:2.7mm;color:#555">${tx('S/O')} <bdi>${esc(s.father||'')}</bdi></div>
+<div class="ab" style="left:5mm;right:5mm;top:66mm;height:10mm;border-top:.25mm solid #d8d8d8;display:flex;align-items:center">
+ <div style="flex:1;text-align:center">${L_(tx('Class'))}<div style="font-size:3.4mm;font-weight:bold;color:${acc}"><bdi>${esc(s.class||'-')}</bdi></div></div>
+ <div style="width:.25mm;height:6mm;background:#d8d8d8"></div>
+ <div style="flex:1;text-align:center">${L_(tx('ID No.'))}<div style="font-size:3.4mm;font-weight:bold;color:${acc}"><bdi dir="ltr">S-${pad(s.id)}</bdi></div></div></div>
+<div class="ab" style="left:0;right:0;bottom:0;height:6.4mm;background:linear-gradient(90deg,${acc},${a2});border-top:.5mm solid ${GOLD};color:#fff;text-align:center;font-size:2.2mm;font-weight:bold;letter-spacing:.35mm;line-height:5.9mm">${tx('STUDENT ID CARD')} &nbsp;•&nbsp; ${sess()}</div>
+</div>`}
+function stBack(s,acc){
+  const c=cfg(),a2=shade(acc,-.3),e=exI('s',s.id),nm=cName(),ad=cAddr();
+  const rows=infoRow('ID No.','S-'+pad(s.id),2.3)+infoRow('DOB',fdl(e.dob),2.3)+infoRow('Blood',e.blood,2.3)+infoRow('Emerg',e.emerg,2.3);
+  return`<div class="idc p"${dirA()}>
+<div class="ab" style="left:0;right:0;top:0;height:4mm;background:linear-gradient(90deg,${acc},${a2});border-bottom:.6mm solid ${GOLD}"></div>
+<div class="ab" style="left:0;right:0;top:4mm;bottom:5.2mm;display:flex;flex-direction:column;align-items:center;padding:1.4mm 3.5mm .6mm">
+ <div style="flex:none;width:30mm;height:30mm;padding:.5mm;border:.4mm solid ${acc};border-radius:1.6mm;background:#fff">${QRG.svg(qrStudent(s),28.2)}</div>
+ <div style="flex:none;font-size:1.7mm;color:#777;font-weight:bold;margin-top:.5mm;text-align:center">${tx('SCAN QR')}</div>
+ <div style="flex:none;width:100%;margin-top:1.2mm">${rows}</div>
+ <div style="flex:1 1 0;min-height:0;overflow:hidden;width:100%;text-align:center;margin-top:1.2mm">
+  <div style="font-size:2.5mm;font-weight:bold;line-height:1.2">${nm}</div>
+  ${ad?`<div style="font-size:2mm;color:#444;line-height:1.25;margin-top:.5mm;max-height:5mm;overflow:hidden">${ad}</div>`:''}
+  ${c.phone?`<div style="font-size:2.2mm;color:#222;margin-top:.5mm;font-weight:bold">${tx('Tel')}: <bdi dir="ltr">${esc(c.phone)}</bdi></div>`:''}
+  <div style="font-size:1.6mm;font-style:italic;color:#777;margin-top:.6mm;line-height:1.25">${tx('Found')}</div></div>
+ ${signBlock(24)}</div>
+<div class="ab" style="left:0;right:0;bottom:0;height:5.2mm;background:linear-gradient(90deg,${acc},${a2});border-top:.5mm solid ${GOLD};color:#fff;text-align:center;font-size:2.1mm;font-weight:bold;letter-spacing:.2mm;line-height:4.7mm">${c.valid?validTxt():tx('Session')+' '+sess()}</div>
+</div>`}
+
+/* ---------- TEACHER card (landscape, side panel) ---------- */
+function tcFront(x,acc){
+  const a2=shade(acc,-.35),nm=cName(),n=String(x.name||''),fs=n.length>26?3.5:n.length>18?4:4.6,
+    sfs=nm.length>30?2.6:3.1;
+  const wm=(D.settings&&D.settings.logo)?`<img class="ab" src="${D.settings.logo}" style="right:3mm;bottom:5mm;width:24mm;height:24mm;object-fit:contain;opacity:.08">`:'';
+  return`<div class="idc l"${dirA()} style="background:repeating-linear-gradient(135deg,#fff 0,#fff .9mm,#f2f4f8 .9mm,#f2f4f8 1.8mm)">
+<div class="ab" style="left:0;top:0;bottom:0;width:29mm;background:linear-gradient(170deg,${acc},${a2});border-right:1mm solid ${GOLD}"></div>
+<div class="ab" style="top:2.2mm;left:14.5mm;margin-left:-5mm;width:10mm;height:2mm;border-radius:1mm;background:#fff;box-shadow:inset 0 .3mm .6mm rgba(0,0,0,.55)"></div>
+${photo(x,`left:3.2mm;top:7.5mm;width:22.6mm;height:27mm;border:.8mm solid ${GOLD};border-radius:2mm;box-shadow:0 .8mm 1.6mm rgba(0,0,0,.35)`)}
+<div class="ab" style="left:0;width:29mm;top:37mm;text-align:center;color:#fff"><div style="font-size:1.7mm;letter-spacing:.3mm;opacity:.85">${tx('EMP')}</div><div style="font-size:3.3mm;font-weight:bold;letter-spacing:.2mm"><bdi dir="ltr">T-${pad(x.id)}</bdi></div></div>
+${wm}
+<div class="ab" style="left:32mm;right:3mm;top:3mm;display:flex;align-items:center;gap:2mm">${(D.settings&&D.settings.logo)?`<div style="flex:none">${lg(8)}</div>`:''}<div style="font-size:${sfs}mm;font-weight:bold;line-height:1.15;color:${acc}">${nm}</div></div>
+<div class="ab" style="left:32mm;right:3mm;top:13.4mm;height:.5mm;background:${GOLD}"></div>
+<div class="ab" style="left:32mm;top:15.6mm;background:${GOLD};color:#fff;font-size:1.9mm;font-weight:bold;letter-spacing:.3mm;padding:.6mm 2mm;border-radius:1mm">${tx('STAFF')}</div>
+<div class="ab" style="left:32mm;right:3mm;top:21.4mm;height:9mm;display:flex;align-items:center"><bdi style="font-size:${fs}mm;font-weight:bold;line-height:1.1;color:#1a1a1a">${esc(n)}</bdi></div>
+<div class="ab" style="left:32mm;right:3mm;top:30.6mm;font-size:3mm;font-weight:bold;color:#9A7420"><bdi>${x.desig?esc(x.desig):tx('Teacher')}</bdi></div>
+<div class="ab" style="left:32mm;right:3mm;top:35.8mm;font-size:2.5mm;color:#444;line-height:1.5">${x.subject?`${tx('Subject')}: <b><bdi>${esc(x.subject)}</bdi></b><br>`:''}${x.join?`${tx('Joined')}: <b><bdi dir="ltr">${esc(fdl(x.join))}</bdi></b>`:''}</div>
+<div class="ab" style="left:32mm;right:3mm;bottom:2.2mm;text-align:${LI()?'left':'right'};font-size:1.9mm;color:#777">${validTxt()}</div>
+</div>`}
+function tcBack(x,acc){
+  const c=cfg(),a2=shade(acc,-.35),e=exI('t',x.id),nm=cName(),ad=cAddr();
+  const rows=infoRow('CNIC',x.cnic,2.3)+infoRow('Blood',e.blood,2.3);
+  return`<div class="idc l"${dirA()}>
+<div class="ab" style="left:0;right:0;top:0;height:8mm;background:linear-gradient(90deg,${acc},${a2});border-bottom:.6mm solid ${GOLD};color:#fff;text-align:center;font-size:2.6mm;font-weight:bold;letter-spacing:.5mm;line-height:7.4mm">${tx('STAFF')}</div>
+<div class="ab" style="left:5mm;top:11.5mm;width:31mm;height:31mm;padding:.5mm;border:.4mm solid ${acc};border-radius:1.6mm;background:#fff">${QRG.svg(qrTeacher(x),29.2)}</div>
+<div class="ab" style="left:5mm;width:31mm;top:43.2mm;text-align:center;font-size:1.8mm;letter-spacing:.2mm;color:#777;font-weight:bold">${tx('SCAN')}</div>
+<div class="ab" style="left:40mm;right:4mm;top:10.2mm;bottom:5.4mm;display:flex;flex-direction:column">
+ <div style="flex:1 1 0;min-height:0;overflow:hidden"><div style="font-size:2.8mm;font-weight:bold;line-height:1.15;color:${acc}">${nm}</div>
+  ${ad?`<div style="font-size:2mm;color:#444;line-height:1.25;margin-top:.5mm;max-height:5mm;overflow:hidden">${ad}</div>`:''}
+  ${c.phone?`<div style="font-size:2.2mm;font-weight:bold;margin-top:.5mm">${tx('Tel')}: <bdi dir="ltr">${esc(c.phone)}</bdi></div>`:''}
+  <div style="height:.3mm;background:#ddd;margin:1.3mm 0"></div>${rows}
+  <div style="font-size:1.7mm;color:#666;line-height:1.3;margin-top:.8mm">${tx('Found')}</div></div>
+ <div style="flex:none;align-self:flex-end">${signBlock(24)}</div></div>
+<div class="ab" style="left:0;right:0;bottom:0;height:4.6mm;background:linear-gradient(90deg,${acc},${a2});border-top:.5mm solid ${GOLD};color:#fff;text-align:center;font-size:2mm;font-weight:bold;letter-spacing:.2mm;line-height:4.1mm">${c.valid?validTxt():tx('ID No.')+': <bdi dir="ltr">T-'+pad(x.id)+'</bdi>'}</div>
+</div>`}
+
+const faces=(k,x)=>{const a=accFor(k,x);return k=='s'?{f:stFront(x,a),b:stBack(x,a)}:{f:tcFront(x,a),b:tcBack(x,a)}};
+
+/* ---------- A4 sheets ---------- */
+const GX=5,GY=4;
+/* cards per A4 page: students (54 x 85.6) 3 x 3 = 9; teachers (85.6 x 54) 2 x 5 = 10; "pairs" = front + back side by side */
+const PER=(k,mode)=>({cols:mode=='pair'?1:(k=='s'?3:2),rows:k=='s'?3:5});
+const pagesFor=(k,n,mode)=>{const g=PER(k,mode);return Math.max(1,Math.ceil(n/(g.cols*g.rows)))};
+function sheets(k,items,mode,out){ // out: 'pdf' (px page for PDF) or 'print' (exact mm, page margin 0)
+  const port=k=='s',cw=port?54:85.6,ch=port?85.6:54,pair=mode=='pair',gy=port?4:3,{cols,rows}=PER(k,mode),per=cols*rows,pages=[];
+  let cells=items.map(it=>{const f=faces(k,it);return pair?`<div style="display:flex;gap:${GX}mm">${f.f}${f.b}</div>`:(mode=='back'?f.b:f.f)});
+  const blank=`<div style="width:${cw}mm;height:${ch}mm"></div>`;
+  for(let i=0;i<cells.length;i+=per){
+    let pg=cells.slice(i,i+per);
+    if(mode=='back'){ // mirror every row so duplex printing lines up
+      const r=[];for(let j=0;j<pg.length;j+=cols){const row=pg.slice(j,j+cols);while(row.length<cols)row.push(blank);r.push(row.reverse())}
+      pg=r.flat()}
+    pages.push(pg)}
+  const gridH=rows*ch+(rows-1)*gy;
+  const grid=pg=>`<div style="display:grid;grid-template-columns:repeat(${cols},max-content);gap:${gy}mm ${GX}mm;justify-content:center;align-content:start">${pg.join('')}</div>`;
+  return pages.map((pg,i)=>out=='pdf'
+    ?`<div style="width:794px;height:1111px;box-sizing:border-box;padding-top:${((294-gridH)/2).toFixed(1)}mm;background:#fff"><style>${CSS}</style>${grid(pg)}</div>`
+    :`<div style="width:210mm;height:296mm;box-sizing:border-box;overflow:hidden;padding-top:${((297-gridH)/2).toFixed(1)}mm;${i<pages.length-1?'page-break-after:always;break-after:page;':''}">${i==0?`<style>${CSS}</style>`:''}${grid(pg)}</div>`)}
+/* print: A4, page margin 0 (so the browser adds no header/footer), the portal's own #pr padding removed */
+function printCards(h){let st=document.getElementById('pgs');if(!st){st=document.createElement('style');st.id='pgs';document.head.appendChild(st)}
+  st.textContent='@media print{@page{size:A4 portrait;margin:0}html,body{margin:0!important;padding:0!important}#pr{padding:0!important}#pr .wm{display:none!important}}';
+  const d=document.createElement('div');d.id='vprint';d.style.display='none';d.innerHTML=h;document.body.appendChild(d);printEl('vprint');d.remove()}
+/* size test page: a 100 mm ruler and card-size boxes, to check the printer prints at 100% */
+window.idcRuler=function(){
+  const tk=Array.from({length:101},(_,i)=>`<i style="position:absolute;left:${i}mm;bottom:0;width:.2mm;height:${i%10==0?6:i%5==0?4:2.4}mm;background:#000"></i>`).join(''),
+    nb=Array.from({length:11},(_,i)=>`<b style="position:absolute;left:${i*10-3}mm;top:-5mm;width:6mm;text-align:center;font-size:3mm">${i*10}</b>`).join('');
+  printCards(`<div style="width:210mm;height:296mm;box-sizing:border-box;position:relative;font-family:Arial,sans-serif;color:#000;background:#fff">
+<div style="position:absolute;left:20mm;top:14mm;font-size:5mm;font-weight:bold">${t('Print size test')}</div>
+<div style="position:absolute;left:20mm;top:22mm;right:20mm;font-size:3.4mm;line-height:1.5">${t('The ruler below must measure exactly 100 mm (10 cm) and each box must match its size. If it does not: set Scale to 100% / Actual size, turn off Fit to page, and turn off Headers and footers.')}</div>
+<div style="position:absolute;left:20mm;top:58mm;width:100mm;height:6mm">${nb}${tk}<div style="position:absolute;left:0;right:0;bottom:0;height:.2mm;background:#000"></div></div>
+<div style="position:absolute;left:20mm;top:76mm;width:85.6mm;height:54mm;border:.3mm solid #000;box-sizing:border-box;font-size:3.4mm;padding:2mm">85.6 × 54 mm</div>
+<div style="position:absolute;left:115mm;top:76mm;width:54mm;height:85.6mm;border:.3mm solid #000;box-sizing:border-box;font-size:3.4mm;padding:2mm">54 × 85.6 mm</div>
+</div>`)};
+
+/* ---------- list / selection ---------- */
+const list=()=>IDS.k=='s'
+  ?D.students.filter(s=>s.active&&(!IDS.cls||(s.class||'')===IDS.cls)).sort((a,b)=>((a.class||'')+a.name).localeCompare((b.class||'')+b.name))
+  :D.teachers.filter(x=>x.active).sort((a,b)=>a.name.localeCompare(b.name));
+const CAM='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const photoBtn=(id,lbl,after)=>`<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;border:1px solid #1F3B33;color:#1F3B33;background:#fff;border-radius:8px;padding:5px 10px;font-size:13px">${CAM}${t(lbl)}<input type="file" accept="image/*" style="display:none" onchange="idcPhoto(${id},this${after?',1':''})"></label>`;
+function idPhoto(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();
+  i.onload=()=>{const W=300,H=350,ar=W/H;let sw=i.width,sh=i.height,sx=0,sy=0;
+    if(sw/sh>ar){const nw=sh*ar;sx=(sw-nw)/2;sw=nw}else{const nh=sw/ar;sy=Math.max(0,(sh-nh)*.15);sh=nh}
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(i,sx,sy,sw,sh,0,0,W,H);
+    URL.revokeObjectURL(i.src);r(cv.toDataURL('image/jpeg',.85))};
+  i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+window.idcPhoto=async function(id,inp,reopen){
+  const f=inp.files&&inp.files[0];if(!f)return;const u=await idPhoto(f);if(!u){alert(t('Could not read this image'));return}
+  const x=(IDS.k=='s'?D.students:D.teachers).find(z=>z.id==id);if(!x)return;x.photo=u;save();toast('Saved');
+  if(reopen)closeM();boot();if(reopen)idcView(id)};
+/* principal signature: choose a photo/scan from the phone; paper is removed and the signature is cropped to its edges */
+function idSign(f){return new Promise(r=>{if(!f)return r(null);const i=new Image();
+  i.onload=()=>{try{
+    let w=i.naturalWidth||i.width,h=i.naturalHeight||i.height;const k=Math.min(1,1000/Math.max(w,h));w=Math.max(1,Math.round(w*k));h=Math.max(1,Math.round(h*k));
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage(i,0,0,w,h);URL.revokeObjectURL(i.src);
+    const im=g.getImageData(0,0,w,h),d=im.data;let hasA=false;
+    for(let p=3;p<d.length;p+=4)if(d[p]<200){hasA=true;break}
+    if(!hasA){const hist=new Uint32Array(256);let tot=0;
+      for(let p=0;p<d.length;p+=16){hist[Math.round(d[p]*.3+d[p+1]*.59+d[p+2]*.11)]++;tot++}
+      let acc=0,bg=255;for(let q=255;q>=0;q--){acc+=hist[q];if(acc>=tot*.1){bg=q;break}}
+      const hi=bg-40,lo=bg-100;
+      for(let p=0;p<d.length;p+=4){const l=d[p]*.3+d[p+1]*.59+d[p+2]*.11,a=l>=hi?0:l<=lo?255:Math.round((hi-l)/(hi-lo)*255);d[p+3]=a;if(a){d[p]=d[p]*.6|0;d[p+1]=d[p+1]*.6|0;d[p+2]=d[p+2]*.6|0}}}
+    g.putImageData(im,0,0);
+    const rc=new Uint32Array(h),cc=new Uint32Array(w);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>110){rc[y]++;cc[x]++}
+    const mn=Math.max(1,Math.round(Math.min(w,h)*.004));let y0=0,y1=h-1,x0=0,x1=w-1;
+    while(y0<h&&rc[y0]<mn)y0++;while(y1>y0&&rc[y1]<mn)y1--;while(x0<w&&cc[x0]<mn)x0++;while(x1>x0&&cc[x1]<mn)x1--;
+    if(y1-y0<3||x1-x0<3)return r(null);
+    const pd=Math.round(Math.max(x1-x0,y1-y0)*.03);x0=Math.max(0,x0-pd);y0=Math.max(0,y0-pd);x1=Math.min(w-1,x1+pd);y1=Math.min(h-1,y1+pd);
+    const cw=x1-x0+1,ch=y1-y0+1,sc=Math.min(1,500/Math.max(cw,ch)),o=document.createElement('canvas');o.width=Math.max(1,Math.round(cw*sc));o.height=Math.max(1,Math.round(ch*sc));
+    o.getContext('2d').drawImage(cv,x0,y0,cw,ch,0,0,o.width,o.height);r(o.toDataURL('image/png'))
+  }catch(err){console.error(err);r(null)}};
+  i.onerror=()=>r(null);i.src=URL.createObjectURL(f)})}
+window.idcSign=async function(inp){const f=inp.files&&inp.files[0];if(!f)return;const u=await idSign(f);inp.value='';
+  if(!u){alert(t('Could not find a signature in this image'));return}IDCD().cfg.sign=u;save();toast('Saved');boot()};
+window.idcSignDel=function(){delete IDCD().cfg.sign;save();boot()};
+const picked=()=>list().filter(x=>IDS.sel[IDS.k][x.id]);
+
+V.idcards=async function(){
+  const k=IDS.k,c=cfg(),L=list(),sel=IDS.sel[k],n=L.filter(x=>sel[x.id]).length,cl=classes();
+  const sw=(key,cur)=>SW.map(h=>`<button onclick="idcCfg('${key}','${h}',1)" style="width:30px;height:30px;padding:0;border-radius:50%;background:${h};border:3px solid ${h==cur?'#C9A24B':'#fff'};box-shadow:0 0 0 1px #bbb"></button>`).join(' ');
+  app.innerHTML=`
+<div class="card"><div class="row"><button class="${k=='s'?'on':'o'}" onclick="idcKind('s')">${t('Student ID cards')}</button><button class="${k=='t'?'on':'o'}" onclick="idcKind('t')">${t('Teacher service cards')}</button></div>
+<small style="color:#7a705c">${t('Credit-card size (85.6 × 54 mm), front and back, with QR code')}</small>
+<div class="row" style="margin:8px 0 0"><button class="o sm" onclick="idcRuler()">📏 ${t('Print size test')}</button></div>
+<div style="margin-top:6px;font-size:13px;color:#1F3B33">① ${t('Tap a name')} → ② ${t('Check the card')} → ③ ${t('Download PDF')}</div>
+<div class="row" style="margin:8px 0 0;align-items:center"><small>${t('Card language')}:</small>${[['en','English'],['ur','اردو'],['ar','العربية']].map(([v,l])=>`<button class="${(c.lang||'en')==v?'on':'o'} sm" onclick="idcCfg('lang','${v}',1)">${l}</button>`).join('')}</div></div>
+<details class="card"><summary><b>${t('Card settings')}</b></summary>
+<div style="display:grid;gap:8px;margin-top:10px">
+<input placeholder="${t('School address')}" value="${esc(c.addr)}" onchange="idcCfg('addr',this.value)">
+<input placeholder="${t('School phone')}" value="${esc(c.phone)}" onchange="idcCfg('phone',this.value)">
+<input placeholder="${t('Principal name')}" value="${esc(c.principal)}" onchange="idcCfg('principal',this.value)">
+<div class="row" style="margin:0"><input placeholder="${t('Session')}" value="${esc(c.session)}" onchange="idcCfg('session',this.value)" style="flex:1;min-width:110px"><input placeholder="${t('Valid up to')} (Mar 2027)" value="${esc(c.valid)}" onchange="idcCfg('valid',this.value)" style="flex:1;min-width:130px"></div>
+${c.lang&&c.lang!='en'?`<input dir="auto" placeholder="${t('School name on card')}" value="${esc(c['nm_'+c.lang]||'')}" onchange="idcCfg('nm_${c.lang}',this.value)">
+<input dir="auto" placeholder="${t('School address on card')}" value="${esc(c['ad_'+c.lang]||'')}" onchange="idcCfg('ad_${c.lang}',this.value)">
+<input dir="auto" placeholder="${t('Principal name on card')}" value="${esc(c['pr_'+c.lang]||'')}" onchange="idcCfg('pr_${c.lang}',this.value)">`:''}
+<div><small>${t('Principal signature')}</small><div class="row" style="margin:6px 0 0;align-items:center">${c.sign?`<img src="${c.sign}" style="height:36px;max-width:110px;object-fit:contain;border:1px dashed #bbb;background:#fff;padding:2px">`:''}<label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;border:1px solid #1F3B33;color:#1F3B33;background:#fff;border-radius:8px;padding:5px 10px;font-size:13px">${CAM}${t(c.sign?'Change signature':'Choose signature file')}<input type="file" accept="image/*" style="display:none" onchange="idcSign(this)"></label>${c.sign?`<button class="o sm" onclick="idcSignDel()">${t('Remove')}</button>`:''}</div>
+<small style="color:#7a705c">${t('Choose a photo or scan of the signature; it is cropped and resized automatically')}</small></div>
+<div><small>${t('Card colour')}</small><div class="row" style="margin:6px 0 0">${k=='s'?sw('stc',c.stc):sw('tcc',c.tcc)}</div></div>
+${k=='s'?`<label><input type="checkbox" ${c.cw?'checked':''} onchange="idcCfg('cw',this.checked,1)"> ${t('Different colour for each class')}</label>
+<label><input type="checkbox" ${c.exam!==false?'checked':''} onchange="idcCfg('exam',this.checked)"> ${t('Include last exam result in QR code')}</label>
+<small style="color:#7a705c;margin-top:-4px">${t("The latest locked exam of the student's class is used (marks, percentage, position)")}</small>`:''}
+</div></details>
+<details class="card"><summary><b>${t('Import card data from Excel / CSV')}</b></summary>
+<p style="font-size:13px;color:#7a705c;margin:8px 0">${t('Download the template, fill it in Excel, then choose the file. It matches people by ID or name and adds date of birth, blood group, emergency phone, address and an extra note for the QR code.')}</p>
+<div class="row" style="align-items:center"><button class="o sm" onclick="idcImpTpl()">${t('Download template')}</button><label style="cursor:pointer;border:1px solid #1F3B33;color:#1F3B33;background:#fff;border-radius:8px;padding:5px 10px;font-size:13px">${t('Choose file')}<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="idcImpFile(this)"></label></div><div id="idcImp"></div></details>
+<div class="card">
+${k=='s'?`<div class="row"><select onchange="idcCls(this.value)" style="flex:1"><option value="">${t('All classes')}</option>${cl.map(x=>`<option value="${esc(x)}" ${IDS.cls===x?'selected':''}>${esc(x||'-')}</option>`).join('')}</select></div>`:''}
+<div class="row" style="align-items:center"><button class="o sm" onclick="idcAll(1)">${t('Select all')}</button><button class="o sm" onclick="idcAll(0)">${t('Clear')}</button><b style="margin-inline-start:auto;text-align:end">${n}/${L.length} ${t('selected')}${n?` · ${pagesFor(k,n,IDS.mode)} ${t('A4 pages')}`:''}</b></div>
+${L.map(x=>`<div style="padding:8px 0;border-top:1px solid #eee">
+<div style="display:flex;align-items:center;gap:8px">
+<input type="checkbox" ${sel[x.id]?'checked':''} onchange="idcTog(${x.id},this.checked)" style="width:20px;height:20px;flex:none">
+<div style="flex:none">${avatar(x,38)}</div>
+<div onclick="idcView(${x.id})" style="flex:1;min-width:0;cursor:pointer"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</b><small style="color:#7a705c">${esc(k=='s'?(x.class||''):(x.desig||x.subject||''))}</small>${x.photo?'':` <small style="color:#B0453A">• ${t('no photo')}</small>`}</div></div>
+<div class="row" style="margin:6px 0 0 28px">${photoBtn(x.id,x.photo?'Change photo':'Photo')}<button class="o sm" onclick="idcInfo(${x.id})">${t('Edit details')}</button><button class="sm" onclick="idcView(${x.id})">${t('Card')} ▶</button></div></div>`).join('')||`<p>${t(k=='s'?'No students yet':'No teachers yet')}</p>`}
+</div>
+<div class="card" style="position:sticky;bottom:6px;box-shadow:0 -2px 10px rgba(0,0,0,.15)">
+<div class="row">${[['front','Front'],['back','Back'],['pair','Pairs (front + back)']].map(([m,l])=>`<button class="${IDS.mode==m?'on':'o'} sm" onclick="idcMode('${m}')">${t(l)}</button>`).join('')}</div>
+<div class="row" style="margin:0"><button onclick="idcPdf()" style="flex:1">${t('Save PDF')}</button><button class="o" onclick="idcPrint()" style="flex:1">${t('Print')}</button></div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#7a705c">${t('Print on A4 at 100% (Actual size), margins none, headers and footers off')} ${k=='s'?'· 9':'· 10'} ${t('cards per page')}</small></div>`};
+
+Object.assign(window,{
+ idcKind(k){IDS.k=k;boot()},
+ idcCls(v){IDS.cls=v;L_all();boot()},
+ idcTog(id,on){if(on)IDS.sel[IDS.k][id]=1;else delete IDS.sel[IDS.k][id];boot()},
+ idcAll(on){IDS.sel[IDS.k]={};if(on)list().forEach(x=>IDS.sel[IDS.k][x.id]=1);boot()},
+ idcMode(m){IDS.mode=m;boot()},
+ idcCfg(key,v,re){IDCD().cfg[key]=v;save();if(re)boot()}
+});
+function L_all(){IDS.sel[IDS.k]={};if(IDS.cls)list().forEach(x=>IDS.sel[IDS.k][x.id]=1)}
+
+/* ---------- extra info (goes into the QR code) ---------- */
+window.idcInfo=function(id){
+  const k=IDS.k,x=(k=='s'?D.students:D.teachers).find(z=>z.id==id);if(!x)return;const e=exI(k,id);
+  const inp=(f,l,v,ty)=>`<div><small>${t(l)}</small><input id="idx_${f}" type="${ty||'text'}" dir="auto" value="${esc(v||'')}" style="width:100%"></div>`;
+  const rec=k=='s'?inp('r_name','Name',x.name)+inp('r_father','Father name',x.father)+inp('r_class','Class',x.class)+inp('r_phone','Phone',x.phone)
+    :inp('r_name','Name',x.name)+inp('r_desig','Designation',x.desig)+inp('r_subject','Subject',x.subject)+inp('r_cnic','CNIC',x.cnic)+inp('r_phone','Phone',x.phone)+inp('r_join','Joining date',x.join,'date')+inp('r_emerg','Emergency phone',x.emerg)+inp('r_addr','Address',x.addr);
+  const ex=inp('blood','Blood group',e.blood)+(k=='s'?inp('dob','Date of birth',e.dob,'date')+inp('emerg','Emergency phone',e.emerg)+inp('addr','Address',e.addr):'');
+  modal(`<h4 style="margin:0 0 8px">${esc(x.name)}</h4>
+<div style="max-height:60vh;overflow:auto;display:grid;gap:8px;padding-bottom:4px">${rec}<div style="border-top:1px dashed #ccc"></div>${ex}
+<div><small>${t('Extra lines for the QR code (one per line)')}</small><textarea id="idx_note" rows="3" dir="auto" style="width:100%">${esc(e.note||'')}</textarea></div></div>
+<p style="font-size:12px;color:#7a705c;margin:6px 0">${t('Blood group, date of birth and emergency phone are printed on the back of the card; everything here is also stored in the QR code')}</p>
+<div class="eg"><button class="eb pri" onclick="idcInfoSave('${k}',${id})">${t('Save')}</button><button class="eb ghost" onclick="idcView(${id})">${t('Close')}</button></div>`)};
+window.idcInfoSave=function(k,id){
+  const x=(k=='s'?D.students:D.teachers).find(z=>z.id==id);if(!x)return;
+  const v=f=>{const el=document.getElementById('idx_'+f);return el?el.value.trim():''};
+  if(!v('r_name')){alert(t('Name is required'));return}
+  const R=k=='s'?{name:'r_name',father:'r_father',class:'r_class',phone:'r_phone'}:{name:'r_name',desig:'r_desig',subject:'r_subject',cnic:'r_cnic',phone:'r_phone',join:'r_join',emerg:'r_emerg',addr:'r_addr'};
+  Object.keys(R).forEach(f=>{x[f]=v(R[f])});
+  const e={};['blood','dob','emerg','addr'].forEach(f=>{if(v(f))e[f]=v(f)});const n=v('note');if(n)e.note=n.slice(0,200);
+  IDCD().ex[k+id]=e;save();toast('Saved');closeM();boot();idcView(id)};
+
+/* ---------- preview (the whole card) with one-tap download ---------- */
+window.idcView=function(id){
+  const k=IDS.k,x=(k=='s'?D.students:D.teachers).find(z=>z.id==id);if(!x)return;const f=faces(k,x),
+    z=Math.max(.6,Math.min(k=='s'?1.45:1.25,(innerWidth-72)/(k=='s'?204:323)));
+  modal(`<style>${CSS}</style><div style="max-height:62vh;overflow:auto"><div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;padding:10px 0;zoom:${z.toFixed(2)}">${f.f.replace('class="idc ','class="idc sc ')}${f.b.replace('class="idc ','class="idc sc ')}</div></div>
+<div class="eg"><button class="eb pri" onclick="idcOne(${id})">${t('Download PDF')}</button><button class="eb sec" onclick="idcOnePrint(${id})">${t('Print')}</button><button class="eb sec" onclick="idcInfo(${id})">${t('Edit details')}</button>${photoBtn(id,x.photo?'Change photo':'Photo',1)}<button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`)};
+const one=id=>(IDS.k=='s'?D.students:D.teachers).find(z=>z.id==id);
+window.idcOne=function(id){const x=one(id);if(x)idcPdf([x],'pair')};
+window.idcOnePrint=function(id){const x=one(id);if(x)idcPrint([x],'pair')};
+function need(){const P=picked();if(!P.length){alert(t('Select at least one card'));return null}return P}
+window.idcPrint=function(P0,m0){const P=Array.isArray(P0)?P0:need();if(!P)return;printCards(sheets(IDS.k,P,m0||IDS.mode,'print').join(''))};
+window.idcPdf=async function(P0,m0){
+  const P=Array.isArray(P0)?P0:need();if(!P)return;const mode=m0||IDS.mode,
+    pages=sheets(IDS.k,P,mode,'pdf'),nm=(P.length==1?'ID-Card-'+String(P[0].name||P[0].id).slice(0,30)+'-'+P[0].id:'ID-Cards-'+(IDS.k=='s'?'Students-'+(IDS.cls||'All'):'Teachers')+'-'+mode).replace(/[^\w\-]+/g,'_')+'.pdf';
+  try{toast('Working...');const J=[],prev=[];
+    for(const h of pages){const c=await dmcCanvas(h);J.push(dmcJpg(c));prev.push(c.toDataURL('image/jpeg',.8))}
+    window.IDB={blob:pdfOf(J),name:nm,n:prev.length,P,mode};
+    modal(`<div style="max-height:66vh;overflow:auto">${prev.map(u=>`<div style="margin-bottom:10px;border:1px solid #ddd"><img src="${u}" style="width:100%;display:block"></div>`).join('')}</div>
+<div class="eg" style="margin-top:10px"><button class="eb pri" onclick="idcPrint(IDB.P,IDB.mode)">${t('Print')}</button><button class="eb sec" onclick="dmcGet(IDB.blob,IDB.name)">${t('Download again')} (PDF)</button>${navigator.canShare?`<button class="eb sec" onclick="dmcGet(IDB.blob,IDB.name,1)">${t('Share')}</button>`:''}<span style="align-self:center">✓ ${t('PDF downloaded')}</span><button class="eb ghost" onclick="closeM()">${t('Close')}</button></div>`);
+    const m=$('#md .card');if(m)m.style.maxWidth='820px';
+    await new Promise(r=>setTimeout(r,250));await dmcGet(IDB.blob,IDB.name)
+  }catch(e){console.error(e);alert(t('Could not save the PDF. Please try again.'))}};
+
+/* ---------- import card data (DOB, blood group, emergency, address, QR note) from Excel / CSV ---------- */
+const normDate=v=>{v=String(v).trim();let m;
+  if(/^\d{5}(\.\d+)?$/.test(v))return new Date(Date.UTC(1899,11,30)+Math.floor(+v)*864e5).toISOString().slice(0,10);
+  if(m=/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(v))return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  if(m=/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/.exec(v))return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  return v};
+window.idcImpTpl=async function(){
+  const k=IDS.k,L=list(),q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const H=k=='s'?['ID','Name','Class','Date of birth (YYYY-MM-DD)','Blood group','Emergency phone','Address','Extra note for QR']:['ID','Name','Blood group','Extra note for QR'];
+  const rows=L.map(x=>{const e=exI(k,x.id);return k=='s'?[x.id,x.name,x.class||'',e.dob||'',e.blood||'',e.emerg||'',e.addr||'',e.note||'']:[x.id,x.name,e.blood||'',e.note||'']});
+  const csv='\ufeff'+[H,...rows].map(r=>r.map(q).join(',')).join('\r\n');
+  try{await dmcGet(new Blob([csv],{type:'text/csv;charset=utf-8'}),'ID-card-data-'+(k=='s'?'students':'teachers')+'.csv')}catch(e){if(!e||e.name!='AbortError')alert(t('Could not save the file. Please try again.'))}};
+window.idcImpFile=async function(inp){
+  const f=inp.files&&inp.files[0];if(!f)return;let rows;
+  try{rows=/\.xlsx$/i.test(f.name)?await readXlsx(await f.arrayBuffer()):parseCsv(await f.text())}catch(e){alert(t('Could not read this file'));return}
+  inp.value='';rows=rows.filter(r=>r.some(c=>String(c??'').trim()));const box=document.getElementById('idcImp');
+  const k=IDS.k,hm={};
+  (rows[0]||[]).forEach((h,i)=>{h=String(h??'').trim().toLowerCase();if(!h||/father|walid|والد/.test(h))return;let kk=null;
+    if(/^(student |teacher |staff )?(id|s-id|id no\.?|roll no\.?)$/.test(h))kk='id';
+    else if(/dob|birth|پیدائش|پیدایش|janam/.test(h))kk='dob';
+    else if(/blood|بلڈ|خون/.test(h))kk='blood';
+    else if(/emerg|ایمرجنسی|طوارئ/.test(h))kk='emerg';
+    else if(/addr|pata|پتہ|پتا/.test(h))kk='addr';
+    else if(/note|extra|remark|qr|نوٹ/.test(h))kk='note';
+    else if(/class|jamaat|جماعت|کلاس/.test(h))kk='cls';
+    else if(/name|naam|نام|student|teacher/.test(h))kk='name';
+    if(kk&&!(kk in hm))hm[kk]=i});
+  if(!('id' in hm)&&!('name' in hm)){box.innerHTML=`<p style="color:#B3261E">${t('The file needs an ID or Name column in the first row')}</p>`;return}
+  const all=k=='s'?D.students.filter(s=>s.active):D.teachers.filter(x=>x.active),allow=k=='s'?['dob','blood','emerg','addr','note']:['blood','note'];
+  const nn=v=>String(v||'').toLowerCase().replace(/\s+/g,' ').trim(),g=(r,kk)=>kk in hm?String(r[hm[kk]]??'').trim():'';
+  const out=[],miss=[];
+  rows.slice(1).forEach(r=>{let x=null;const idv=g(r,'id').replace(/\D/g,'');
+    if(idv)x=all.find(z=>String(z.id)==String(+idv))||null;
+    if(!x&&g(r,'name')){const c=all.filter(z=>nn(z.name)==nn(g(r,'name')));x=c.length==1?c[0]:(c.find(z=>nn(z.class)==nn(g(r,'cls')))||null)}
+    if(!x){miss.push(g(r,'name')||g(r,'id')||'?');return}
+    const d={};allow.forEach(kk=>{let v=g(r,kk);if(!v)return;if(kk=='dob')v=normDate(v);else if(kk=='emerg'){v=v.replace(/\s+/g,'');if(/^3\d{9}$/.test(v))v='0'+v}if(v)d[kk]=v});
+    if(Object.keys(d).length)out.push({x,d})});
+  window.IDIMP=out;
+  box.innerHTML=`<p><b>${out.length}</b> ${t('cards will be updated')}${miss.length?` · <span style="color:#B3261E">${miss.length} ${t('not found')}: ${esc(miss.slice(0,5).join(', '))}${miss.length>5?'…':''}</span>`:''}</p>
+${out.length?`<div style="max-height:30vh;overflow:auto"><table>${out.slice(0,8).map(o=>`<tr><td>${esc(o.x.name)}</td><td><small>${esc(Object.values(o.d).join(' · '))}</small></td></tr>`).join('')}</table></div><div class="row"><button onclick="idcImpApply()">${t('Apply to cards')}</button></div>`:''}`};
+window.idcImpApply=function(){const k=IDS.k,O=window.IDIMP||[];if(!O.length)return;
+  O.forEach(o=>{const e=Object.assign({},exI(k,o.x.id),o.d);if(e.note)e.note=String(e.note).slice(0,200);IDCD().ex[k+o.x.id]=e});
+  window.IDIMP=[];save();toast('Saved');boot()};
+
+window.IDCX={qrStudent,qrTeacher,lastResult};
+TABS.idcards=['ID Cards',['admin']];
+})();
 
 apply();boot();
 </script></body></html>
